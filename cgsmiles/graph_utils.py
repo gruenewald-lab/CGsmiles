@@ -3,7 +3,9 @@ Molecule utilites
 """
 import copy
 from functools import partial
+from collections import defaultdict
 import itertools
+import networkx as nx
 
 def merge_graphs(source_graph, target_graph, max_node=None):
     """
@@ -24,20 +26,24 @@ def merge_graphs(source_graph, target_graph, max_node=None):
         A dict mapping the node indices of the added `molecule` to their
         new indices in this molecule.
     """
-    if not source_graph.max_node:
+    if len(source_graph) == 0:
+        fragment_offset = 0
+        offset = -1
+        max_node = 0
+    else:
+        if not max_node:
         # hopefully it is a small graph when this is called.
-        max_node = max(source_graph)
-
-    # We assume that the last id is always the largest.
-    last_node_idx = max_node
-    offset = last_node_idx
-    fragment_offset = source_graph.nodes[last_node_idx].get('fragid', 1)
+            max_node = max(source_graph.nodes)
+        # We assume that the last id is always the largest.
+        last_node_idx = max_node
+        offset = last_node_idx
+        fragment_offset = source_graph.nodes[last_node_idx].get('fragid', 0)
 
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
         correspondence[node] = idx
         new_atom = copy.copy(target_graph.nodes[node])
-        new_atom['fragid'] = (new_atom.get('fragid', 1) + fragment_offset)
+        new_atom['fragid'] = (new_atom.get('fragid', 0) + fragment_offset)
         source_graph.add_node(idx, **new_atom)
 
     for node1, node2 in target_graph.edges:
@@ -68,7 +74,7 @@ def sort_nodes(graph, sortby_attrs=("fragid", "atomid"), target_attr=None):
     """
     node_order = sorted(graph, key=partial(_keyfunc, graph, attrs=sortby_attrs))
     for new_idx, node_key in enumerate(node_order, 1):
-        graph._node.move_to_end(node_key)
+#        graph._node.move_to_end(node_key)
         if target_attr is not None:
             graph.nodes[node_key][target_attr] = new_idx
     return graph
@@ -97,8 +103,8 @@ def annotate_fragments(meta_graph, molecule):
         # adding node to the fragment graph
         graph_frag = nx.Graph()
         for node in fragids[meta_node]:
-            attrs = self.molecule.nodes[node]
-            graph_frag.add_node(node, *attrs)
+            attrs = molecule.nodes[node]
+            graph_frag.add_node(node, **attrs)
 
         # adding the edges
         # this is slow but OK; we always assume that the fragment

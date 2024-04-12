@@ -124,22 +124,24 @@ class MoleculeResolver:
                        "contain fragment.")
                 raise IOError(msg)
             else:
-                self.fragment_string = elements[0]
-                self.cgsmiles_string = elements[1]
+                self.cgsmiles_string = elements[0]
+                self.fragment_string = elements[1]
 
     def resolve_disconnected_molecule(self):
         """
         """
-        for node in self.meta_graph.nodes:
-            fragname = self.meta_graph.nodes[node]['fragname']
+        for meta_node in self.meta_graph.nodes:
+            fragname = self.meta_graph.nodes[meta_node]['fragname']
             fragment = self.fragment_dict[fragname]
             correspondence = merge_graphs(self.molecule, fragment)
+
             graph_frag = nx.Graph()
 
             for node in fragment.nodes:
                 new_node = correspondence[node]
                 attrs = self.molecule.nodes[new_node]
-                graph_frag.add_node(correspondence[node], *attrs)
+                graph_frag.add_node(correspondence[node], **attrs)
+                nx.set_node_attributes(graph_frag, meta_node, 'fragid')
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -147,7 +149,7 @@ class MoleculeResolver:
                 graph_frag.add_edge(new_a,
                                     new_b)
 
-            self.meta_graph.nodes[node]['graph'] = graph_frag
+            self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
 
     def edges_from_bonding_descrpt(self):
@@ -198,7 +200,7 @@ class MoleculeResolver:
                     bonds = round(sum([self.molecule.edges[(node, neigh)]['order'] for neigh in\
                                        self.molecule.neighbors(node)]))
                     hcount = VALENCES[element][0] - bonds
-                    attrs = {attr: graph.nodes[node][attr] for attr in ['resname', 'resid', 'charge_group']}
+                    attrs = {attr: graph.nodes[node][attr] for attr in ['fragname', 'fragid']}
                     attrs['element'] = 'H'
                     for _ in range(0, hcount):
                         new_node = len(self.molecule.nodes) + 1
@@ -213,7 +215,7 @@ class MoleculeResolver:
         self.meta_graph = annotate_fragments(self.meta_graph, self.molecule)
 
     def resolve(self):
-        if self.meta_graph is not None:
+        if self.cgsmiles_string is not None:
             self.meta_graph = read_cgsmiles(self.cgsmiles_string)
 
         if self.fragment_string is not None:
