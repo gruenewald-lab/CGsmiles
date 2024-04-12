@@ -3,6 +3,7 @@ Molecule utilites
 """
 import copy
 from functools import partial
+import itertools
 
 def merge_graphs(source_graph, target_graph, max_node=None):
     """
@@ -77,3 +78,34 @@ def _keyfunc(graph, node_idx, attrs):
     Reduce a molecule node to a tuple of chain, resid, and resname.
     """
     return [graph.nodes[node_idx].get(attr) for attr in attrs]
+
+def annotate_fragments(meta_graph, molecule):
+    """
+    Given a low resolution graph and a high resolution graph
+    figure out which fragments belong to the nodes on the low
+    resolution graph. Note that the nodes in the high resolution
+    graph need to be annotated with 'fragid' that needs to match
+    the lower resolution graph nodes.
+    """
+    node_to_fragids = nx.get_node_attributes(molecule, 'fragid')
+
+    fragids = defaultdict(list)
+    for fragid, node in node_to_fragids.items():
+        fragids[fragid].append(node)
+
+    for meta_node in meta_graph.nodes:
+        # adding node to the fragment graph
+        graph_frag = nx.Graph()
+        for node in fragids[meta_node]:
+            attrs = self.molecule.nodes[node]
+            graph_frag.add_node(node, *attrs)
+
+        # adding the edges
+        # this is slow but OK; we always assume that the fragment
+        # is much much smaller than the fullblown graph
+        combinations = itertools.combinations(fragids[meta_node], r=2)
+        for a, b in combinations:
+            if molecule.has_edge(a, b):
+                graph.add_edge(a, b)
+
+    return meta_graph
