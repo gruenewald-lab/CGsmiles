@@ -107,10 +107,17 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
 #                        ('PE', 'C C H H H H H'), ('PE', 'C C H H H H'), ('PE', 'C C H H H'),
 #                        ('PE', 'C C H H H H'), ('PE', 'C C H H H H H'), ('PE', 'C C H H H H H')]
 #                       [,
-#                        (
+#                       (
+                        # smiple squash operator; no unconsumed operators
+                        ("{[#A][#B]}.{#A=OC[!],#B=[!]CC}",
+                        #       0 1 2 3 4           1 5 3 4 6 7 8
+                        #       0 1 2 3 4           5 6 7 8 9 10 11
+                        [('A', 'O C H H H'), ('B', 'C C H H H H H'),],
+                        [(0, 1), (0, 2), (1, 3), (1, 4), (1, 6), (6, 9), (6, 10),
+                         (6, 11),]),
 
 ))
-def test_def_big_smile_parser(smile, ref_nodes, ref_edges):
+def test_resolve_molecule(smile, ref_nodes, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()
 #    nx.draw_networkx(meta_mol.molecule, with_labels=True, labels=nx.get_node_attributes(meta_mol.molecule, 'element'))
 #    plt.show()
@@ -120,4 +127,5 @@ def test_def_big_smile_parser(smile, ref_nodes, ref_edges):
         elements = nx.get_node_attributes(block_graph, 'element') #.values())
         sorted_elements =  [elements[key] for key in sorted(elements)]
         assert sorted_elements == ref[1].split()
+    print(molecule.edges)
     assert sorted(molecule.edges) == sorted(ref_edges)

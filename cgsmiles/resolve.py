@@ -141,7 +141,7 @@ class MoleculeResolver:
                 new_node = correspondence[node]
                 attrs = self.molecule.nodes[new_node]
                 graph_frag.add_node(correspondence[node], **attrs)
-                nx.set_node_attributes(graph_frag, meta_node, 'fragid')
+                nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -150,7 +150,6 @@ class MoleculeResolver:
                                     new_b)
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
-
 
     def edges_from_bonding_descrpt(self):
         """
@@ -184,6 +183,52 @@ class MoleculeResolver:
             if not order:
                 order = 1
             self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+
+    def squash_atoms(self):
+        """
+        Applies the squash operator.
+        """
+        bondings = nx.get_edge_attributes(self.molecule, 'bonding')
+        squashed = False
+        for edge, bonding in bondings.items():
+            print(edge)
+            # we have a squash operator
+            if bonding[0].startswith('!'):
+                # find all hydrogens to remove
+                # and which atoms to connect
+                nodes_to_remove = [edge[1]]
+                new_edge_nodes = []
+                for hnode in self.molecule.neighbors(edge[1]):
+                    if self.molecule.nodes[hnode].get('element', 'Nan') == 'H':
+                        nodes_to_remove.append(hnode)
+                    elif hnode != edge[0]:
+                        new_edge_nodes.append(hnode)
+
+                # remove edges
+                self.molecule.remove_edge(*edge)
+                for node in nodes_to_remove[1:]:
+                    self.molecule.remove_edge(edge[1], node)
+
+                # add edges
+                for node in new_edge_nodes:
+                    self.molecule.add_edge(edge[0], node)
+
+                # find the reference hydrogen atoms
+                nodes_to_keep = [edge[0]]
+                for hnode in self.molecule.neighbors(edge[0]):
+                    if self.molecule.nodes[hnode].get('element', 'Nan') == 'H':
+                        nodes_to_keep.append(hnode)
+
+                # remove squashed node and hydrogen atoms
+                for ref_node, node in zip(nodes_to_keep, nodes_to_remove):
+                    other_fragid = self.molecule.nodes[node]['fragid']
+                    self.molecule.remove_node(node)
+                    self.molecule.nodes[ref_node]['fragid'] += other_fragid
+                squashed = True
+
+        if squashed:
+            self.meta_graph = annotate_fragments(self.meta_graph,
+                                                 self.molecule)
 
     def replace_unconsumed_bonding_descrpt(self):
         """
@@ -224,6 +269,7 @@ class MoleculeResolver:
 
         self.resolve_disconnected_molecule()
         self.edges_from_bonding_descrpt()
+        self.squash_atoms()
         if self.all_atom:
             self.replace_unconsumed_bonding_descrpt()
 
