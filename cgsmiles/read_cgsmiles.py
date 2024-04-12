@@ -40,11 +40,11 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     nx.Graph
     """
     prev_node = anchor
-    for bdx, (resname, n_mon) in enumerate(recipe):
+    for bdx, (fragname, n_mon) in enumerate(recipe):
         if bdx == 0:
             anchor = current
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, resname=resname)
+            mol_graph.add_node(current, fragname=fragname)
             mol_graph.add_edge(prev_node, current)
 
             prev_node = current
@@ -62,7 +62,7 @@ def read_cgsmiles(pattern):
     sequence. It can contain any enumeration of nodes by writing them
     as if they were smile atoms but the atomname is given by:
 
-    `[# + resname + ]`
+    `[# + fragname + ]`
 
     This input fomat can handle branching as well as cycles following
     the OpenSmiles syntax. For example, branches are indicated using
@@ -72,7 +72,7 @@ def read_cgsmiles(pattern):
 
     The general pattern of a CGsmiles string looks like this:
 
-    `'{' + [#resname_1][#resname_2]... + '}'`
+    `'{' + [#fragname_1][#fragname_2]... + '}'`
 
     In addition to plain enumeration we allow some special operators
     that simplify the description of large but regular graphs such as
@@ -138,7 +138,7 @@ def read_cgsmiles(pattern):
             branch_anchor.append(prev_node)
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
-            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['resname'], 1)]
+            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1)]
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
@@ -162,19 +162,19 @@ def read_cgsmiles(pattern):
         else:
             n_mon = 1
 
-        # the resname starts at the second character and ends
+        # the fragname starts at the second character and ends
         # one before the last according to the above pattern
-        resname = match.group(0)[2:-1]
+        fragname = match.group(0)[2:-1]
         # if this residue is part of a branch we store it in
         # the recipe dict together with the anchor residue
         # and expansion number
         if branching:
-            recipes[branch_anchor[-1]].append((resname, n_mon))
+            recipes[branch_anchor[-1]].append((fragname, n_mon))
 
         # new we add new residue as often as required
         connection = []
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, resname=resname)
+            mol_graph.add_node(current, fragname=fragname)
 
             if prev_node is not None:
                 mol_graph.add_edge(prev_node, current)
