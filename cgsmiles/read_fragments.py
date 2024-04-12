@@ -35,7 +35,7 @@ def strip_bonding_descriptors(fragment_string):
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
-            if peek in ['$', '>', '<']:
+            if peek in ['$', '>', '<', '!']:
                 bond_descrp = peek
                 peek = next(smile_iter)
                 while peek != ']':

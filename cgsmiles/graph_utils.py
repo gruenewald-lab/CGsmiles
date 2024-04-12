@@ -37,13 +37,13 @@ def merge_graphs(source_graph, target_graph, max_node=None):
         # We assume that the last id is always the largest.
         last_node_idx = max_node
         offset = last_node_idx
-        fragment_offset = source_graph.nodes[last_node_idx].get('fragid', 0)
+        fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0]))
 
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
         correspondence[node] = idx
         new_atom = copy.copy(target_graph.nodes[node])
-        new_atom['fragid'] = (new_atom.get('fragid', 0) + fragment_offset)
+        new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
         source_graph.add_node(idx, **new_atom)
 
     for node1, node2 in target_graph.edges:
@@ -95,23 +95,25 @@ def annotate_fragments(meta_graph, molecule):
     """
     node_to_fragids = nx.get_node_attributes(molecule, 'fragid')
 
-    fragids = defaultdict(list)
-    for fragid, node in node_to_fragids.items():
-        fragids[fragid].append(node)
+    fragid_to_node = defaultdict(list)
+    for node, fragids in node_to_fragids.items():
+        print(fragids)
+        for fragid in fragids:
+            fragid_to_node[fragid].append(node)
 
     for meta_node in meta_graph.nodes:
         # adding node to the fragment graph
         graph_frag = nx.Graph()
-        for node in fragids[meta_node]:
+        for node in fragid_to_node[meta_node]:
             attrs = molecule.nodes[node]
             graph_frag.add_node(node, **attrs)
 
         # adding the edges
         # this is slow but OK; we always assume that the fragment
         # is much much smaller than the fullblown graph
-        combinations = itertools.combinations(fragids[meta_node], r=2)
+        combinations = itertools.combinations(fragid_to_node[meta_node], r=2)
         for a, b in combinations:
             if molecule.has_edge(a, b):
-                graph.add_edge(a, b)
+                graph_frag.add_edge(a, b)
 
     return meta_graph
