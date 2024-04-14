@@ -1,8 +1,6 @@
 =====
-cgsmiles
+Coarse-Grained SMILES (CGsmiles) for representing abitrarily complex molecules using line notation
 =====
-Coarse-Grained SMILES (CGsmiles) for representing abitrarily
-complex molecules using line notation
 
 Overview
 ========
