@@ -118,11 +118,12 @@ html_static_path = ['_static']
 #
 # html_sidebars = {}
 
+html_show_sourcelink = True
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'VerMoUTHdoc'
+htmlhelp_basename = 'CGSmilesdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------

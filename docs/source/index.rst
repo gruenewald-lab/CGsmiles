@@ -7,47 +7,26 @@ Table of Contents
    :maxdepth: 2
    :caption: Getting Started
 
-   gettingstarted/introduction
    gettingstarted/installation
-   gettingstarted/quickstart
-   gettingstarted/tutorial
-   gettingstarted/examples
+   gettingstarted/syntax_examples
+   gettingstarted/api_examples
 
 .. toctree::
    :maxdepth: 2
    :caption: Syntax Rules
 
-   topics/
-   topics/optimizing
-   topics/datainputs
+   syntax/introduction
+   syntax/operators
+   syntax/fragments
+   syntax/bonding
 
 .. toctree::
    :maxdepth: 2
    :caption: API
 
-   modules/box
-   modules/cluster
-   modules/data
-   modules/density
-   modules/diffraction
-   modules/environment
-   modules/interface
-   modules/locality
-   modules/msd
-   modules/order
-   modules/parallel
-   modules/pmft
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Reference
-
-   reference/development
-   reference/citing
-   reference/zreferences
-   reference/license
-   reference/credits
-
+   api/cgsmiles.read_fragments
+   api/cgsmiles.resolve
+   api/cgsmiles.graph_utils
 
 Indices and tables
 ==================
