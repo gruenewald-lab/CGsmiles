@@ -72,10 +72,10 @@ into networkx graphs that can be used for further operations.
    import cgsmiles
 
    # Express 5 units of Polystyrene in CGSmiles
-   cgsmiles = "{[#PS]|5}.{#PU=[$]CC[$](c1ccccc1)}"
+   cgsmiles_str = "{[#PS]|5}.{#PS=[$]CC[$](c1ccccc1)}"
 
    # Resolve molecule into networkx graphs
-   res_graph, mol_graph = cgsmiles.MoleculeResolver(cgsmiles).resolve()
+   res_graph, mol_graph = cgsmiles.MoleculeResolver(cgsmiles_str).resolve()
 
    # Draw molecule at different resolutions
    for g in [res_graph, mol_graph]:
@@ -83,5 +83,5 @@ into networkx graphs that can be used for further operations.
       plt.show()
 
    # Get fragment corresponding to first residue
-   fragment_1 = res_graph.node[0]['graph']
+   fragment_1 = res_graph.nodes[0]['graph']
 
