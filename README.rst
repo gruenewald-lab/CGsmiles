@@ -85,6 +85,3 @@ into networkx graphs that can be used for further operations.
    # Get fragment corresponding to first residue
    fragment_1 = res_graph.node[0]['graph']
 
-
-Support and Contribution
-========================
