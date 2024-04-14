@@ -1,0 +1,476 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
+
+    <!-- Generated with Sphinx 7.2.6 and Furo 2024.01.29 -->
+        <title>cgsmiles.resolve - CGSmiles 0.0.1.dev10 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=135e06be" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=36a5483c" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">CGSmiles 0.0.1.dev10 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <h1>Source code for cgsmiles.resolve</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">pysmiles</span>
+<span class="kn">from</span> <span class="nn">.read_cgsmiles</span> <span class="kn">import</span> <span class="n">read_cgsmiles</span>
+<span class="kn">from</span> <span class="nn">.read_fragments</span> <span class="kn">import</span> <span class="n">read_fragments</span>
+<span class="kn">from</span> <span class="nn">.graph_utils</span> <span class="kn">import</span> <span class="n">merge_graphs</span><span class="p">,</span> <span class="n">sort_nodes</span><span class="p">,</span> <span class="n">annotate_fragments</span>
+
+<span class="n">VALENCES</span> <span class="o">=</span> <span class="n">pysmiles</span><span class="o">.</span><span class="n">smiles_helper</span><span class="o">.</span><span class="n">VALENCES</span>
+<span class="n">VALENCES</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;H&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)})</span>
+
+<div class="viewcode-block" id="compatible">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.compatible">[docs]</a>
+<span class="k">def</span> <span class="nf">compatible</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check bonding descriptor compatibility according</span>
+<span class="sd">    to the BigSmiles syntax conventions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    left: str</span>
+<span class="sd">    right: str</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">left</span> <span class="o">==</span> <span class="n">right</span> <span class="ow">and</span> <span class="n">left</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s1">&#39;&gt; &lt;&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">l</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">left</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">right</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">left</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">right</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="generate_edge">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.generate_edge">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_edge</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">bond_attribute</span><span class="o">=</span><span class="s2">&quot;bonding&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a source and a target graph, which have bonding</span>
+<span class="sd">    descriptors stored as node attributes, find a pair of</span>
+<span class="sd">    matching descriptors and return the respective nodes.</span>
+<span class="sd">    The function also returns the bonding descriptors. If</span>
+<span class="sd">    no bonding descriptor is found an instance of LookupError</span>
+<span class="sd">    is raised.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source: :class:`nx.Graph`</span>
+<span class="sd">    target: :class:`nx.Graph`</span>
+<span class="sd">    bond_attribute: `abc.hashable`</span>
+<span class="sd">        under which attribute are the bonding descriptors</span>
+<span class="sd">        stored.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ((abc.hashable, abc.hashable), (str, str))</span>
+<span class="sd">        the nodes as well as bonding descriptors</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    LookupError</span>
+<span class="sd">        if no match is found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source_nodes</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">bond_attribute</span><span class="p">)</span>
+    <span class="n">target_nodes</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">bond_attribute</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">source_node</span> <span class="ow">in</span> <span class="n">source_nodes</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">target_node</span> <span class="ow">in</span> <span class="n">target_nodes</span><span class="p">:</span>
+            <span class="n">bond_sources</span> <span class="o">=</span> <span class="n">source_nodes</span><span class="p">[</span><span class="n">source_node</span><span class="p">]</span>
+            <span class="n">bond_targets</span> <span class="o">=</span> <span class="n">target_nodes</span><span class="p">[</span><span class="n">target_node</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">bond_source</span> <span class="ow">in</span> <span class="n">bond_sources</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">bond_target</span> <span class="ow">in</span> <span class="n">bond_targets</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">compatible</span><span class="p">(</span><span class="n">bond_source</span><span class="p">,</span> <span class="n">bond_target</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="p">((</span><span class="n">source_node</span><span class="p">,</span> <span class="n">target_node</span><span class="p">),</span> <span class="p">(</span><span class="n">bond_source</span><span class="p">,</span> <span class="n">bond_target</span><span class="p">))</span>
+    <span class="k">raise</span> <span class="ne">LookupError</span></div>
+
+
+<div class="viewcode-block" id="MoleculeResolver">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.MoleculeResolver">[docs]</a>
+<span class="k">class</span> <span class="nc">MoleculeResolver</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resolve the molecule described by a CGBigSmile</span>
+<span class="sd">    string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">pattern</span><span class="p">,</span>
+                 <span class="n">meta_graph</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">fragment_dict</span><span class="o">=</span><span class="p">{},</span>
+                 <span class="n">all_atom</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+        <span class="c1"># let&#39;s start by setting some attributes</span>
+        <span class="c1"># this is the fragment string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fragment_str</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># this is the cgsmiles string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cgsmiles_str</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># this is the dict with the fragments</span>
+        <span class="c1"># either provided and/or extracted</span>
+        <span class="c1"># from the fragment string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fragment_dict</span> <span class="o">=</span> <span class="n">fragment_dict</span>
+        <span class="c1"># this is the lower resolution graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span> <span class="o">=</span> <span class="n">meta_graph</span>
+        <span class="c1"># this is the higher resolution graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+        <span class="c1"># this attribute stores if the fragments</span>
+        <span class="c1"># follow open_smiles syntax or cg_smiles</span>
+        <span class="c1"># syntax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_atom</span> <span class="o">=</span> <span class="n">all_atom</span>
+
+        <span class="c1"># here we figure out what we are dealing with</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{[^\}]+\}&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="p">)</span>
+        <span class="c1"># case 1)</span>
+        <span class="c1"># a meta_graph is provided which means we only</span>
+        <span class="c1"># have fragments to deal with</span>
+        <span class="k">if</span> <span class="n">meta_graph</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;When providing a meta_graph, the pattern can only&quot;</span>
+                       <span class="s2">&quot;contain fragment.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fragment_string</span> <span class="o">=</span> <span class="n">elements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># case 2) we have a meta graph only described</span>
+        <span class="c1"># and the fragment come from elsewhere</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">fragment_dict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cgsmiles_string</span> <span class="o">=</span> <span class="n">elements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># case 3) a string containing both fragments and</span>
+        <span class="c1"># the meta sequence is provided</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;When providing a meta_graph, the pattern can only&quot;</span>
+                       <span class="s2">&quot;contain fragment.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cgsmiles_string</span> <span class="o">=</span> <span class="n">elements</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fragment_string</span> <span class="o">=</span> <span class="n">elements</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<div class="viewcode-block" id="MoleculeResolver.resolve_disconnected_molecule">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.MoleculeResolver.resolve_disconnected_molecule">[docs]</a>
+    <span class="k">def</span> <span class="nf">resolve_disconnected_molecule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">meta_node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="n">fragname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">meta_node</span><span class="p">][</span><span class="s1">&#39;fragname&#39;</span><span class="p">]</span>
+            <span class="n">fragment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fragment_dict</span><span class="p">[</span><span class="n">fragname</span><span class="p">]</span>
+            <span class="n">correspondence</span> <span class="o">=</span> <span class="n">merge_graphs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="p">,</span> <span class="n">fragment</span><span class="p">)</span>
+
+            <span class="n">graph_frag</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">fragment</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                <span class="n">new_node</span> <span class="o">=</span> <span class="n">correspondence</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
+                <span class="n">attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">new_node</span><span class="p">]</span>
+                <span class="n">graph_frag</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">correspondence</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="o">**</span><span class="n">attrs</span><span class="p">)</span>
+                <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">graph_frag</span><span class="p">,</span> <span class="n">meta_node</span><span class="p">,</span> <span class="s1">&#39;fragid&#39;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">fragment</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
+                <span class="n">new_a</span> <span class="o">=</span> <span class="n">correspondence</span><span class="p">[</span><span class="n">a</span><span class="p">]</span>
+                <span class="n">new_b</span> <span class="o">=</span> <span class="n">correspondence</span><span class="p">[</span><span class="n">b</span><span class="p">]</span>
+                <span class="n">graph_frag</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">new_a</span><span class="p">,</span>
+                                    <span class="n">new_b</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">meta_node</span><span class="p">][</span><span class="s1">&#39;graph&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">graph_frag</span></div>
+
+
+
+<div class="viewcode-block" id="MoleculeResolver.edges_from_bonding_descrpt">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.MoleculeResolver.edges_from_bonding_descrpt">[docs]</a>
+    <span class="k">def</span> <span class="nf">edges_from_bonding_descrpt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Make edges according to the bonding descriptors stored</span>
+<span class="sd">        in the node attributes of meta_molecule residue graph.</span>
+<span class="sd">        If a bonding descriptor is consumed it is removed from the list,</span>
+<span class="sd">        however, the meta_molecule edge gets an attribute with the</span>
+<span class="sd">        bonding descriptors that formed the edge. Later unconsumed</span>
+<span class="sd">        bonding descriptors are replaced by hydrogen atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">prev_node</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nx</span><span class="o">.</span><span class="n">dfs_edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="p">):</span>
+            <span class="n">prev_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">prev_node</span><span class="p">][</span><span class="s1">&#39;graph&#39;</span><span class="p">]</span>
+            <span class="n">node_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;graph&#39;</span><span class="p">]</span>
+            <span class="n">edge</span><span class="p">,</span> <span class="n">bonding</span> <span class="o">=</span> <span class="n">generate_edge</span><span class="p">(</span><span class="n">prev_graph</span><span class="p">,</span>
+                                          <span class="n">node_graph</span><span class="p">)</span>
+
+            <span class="c1">#To DO - clean copying of bond-list attribute</span>
+            <span class="c1"># this is a bit of a workaround because at this stage the</span>
+            <span class="c1"># bonding list is actually shared between all residues of</span>
+            <span class="c1"># of the same type; so we first make a copy then we replace</span>
+            <span class="c1"># the list sans used bonding descriptor</span>
+            <span class="n">prev_bond_list</span> <span class="o">=</span> <span class="n">prev_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="s1">&#39;bonding&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">prev_bond_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">bonding</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">prev_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="s1">&#39;bonding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prev_bond_list</span>
+            <span class="n">node_bond_list</span> <span class="o">=</span> <span class="n">node_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="s1">&#39;bonding&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">node_bond_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">bonding</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">node_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="s1">&#39;bonding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_bond_list</span>
+            <span class="n">order</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;\d+\.\d+&quot;</span><span class="p">,</span> <span class="n">bonding</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="c1"># bonding descriptors are assumed to have bonding order 1</span>
+            <span class="c1"># unless they are specifically annotated</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">order</span><span class="p">:</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bonding</span><span class="o">=</span><span class="n">bonding</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MoleculeResolver.replace_unconsumed_bonding_descrpt">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.MoleculeResolver.replace_unconsumed_bonding_descrpt">[docs]</a>
+    <span class="k">def</span> <span class="nf">replace_unconsumed_bonding_descrpt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        We allow multiple bonding descriptors per atom, which</span>
+<span class="sd">        however, are not always consumed. In this case the left</span>
+<span class="sd">        over bonding descriptors are replaced by hydrogen atoms.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">meta_node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">meta_node</span><span class="p">][</span><span class="s1">&#39;graph&#39;</span><span class="p">]</span>
+            <span class="n">bonding</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="s2">&quot;bonding&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">bondings</span> <span class="ow">in</span> <span class="n">bonding</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">bondings</span><span class="p">:</span>
+                    <span class="n">element</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;element&#39;</span><span class="p">]</span>
+                    <span class="n">bonds</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">edges</span><span class="p">[(</span><span class="n">node</span><span class="p">,</span> <span class="n">neigh</span><span class="p">)][</span><span class="s1">&#39;order&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">neigh</span> <span class="ow">in</span>\
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">node</span><span class="p">)]))</span>
+                    <span class="n">hcount</span> <span class="o">=</span> <span class="n">VALENCES</span><span class="p">[</span><span class="n">element</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">bonds</span>
+                    <span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">attr</span><span class="p">:</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fragname&#39;</span><span class="p">,</span> <span class="s1">&#39;fragid&#39;</span><span class="p">]}</span>
+                    <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;element&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;H&#39;</span>
+                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">hcount</span><span class="p">):</span>
+                        <span class="n">new_node</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                        <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">new_node</span><span class="p">)</span>
+                        <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;atomname&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;H&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">new_node</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">new_node</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">new_node</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="c1"># now we want to sort the atoms</span>
+        <span class="n">sort_nodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="p">)</span>
+        <span class="c1"># and redo the meta molecule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span> <span class="o">=</span> <span class="n">annotate_fragments</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MoleculeResolver.resolve">
+<a class="viewcode-back" href="../../api/cgsmiles.resolve.html#cgsmiles.resolve.MoleculeResolver.resolve">[docs]</a>
+    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cgsmiles_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span> <span class="o">=</span> <span class="n">read_cgsmiles</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cgsmiles_string</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fragment_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fragment_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">read_fragments</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fragment_string</span><span class="p">,</span>
+                                                     <span class="n">all_atom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">all_atom</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolve_disconnected_molecule</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edges_from_bonding_descrpt</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_atom</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replace_unconsumed_bonding_descrpt</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecule</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Dr. F Gruenewald
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=54809dcc"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=32e29ea5"></script>
+    </body>
+</html>
