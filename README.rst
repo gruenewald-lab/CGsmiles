@@ -1,6 +1,6 @@
-=====
+================================
 Coarse-Grained SMILES (CGsmiles)
-=====
+================================
 
 Overview
 ========
@@ -67,6 +67,7 @@ into networkx graphs that can be used for further operations.
 
 .. code:: python
 
+   import matplotlib.pyplot as plt
    import networkx as nx
    import cgsmiles
 
