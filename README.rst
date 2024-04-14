@@ -34,7 +34,7 @@ Related Tools
 Generate topology files and coordinates for molecular dynamics (MD)
 from CGSmiles notation.
 
-- `fast_forward <https://github.com/fgrunewald/fast_forward>`:
+- `fast_forward <https://github.com/fgrunewald/fast_forward>`__:
 Forward map trajectories from a high to lower resolution using
 CGSmiles.
 
