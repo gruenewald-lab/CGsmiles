@@ -15,10 +15,7 @@ Table of Contents
    :maxdepth: 2
    :caption: Syntax Rules
 
-   syntax/introduction
-   syntax/operators
-   syntax/fragments
-   syntax/bonding
+   syntax/basic_graph_description
 
 .. toctree::
    :maxdepth: 2

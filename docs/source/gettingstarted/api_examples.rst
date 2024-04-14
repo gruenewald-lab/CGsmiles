@@ -1,5 +1,5 @@
-Tutorial
-========
+API Examples
+============
 
 The following tutorials illustrate how to use read,
 draw, and manipulate CGSmiles using the package API.

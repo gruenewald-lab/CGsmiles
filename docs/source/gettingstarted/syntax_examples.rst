@@ -1,5 +1,5 @@
-Examples
-========
+Syntax Examples
+===============
 
 This page collects examples of CGSmiles string of increasing
 complexity. They are seperated into the following categories:
