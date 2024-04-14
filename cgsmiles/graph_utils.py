@@ -97,7 +97,6 @@ def annotate_fragments(meta_graph, molecule):
 
     fragid_to_node = defaultdict(list)
     for node, fragids in node_to_fragids.items():
-        print(fragids)
         for fragid in fragids:
             fragid_to_node[fragid].append(node)
 

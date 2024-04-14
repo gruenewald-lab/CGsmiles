@@ -78,8 +78,8 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
                          ('PEO', 'C O C H H H H'), ('OHter', 'O H')],
                         [(0, 1), (0, 2), (2, 3), (2, 5), (2, 10), (3, 4),
-                         (4, 6), (4, 7), (4, 17), (8, 9), (8, 11), (8, 14),
-                         (8, 18), (9, 10), (10, 12), (10, 13), (14, 15)]),
+                         (4, 6), (4, 7), (4, 16), (8, 9), (8, 11), (8, 14),
+                         (8, 17), (9, 10), (10, 12), (10, 13), (14, 15)]),
                         # simple branched sequence
                         ("{[#Hter][#PE]([#PEO][#Hter])[#PE]([#PEO][#Hter])[#Hter]}.{#Hter=[$]H,#PE=[$]CC[$][$],#PEO=[$]COC[$]}",
                         [('Hter', 'H'), ('PE', 'C C H H H'), ('PEO', 'C O C H H H H'), ('Hter', 'H'),
@@ -115,7 +115,16 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [('A', 'O C H H H'), ('B', 'C C H H H H H'),],
                         [(0, 1), (0, 2), (1, 3), (1, 4), (1, 6), (6, 9), (6, 10),
                          (6, 11),]),
-
+                        # smiple squash operator; unconsumed operators
+                        ("{[#A][#B]}.{#A=OC[!],#B=[$][!]CC}",
+                        #       0 1 2 3 4           1 5 3 4 6 7 8
+                        #       0 1 2 3 4           5 6 7 11 8 9 10
+                        # note that the unconsumed $ triggers rebuild of a hydrogen
+                        # which however is appended to the end of the molecule so
+                        # making it 11
+                        [('A', 'O C H H H'), ('B', 'C C H H H H H'),],
+                        [(0, 1), (0, 2), (1, 3), (1, 4), (1, 6), (6, 8), (6, 9),
+                         (6, 10),]),
 ))
 def test_resolve_molecule(smile, ref_nodes, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()

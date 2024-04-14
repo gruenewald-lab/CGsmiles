@@ -191,7 +191,6 @@ class MoleculeResolver:
         bondings = nx.get_edge_attributes(self.molecule, 'bonding')
         squashed = False
         for edge, bonding in bondings.items():
-            print(edge)
             # we have a squash operator
             if bonding[0].startswith('!'):
                 # find all hydrogens to remove
@@ -248,12 +247,13 @@ class MoleculeResolver:
                     attrs = {attr: graph.nodes[node][attr] for attr in ['fragname', 'fragid']}
                     attrs['element'] = 'H'
                     for _ in range(0, hcount):
-                        new_node = len(self.molecule.nodes) + 1
+                        new_node = len(self.molecule.nodes) #+ 1
                         graph.add_edge(node, new_node)
                         attrs['atomname'] = "H" + str(len(graph.nodes)-1)
                         graph.nodes[new_node].update(attrs)
                         self.molecule.add_edge(node, new_node, order=1)
                         self.molecule.nodes[new_node].update(attrs)
+
         # now we want to sort the atoms
         sort_nodes(self.molecule)
         # and redo the meta molecule
@@ -269,8 +269,8 @@ class MoleculeResolver:
 
         self.resolve_disconnected_molecule()
         self.edges_from_bonding_descrpt()
-        self.squash_atoms()
         if self.all_atom:
             self.replace_unconsumed_bonding_descrpt()
 
+        self.squash_atoms()
         return self.meta_graph, self.molecule
