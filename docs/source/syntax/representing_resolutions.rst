@@ -34,3 +34,33 @@ In CGSmiles, hydrogens are often omitted for simplicity and added implicitly if 
 
 - **Implicit Hydrogens:** If bonding descriptors remain unconsumed, they are assumed to be replaced by hydrogen atoms in SMILES or removed in graph descriptions.
 
+Additional Bonding Descriptor
+-----------------------------
+The "squash" descriptor, represented as `[!]`, is crucial for describing overlapping mappings where two lower-resolution nodes in the graph share an atom. This descriptor indicates that atoms connected by `[!]` are identical and will appear only once in the final full-resolution graph, despite being part of different fragments.
+
+- **Usage:** The squash descriptor is used when the same atom is part of multiple fragments, ensuring that it is represented only once in the combined structure.
+
+.. code-block:: none
+
+   Example: If two fragments represented by nodes A and B both include the same atom X, the notation might look like "{[#A][#B]}.{#A=[!]X, #B=[!]X}".
+
+Updated Bonding Descriptors Lookup Table
+----------------------------------------
+This table now includes the squash descriptor, summarizing all the bonding descriptors used in CGSmiles:
+
++----------------+---------------------------+--------------------------------------------------------------------+
+| Descriptor     | Symbol                    | Description                                                        |
++================+===========================+====================================================================+
+| Indiscriminate | `$`                       | Connects to any matching `$` descriptor.                           |
++----------------+---------------------------+--------------------------------------------------------------------+
+| Forward bond   | `>`                       | Must connect with a bonding descriptor of type `<`.                |
++----------------+---------------------------+--------------------------------------------------------------------+
+| Backward bond  | `<`                       | Designed to connect with a descriptor of type `>`.                 |
++----------------+---------------------------+--------------------------------------------------------------------+
+| Alphanumeric   | `[descriptor]alphanumeric`| Adds specificity to descriptors, requiring exact matches.          |
++----------------+---------------------------+--------------------------------------------------------------------+
+| Squash         | `[!]`                     | Indicates overlapping mappings; connected atoms are identical.     |
++----------------+---------------------------+--------------------------------------------------------------------+
+
+This extended documentation now provides a comprehensive overview of all types of bonding descriptors used in CGSmiles, facilitating precise and accurate molecular modeling.
+
