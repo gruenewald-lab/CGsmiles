@@ -16,6 +16,7 @@ Table of Contents
    :caption: Syntax Rules
 
    syntax/basic_graph_description
+   syntax/representing_resolutions
 
 .. toctree::
    :maxdepth: 2

@@ -34,18 +34,3 @@ In CGSmiles, hydrogens are often omitted for simplicity and added implicitly if 
 
 - **Implicit Hydrogens:** If bonding descriptors remain unconsumed, they are assumed to be replaced by hydrogen atoms in SMILES or removed in graph descriptions.
 
-Bonding Descriptors Lookup Table
---------------------------------
-This table summarizes the bonding descriptors used in CGSmiles to denote possible interactions between atoms in different fragments:
-
-+----------------+---------------------------+--------------------------------------------------------------------+
-| Descriptor     | Symbol                    | Description                                                        |
-+================+===========================+====================================================================+
-| Indiscriminate | `$`                       | Connects to any matching `$` descriptor.                           |
-+----------------+---------------------------+--------------------------------------------------------------------+
-| Forward bond   | `>`                       | Must connect with a bonding descriptor of type `<`.                |
-+----------------+---------------------------+--------------------------------------------------------------------+
-| Backward bond  | `<`                       | Designed to connect with a descriptor of type `>`.                 |
-+----------------+---------------------------+--------------------------------------------------------------------+
-| Alphanumeric   | `[descriptor]alphanumeric`| Adds specificity to descriptors, requiring exact matches.          |
-+----------------+---------------------------+--------------------------------------------------------------------+
