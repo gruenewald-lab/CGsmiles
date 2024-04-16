@@ -67,39 +67,6 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
     return smile, bonding_descrpt
 
-def _rebuild_h_atoms(mol_graph):
-    # special hack around to fix
-    # pysmiles bug for a single
-    # atom molecule; we assume that the
-    # hcount is just wrong and set it to
-    # the valance number minus bonds minus
-    # bonding connectors
-    if len(mol_graph.nodes) == 1:
-        ele = mol_graph.nodes[0]['element']
-        # for N and P we assume the regular valency
-        hcount = pysmiles.smiles_helper.VALENCES[ele][0]
-        if mol_graph.nodes[0].get('bonding', False):
-            hcount -= 1
-        mol_graph.nodes[0]['hcount'] = hcount
-    else:
-        for node in mol_graph.nodes:
-            if mol_graph.nodes[node].get('bonding', False):
-                # get the degree
-                ele = mol_graph.nodes[node]['element']
-                # hcount is the valance minus the degree minus
-                # the number of bonding descriptors
-                bonds = round(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
-                                   mol_graph.neighbors(node)]))
-                charge = mol_graph.nodes[node].get('charge', 0)
-                hcount = pysmiles.smiles_helper.VALENCES[ele][0] -\
-                         bonds -\
-                         len(mol_graph.nodes[node]['bonding']) +\
-                         charge
-                mol_graph.nodes[node]['hcount'] = hcount
-
-    pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
-    return mol_graph
-
 def fragment_iter(fragment_str, all_atom=True):
     """
     Iterates over fragments defined in a CGBigSmile string.
@@ -137,8 +104,6 @@ def fragment_iter(fragment_str, all_atom=True):
         elif all_atom:
             mol_graph = pysmiles.read_smiles(smile)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-            # we need to rebuild hydrogen atoms now
-            _rebuild_h_atoms(mol_graph)
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
