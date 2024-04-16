@@ -1,4 +1,5 @@
 import re
+import copy
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
@@ -127,6 +128,10 @@ class MoleculeResolver:
 
     def resolve_disconnected_molecule(self):
         """
+        Given a connected graph of nodes with associated fragment graphs
+        generate a disconnected graph of the fragments and annotate
+        each fragment graph to the node in the higher resolution
+        graph.
         """
         for meta_node in self.meta_graph.nodes:
             fragname = self.meta_graph.nodes[meta_node]['fragname']
@@ -137,14 +142,14 @@ class MoleculeResolver:
 
             for node in fragment.nodes:
                 new_node = correspondence[node]
-                attrs = self.molecule.nodes[new_node]
+                attrs = copy.deepcopy(self.molecule.nodes[new_node])
                 graph_frag.add_node(correspondence[node], **attrs)
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
                 new_b = correspondence[b]
-                attrs = fragment.edges[(a, b)]
+                attrs = copy.deepcopy(fragment.edges[(a, b)])
                 graph_frag.add_edge(new_a,
                                     new_b,
                                     **attrs)
@@ -166,20 +171,13 @@ class MoleculeResolver:
             edge, bonding = generate_edge(prev_graph,
                                           node_graph)
 
-            #To DO - clean copying of bond-list attribute
-            # this is a bit of a workaround because at this stage the
-            # bonding list is actually shared between all residues of
-            # of the same type; so we first make a copy then we replace
-            # the list sans used bonding descriptor
-            prev_bond_list = prev_graph.nodes[edge[0]]['bonding'].copy()
-            prev_bond_list.remove(bonding[0])
-            prev_graph.nodes[edge[0]]['bonding'] = prev_bond_list
-            node_bond_list = node_graph.nodes[edge[1]]['bonding'].copy()
-            node_bond_list.remove(bonding[1])
-            node_graph.nodes[edge[1]]['bonding'] = node_bond_list
-            order = re.findall("\d+\.\d+", bonding[0])
+            # remove used bonding descriptors
+            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+
             # bonding descriptors are assumed to have bonding order 1
             # unless they are specifically annotated
+            order = re.findall("\d+\.\d+", bonding[0])
             if not order:
                 order = 1
             self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
@@ -216,16 +214,20 @@ class MoleculeResolver:
             self.fragment_dict.update(read_fragments(self.fragment_string,
                                                      all_atom=self.all_atom))
 
+        # add disconnected fragments to graph
         self.resolve_disconnected_molecule()
 
+        # connect valid bonding descriptors
         self.edges_from_bonding_descrpt()
 
+        # contract atoms with squash descriptors
         self.squash_atoms()
 
+        # rebuild hydrogen in all-atom case
         if self.all_atom:
             rebuild_h_atoms(self.molecule)
 
-        # now we want to sort the atoms
+        # sort the atoms
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
         # and redo the meta molecule
