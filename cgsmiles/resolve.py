@@ -194,34 +194,18 @@ class MoleculeResolver:
         bondings = nx.get_edge_attributes(self.molecule, 'bonding')
         squashed = False
         for edge, bonding in bondings.items():
-            # we have a squash operator
-            if bonding[0].startswith('!'):
-                node_to_keep, node_to_remove = edge
-                # find all connections of discarded node
-                # so we can add them to the remaining node
-                new_edge_nodes = []
-                for neigh_node in self.molecule.neighbors(edge[1]):
-                    if neigh_node != edge[0]:
-                        new_edge_nodes.append(neigh_node)
+            if not bonding[0].startswith('!'):
+                continue
+            # let's squash two nodes
+            node_to_keep, node_to_remove = edge
+            self.molecule = nx.contracted_nodes(self.molecule,
+                                                node_to_keep,
+                                                node_to_remove,
+                                                self_loops=False)
 
-                # add new edges between the old and new node
-                for node in new_edge_nodes:
-                    order = re.findall("\d+\.\d+", bonding[0])
-
-                    if not order:
-                        order = 1
-
-                    self.molecule.add_edge(node_to_keep,
-                                           node,
-                                           order=order)
-
-                # add the fragment id of the sequashed node
-                self.molecule.nodes[node_to_keep]['fragid'] +=\
-                self.molecule.nodes[node_to_remove]['fragid']
-
-                # remove the edge and node
-                self.molecule.remove_edge(*edge)
-                self.molecule.remove_node(node_to_remove)
+            # add the fragment id of the sequashed node
+            self.molecule.nodes[node_to_keep]['fragid'] +=\
+            self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
 
     def resolve(self):
 
