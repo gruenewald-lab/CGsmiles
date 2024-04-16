@@ -42,13 +42,14 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
     assert new_btypes == btypes
 
 
-@pytest.mark.parametrize('smile, ref_nodes, ref_edges',(
+@pytest.mark.parametrize('smile, ref_frags, elements, ref_edges',(
                         # smiple linear seqeunce
                         ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]COC[$],#OHter=[$][O]}",
                         #           0 1             2 3 4 5 6 7 8
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
                         #        9 10 11 12 13 14 15         16 17
                          ('PEO', 'C O C H H H H'), ('OHter', 'O H')],
+                        'O H C O C H H H H C O C H H H H O H',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
                          (11, 14), (11, 15), (11, 16), (16, 17)]),
@@ -58,6 +59,7 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
                         #        9 10 11 12 13 14 15         16 17
                          ('PEO', 'C O C H H H H'), ('OHter', 'O H')],
+                        'O H C O C H H H H C O C H H H H O H',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
                          (11, 14), (11, 15), (11, 16), (16, 17)]),
@@ -67,23 +69,27 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [('OHter', 'O Na'), ('PEO', 'C O C H H H H'),
                         #        9 10 11 12 13 14 15         16 17
                          ('PEO', 'C O C H H H H'), ('OHter', 'O Na')],
+                        'O Na C O C H H H H C O C H H H H O Na',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
                          (11, 14), (11, 15), (11, 16), (16, 17)]),
-
                         # uncomsumed bonding IDs; note that this is not the same
                         # molecule as previous test case. Here one of the OH branches
                         # and replaces an CH2 group with CH-OH
-                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[>][$1]COC[<],#OHter=[$1][O]}",
+                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[>][$1A]COC[<],#OHter=[$1A][O]}",
+                        #           0 1             2 3 4 5 6 7 8
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
+                        #       9 10 11 12 13 14 15           16 17
                          ('PEO', 'C O C H H H H'), ('OHter', 'O H')],
-                        [(0, 1), (0, 2), (2, 3), (2, 5), (2, 10), (3, 4),
-                         (4, 6), (4, 7), (4, 16), (8, 9), (8, 11), (8, 14),
-                         (8, 17), (9, 10), (10, 12), (10, 13), (14, 15)]),
+                        'O H C O C H H H H C O C H H H H O H',
+                        [(0, 1), (0, 2), (2, 3), (2, 5), (2, 9), (3, 4),
+                         (4, 6), (4, 7), (4, 8), (9, 10), (9, 12), (9, 13),
+                         (10, 11), (11, 15), (11, 14), (11, 16), (16, 17)]),
                         # simple branched sequence
                         ("{[#Hter][#PE]([#PEO][#Hter])[#PE]([#PEO][#Hter])[#Hter]}.{#Hter=[$]H,#PE=[$]CC[$][$],#PEO=[$]COC[$]}",
                         [('Hter', 'H'), ('PE', 'C C H H H'), ('PEO', 'C O C H H H H'), ('Hter', 'H'),
                          ('PE', 'C C H H H'), ('PEO', 'C O C H H H H'), ('Hter', 'H'), ('Hter', 'H')],
+                        'H C C H H H C O C H H H H H C C H H H C O C H H H H H H',
                         [(0, 1), (1, 2), (1, 3), (1, 4), (2, 5), (2, 6), (2, 14), (6, 7), (6, 9), (6, 10), (7, 8),
                          (8, 11), (8, 12), (8, 13), (14, 15), (14, 16), (14, 17), (15, 18), (15, 19), (15, 27),
                          (19, 20), (19, 22), (19, 23), (20, 21), (21, 24), (21, 25), (21, 26)]),
@@ -93,6 +99,7 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         ("{[#Hter][#PS]|2[#Hter]}.{#PS=[$]CC[$]c1ccccc1,#Hter=[$]H}",
                         [('Hter', 'H'), ('PS', 'C C C C C C C C H H H H H H H H'),
                          ('PS', 'C C C C C C C C H H H H H H H H'), ('Hter', 'H')],
+                        'H C C C C C C C C H H H H H H H H C C C C C C C C H H H H H H H H H',
                         [(0, 1), (1, 2), (1, 9), (1, 10), (2, 3), (2, 11), (2, 17),
                          (3, 4), (3, 8), (4, 5), (4, 12), (5, 6), (5, 13), (6, 7),
                          (6, 14), (7, 8), (7, 15), (8, 16), (17, 18), (17, 25),
@@ -111,10 +118,16 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         # smiple squash operator; no unconsumed operators
                         ("{[#A][#B]}.{#A=OC[!],#B=[!]CC}",
                         #       0 1 2 3 4           1 5 3 4 6 7 8
-                        #       0 1 2 3 4           5 6 7 8 9 10 11
-                        [('A', 'O C H H H'), ('B', 'C C H H H H H'),],
-                        [(0, 1), (0, 2), (1, 3), (1, 4), (1, 6), (6, 9), (6, 10),
-                         (6, 11),]),
+                        # note that the order here is O H then C H H
+                        # because the C H H is shared between fragments
+                        # so that sorting by fragment id yields this order
+                        # the same goes for the second fragment but here
+                        # the CH2 goes in the front because it also belongs
+                        # to the fragment with lower fragid
+                        [('A', 'O H C H H'), ('B', 'C H H C H H H'),],
+                        'O H C H H C H H H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4), (2, 5),
+                         (5, 6), (5, 7), (5, 8)]),
                         # smiple squash operator; unconsumed operators
                         ("{[#A][#B]}.{#A=OC[!],#B=[$][!]CC}",
                         #       0 1 2 3 4           1 5 3 4 6 7 8
@@ -122,19 +135,31 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         # note that the unconsumed $ triggers rebuild of a hydrogen
                         # which however is appended to the end of the molecule so
                         # making it 11
-                        [('A', 'O C H H H'), ('B', 'C C H H H H H'),],
-                        [(0, 1), (0, 2), (1, 3), (1, 4), (1, 6), (6, 8), (6, 9),
-                         (6, 10),]),
+                        [('A', 'O H C H H'), ('B', 'C H H C H H H'),],
+                        'O H C H H C H H H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4), (2, 5),
+                         (5, 6), (5, 7), (5, 8)]),
 ))
-def test_resolve_molecule(smile, ref_nodes, ref_edges):
+def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()
-#    nx.draw_networkx(meta_mol.molecule, with_labels=True, labels=nx.get_node_attributes(meta_mol.molecule, 'element'))
-#    plt.show()
-    for node, ref in zip(meta_mol.nodes, ref_nodes):
+
+    # loop and compare fragments first
+    for node, ref in zip(meta_mol.nodes, ref_frags):
         assert meta_mol.nodes[node]['fragname'] ==  ref[0]
         block_graph = meta_mol.nodes[node]['graph']
-        elements = nx.get_node_attributes(block_graph, 'element') #.values())
-        sorted_elements =  [elements[key] for key in sorted(elements)]
+        target_elements = nx.get_node_attributes(block_graph, 'element')
+        sorted_elements =  [target_elements[key] for key in sorted(target_elements)]
         assert sorted_elements == ref[1].split()
-    print(molecule.edges)
-    assert sorted(molecule.edges) == sorted(ref_edges)
+
+    # make the full scale reference graph
+    ref_graph = nx.Graph()
+    ref_graph.add_edges_from(ref_edges)
+    nx.set_node_attributes(ref_graph,
+                           dict(zip(sorted(ref_graph.nodes), elements.split())),
+                           'element')
+
+    def _ele_match(n1, n2):
+        return n1["element"] == n2["element"]
+
+    # check that reference graph and molecule are isomorphic
+    assert nx.is_isomorphic(ref_graph, molecule, node_match=_ele_match)
