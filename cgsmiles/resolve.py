@@ -3,10 +3,8 @@ import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
-from .graph_utils import merge_graphs, sort_nodes, annotate_fragments
-
-VALENCES = pysmiles.smiles_helper.VALENCES
-VALENCES.update({"H": (1,)})
+from .graph_utils import merge_graphs, sort_nodes_by_attr, annotate_fragments
+from .pysmiles_utils import rebuild_h_atoms
 
 def compatible(left, right):
     """
@@ -146,8 +144,10 @@ class MoleculeResolver:
             for a, b in fragment.edges:
                 new_a = correspondence[a]
                 new_b = correspondence[b]
+                attrs = fragment.edges[(a, b)]
                 graph_frag.add_edge(new_a,
-                                    new_b)
+                                    new_b,
+                                    **attrs)
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
@@ -210,7 +210,10 @@ class MoleculeResolver:
 
                 # add edges
                 for node in new_edge_nodes:
-                    self.molecule.add_edge(edge[0], node)
+                    order = re.findall("\d+\.\d+", bonding[0])
+                    if not order:
+                        order = 1
+                    self.molecule.add_edge(edge[0], node, order=order)
 
                 # find the reference hydrogen atoms
                 nodes_to_keep = [edge[0]]
@@ -223,43 +226,9 @@ class MoleculeResolver:
                     other_fragid = self.molecule.nodes[node]['fragid']
                     self.molecule.remove_node(node)
                     self.molecule.nodes[ref_node]['fragid'] += other_fragid
-                squashed = True
-
-        if squashed:
-            self.meta_graph = annotate_fragments(self.meta_graph,
-                                                 self.molecule)
-
-    def replace_unconsumed_bonding_descrpt(self):
-        """
-        We allow multiple bonding descriptors per atom, which
-        however, are not always consumed. In this case the left
-        over bonding descriptors are replaced by hydrogen atoms.
-        """
-        for meta_node in self.meta_graph.nodes:
-            graph = self.meta_graph.nodes[meta_node]['graph']
-            bonding = nx.get_node_attributes(graph, "bonding")
-            for node, bondings in bonding.items():
-                if bondings:
-                    element = graph.nodes[node]['element']
-                    bonds = round(sum([self.molecule.edges[(node, neigh)]['order'] for neigh in\
-                                       self.molecule.neighbors(node)]))
-                    hcount = VALENCES[element][0] - bonds
-                    attrs = {attr: graph.nodes[node][attr] for attr in ['fragname', 'fragid']}
-                    attrs['element'] = 'H'
-                    for _ in range(0, hcount):
-                        new_node = len(self.molecule.nodes) #+ 1
-                        graph.add_edge(node, new_node)
-                        attrs['atomname'] = "H" + str(len(graph.nodes)-1)
-                        graph.nodes[new_node].update(attrs)
-                        self.molecule.add_edge(node, new_node, order=1)
-                        self.molecule.nodes[new_node].update(attrs)
-
-        # now we want to sort the atoms
-        sort_nodes(self.molecule)
-        # and redo the meta molecule
-        self.meta_graph = annotate_fragments(self.meta_graph, self.molecule)
 
     def resolve(self):
+
         if self.cgsmiles_string is not None:
             self.meta_graph = read_cgsmiles(self.cgsmiles_string)
 
@@ -268,9 +237,18 @@ class MoleculeResolver:
                                                      all_atom=self.all_atom))
 
         self.resolve_disconnected_molecule()
+
         self.edges_from_bonding_descrpt()
-        if self.all_atom:
-            self.replace_unconsumed_bonding_descrpt()
 
         self.squash_atoms()
+
+        if self.all_atom:
+            rebuild_h_atoms(self.molecule)
+
+        # now we want to sort the atoms
+        self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
+        # and redo the meta molecule
+        self.meta_graph = annotate_fragments(self.meta_graph,
+                                             self.molecule)
+
         return self.meta_graph, self.molecule
