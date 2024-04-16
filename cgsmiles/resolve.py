@@ -193,39 +193,32 @@ class MoleculeResolver:
         for edge, bonding in bondings.items():
             # we have a squash operator
             if bonding[0].startswith('!'):
-                # find all hydrogens to remove
-                # and which atoms to connect
-                nodes_to_remove = [edge[1]]
+                node_to_keep, node_to_remove = edge
+                # find all connections of discarded node
+                # so we can add them to the remaining node
                 new_edge_nodes = []
-                for hnode in self.molecule.neighbors(edge[1]):
-                    if self.molecule.nodes[hnode].get('element', 'Nan') == 'H':
-                        nodes_to_remove.append(hnode)
-                    elif hnode != edge[0]:
-                        new_edge_nodes.append(hnode)
+                for neigh_node in self.molecule.neighbors(edge[1]):
+                    if neigh_node != edge[0]:
+                        new_edge_nodes.append(neigh_node)
 
-                # remove edges
-                self.molecule.remove_edge(*edge)
-                for node in nodes_to_remove[1:]:
-                    self.molecule.remove_edge(edge[1], node)
-
-                # add edges
+                # add new edges between the old and new node
                 for node in new_edge_nodes:
                     order = re.findall("\d+\.\d+", bonding[0])
+
                     if not order:
                         order = 1
-                    self.molecule.add_edge(edge[0], node, order=order)
 
-                # find the reference hydrogen atoms
-                nodes_to_keep = [edge[0]]
-                for hnode in self.molecule.neighbors(edge[0]):
-                    if self.molecule.nodes[hnode].get('element', 'Nan') == 'H':
-                        nodes_to_keep.append(hnode)
+                    self.molecule.add_edge(node_to_keep,
+                                           node,
+                                           order=order)
 
-                # remove squashed node and hydrogen atoms
-                for ref_node, node in zip(nodes_to_keep, nodes_to_remove):
-                    other_fragid = self.molecule.nodes[node]['fragid']
-                    self.molecule.remove_node(node)
-                    self.molecule.nodes[ref_node]['fragid'] += other_fragid
+                # add the fragment id of the sequashed node
+                self.molecule.nodes[node_to_keep]['fragid'] +=\
+                self.molecule.nodes[node_to_remove]['fragid']
+
+                # remove the edge and node
+                self.molecule.remove_edge(*edge)
+                self.molecule.remove_node(node_to_remove)
 
     def resolve(self):
 
@@ -247,6 +240,7 @@ class MoleculeResolver:
 
         # now we want to sort the atoms
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
+
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
                                              self.molecule)
