@@ -186,7 +186,10 @@ class MoleculeResolver:
 
     def squash_atoms(self):
         """
-        Applies the squash operator.
+        Applies the squash operator by removing the duplicate node
+        adding, all edges from that node to the remaining one, and
+        annotate the other node with the fragid of the removed
+        node.
         """
         bondings = nx.get_edge_attributes(self.molecule, 'bonding')
         squashed = False
