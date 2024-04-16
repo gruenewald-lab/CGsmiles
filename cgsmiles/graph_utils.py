@@ -37,7 +37,7 @@ def merge_graphs(source_graph, target_graph, max_node=None):
         # We assume that the last id is always the largest.
         last_node_idx = max_node
         offset = last_node_idx
-        fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0]))
+        fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0])) + 1
 
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
@@ -53,31 +53,28 @@ def merge_graphs(source_graph, target_graph, max_node=None):
 
     return correspondence
 
-def sort_nodes(graph, sortby_attrs=("fragid", "atomid"), target_attr=None):
+def sort_nodes_by_attr(graph, sort_attr="fragid"):
     """
-    Sort nodes in graph by multiple attributes.
+    Sort nodes in graph by attribute and relable the graph in place.
 
     Parameters
     ----------
     graph: :class:`nx.Graph`
         the graph to sort nodes of
-    sortby_attrs: tuple(str)
-        the attributes and in which order to sort
-    target_attr: `abc.hashable`
-        if not None indices are assigned to this
-        attribute starting at 1
+    sort_attr: `abc.hashable`
+        the attribute to use for sorting
 
     Returns
     -------
     nx.Graph
         graph with nodes sorted in correct order
     """
-    node_order = sorted(graph, key=partial(_keyfunc, graph, attrs=sortby_attrs))
-    for new_idx, node_key in enumerate(node_order, 1):
-#        graph._node.move_to_end(node_key)
-        if target_attr is not None:
-            graph.nodes[node_key][target_attr] = new_idx
-    return graph
+    fragids = nx.get_node_attributes(graph, "fragid")
+    sorted_ids = sorted(fragids.items(), key=lambda item: (item[1], item[0]))
+    print(sorted_ids)
+    mapping = {old[0]: new for new, old in enumerate(sorted_ids)}
+    new_graph = nx.relabel_nodes(graph, mapping, copy=True)
+    return new_graph
 
 def _keyfunc(graph, node_idx, attrs):
     """
@@ -114,5 +111,7 @@ def annotate_fragments(meta_graph, molecule):
         for a, b in combinations:
             if molecule.has_edge(a, b):
                 graph_frag.add_edge(a, b)
+
+        meta_graph.nodes[meta_node]['graph'] = graph_frag
 
     return meta_graph
