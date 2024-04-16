@@ -1,7 +1,13 @@
+from collections import defaultdict
+import networkx as nx
 import pysmiles
-from pysmiles.write_smile import _get_ring_marker
+from pysmiles.write_smiles import _get_ring_marker
 
-def write_cgsmiles(graph):
+def format_node(molecule, current):
+    node = "[#{}]".format(molecule.nodes[current]['fragname'])
+    return node
+
+def write_cgsmiles(molecule):
     """
     Creates a SMILES string describing `molecule` according to the OpenSMILES
     standard. `molecule` should be a single connected component.
@@ -24,7 +30,6 @@ def write_cgsmiles(graph):
     molecule = molecule.copy()
     # should be any node with order 1
     start = 0
-
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
     predecessors = defaultdict(list)
@@ -67,11 +72,8 @@ def write_cgsmiles(graph):
             previous = predecessors[current]
             assert len(previous) == 1
             previous = previous[0]
-            if _write_edge_symbol(molecule, previous, current):
-                order = molecule.edges[previous, current].get('order', 1)
-                smiles += order_to_symbol[order]
 
-        smiles += format_atom(molecule, current, default_element)
+        smiles += format_node(molecule, current)
         if current in atom_to_ring_idx:
             # We're going to need to write a ring number
             ring_idxs = atom_to_ring_idx[current]
