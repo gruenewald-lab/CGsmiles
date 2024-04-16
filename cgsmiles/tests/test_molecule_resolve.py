@@ -139,6 +139,18 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         'O H C H H C H H H',
                         [(0, 1), (0, 2), (2, 3), (2, 4), (2, 5),
                          (5, 6), (5, 7), (5, 8)]),
+                        # smiple squash operator; plus connect operator
+                        ("{[#A][#B][#C]}.{#A=OC[!],#B=[$][!]CC,#C=[$]O}",
+                        #       0 1 2 3 4           1 5 3 4 6 7 8
+                        #       0 1 2 3 4           5 6 7 11 8 9 10
+                        # note that the unconsumed $ triggers rebuild of a hydrogen
+                        # which however is appended to the end of the molecule so
+                        # making it 11
+                        [('A', 'O H C H'), ('B', 'C H C H H H'), ('C', 'O H')],
+                        'O H C H C H H H O H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4),
+                         (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)]),
+
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()
