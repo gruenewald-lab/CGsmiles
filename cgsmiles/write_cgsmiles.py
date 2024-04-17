@@ -103,6 +103,19 @@ def write_cgsmiles_res_graph(molecule):
     smiles += ')' * branch_depth
     return smiles
 
+def _find_nodes_bonding(molecule, graph):
+    """
+    """
+    edges = nx.get_edge_attributes(molecule, "bonding")
+    node_to_bonding = {}
+    for edge in edges:
+        if edge[0] in graph:
+            node_to_bonding[edge[0]] = edges[edge][0]
+        elif edge[1] in graph:
+            node_to_bonding[edge[1]] = edges[edge][1]
+
+    return node_to_bonding
+
 def _smiles_node_iter(smiles_str):
     organic_subset = 'B C N O P S F Cl Br I * b c n o s p'.split()
     batom=False
@@ -119,12 +132,12 @@ def _smiles_node_iter(smiles_str):
         if node in organic_subset and not batom:
             yield idx, idx + 1
 
-def add_bond_descrp(smiles_str, graph):
+def add_bond_descrp(smiles_str, molecule, graph):
     """
     Annotate smiles str with bonding descriptors.
     """
     nodes_in_string = {idx: (start, stop) for idx, (start, stop) in enumerate(_smiles_node_iter(smiles_str))}
-    nodes_to_bonding = nx.get_node_attributes(graph, "bonding")
+    nodes_to_bonding = _find_nodes_bonding(molecule, graph)
     # no bonding descriptor to add
     if len(nodes_to_bonding) == 0:
         return smiles_str
@@ -142,32 +155,44 @@ def add_bond_descrp(smiles_str, graph):
     annotated_str += smiles_str[prev_stop:]
     return annotated_str
 
-def write_fragments(molecule, all_atom=True):
+def write_fragments(low_res_graph, high_res_graph, all_atom=True):
     fragment_str = ""
 
     # collect unique fragments
-    fragments = nx.get_node_attributes(molecule, "fragname")
+    fragments = nx.get_node_attributes(low_res_graph, "fragname")
     uniq_frags = defaultdict(list)
+
     for node, fragname in fragments.items():
         uniq_frags[fragname].append(node)
 
     for frag, nodes in uniq_frags.items():
-        frag_graph = molecule.nodes[nodes[0]]
+        frag_graph = low_res_graph.nodes[nodes[0]]['graph']
+
         # format graph depending on resolution
         if all_atom:
             smiles_str = pysmiles.write_smiles(frag_graph)
         else:
             smiles_str = write_cgsmiles_res_graph(frag_graph)
+
         # annotate bonding descriptors and done
         fragment_str += "#" + frag + "=" + add_bond_descrp(smiles_str,
+                                                           high_res_graph,
                                                            frag_graph) + ","
+    fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
 
-def write_cgsmiles(molecule, with_fragments=False, all_atom=True):
-    res_str = write_cgsmiles_res_graph(molecule)
-    if with_fragments:
-        fragment_str = write_fragments(molecule, all_atom=all_atom)
+def write_cgsmiles(low_res_graph=None, high_res_graph=None, all_atom=True):
+    """
+    """
+    if low_res_graph and high_res_graph:
+        res_str = write_cgsmiles_res_graph(low_res_graph)
+        fragment_str = write_fragments(low_res_graph,
+                                       high_res_graph,
+                                       all_atom=all_atom)
         cgsmiles_str = res_str + "." + fragment_str
+    elif low_res_graph:
+        cgsmiles_str = write_cgsmiles_res_graph(low_res_graph)
     else:
-        cgsmiles_str = res_str
+        raise IOError("You need to provide either a high or low resolution graph.")
+
     return cgsmiles_str
