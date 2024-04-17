@@ -7,7 +7,7 @@ def format_node(molecule, current):
     node = "[#{}]".format(molecule.nodes[current]['fragname'])
     return node
 
-def write_cgsmiles(molecule):
+def write_cgsmiles_res_graph(molecule):
     """
     Creates a SMILES string describing `molecule` according to the OpenSMILES
     standard. `molecule` should be a single connected component.
@@ -102,3 +102,72 @@ def write_cgsmiles(molecule):
 
     smiles += ')' * branch_depth
     return smiles
+
+def _smiles_node_iter(smiles_str):
+    organic_subset = 'B C N O P S F Cl Br I * b c n o s p'.split()
+    batom=False
+    for idx, node in enumerate(smiles_str):
+        if node == '[':
+            batom = True
+            start = idx
+
+        if node == ']' and batom:
+            stop = idx+1
+            batom = False
+            yield start, stop
+
+        if node in organic_subset and not batom:
+            yield idx, idx + 1
+
+def add_bond_descrp(smiles_str, graph):
+    """
+    Annotate smiles str with bonding descriptors.
+    """
+    nodes_in_string = {idx: (start, stop) for idx, (start, stop) in enumerate(_smiles_node_iter(smiles_str))}
+    nodes_to_bonding = nx.get_node_attributes(graph, "bonding")
+    # no bonding descriptor to add
+    if len(nodes_to_bonding) == 0:
+        return smiles_str
+
+    first_node = min(nodes_to_bonding.keys())
+    annotated_str = smiles_str[:nodes_in_string[first_node][0]]
+    prev_stop = nodes_in_string[first_node][0]
+    for node, descriptors in nodes_to_bonding.items():
+        start, stop = nodes_in_string[node]
+        annotated_str += smiles_str[prev_stop:stop]
+        for descriptor in descriptors:
+            annotated_str += f"[{descriptor}]"
+        prev_stop = stop
+
+    annotated_str += smiles_str[prev_stop:]
+    return annotated_str
+
+def write_fragments(molecule, all_atom=True):
+    fragment_str = ""
+
+    # collect unique fragments
+    fragments = nx.get_node_attributes(molecule, "fragname")
+    uniq_frags = defaultdict(list)
+    for node, fragname in fragments.items():
+        uniq_frags[fragname].append(node)
+
+    for frag, nodes in uniq_frags.items():
+        frag_graph = molecule.nodes[nodes[0]]
+        # format graph depending on resolution
+        if all_atom:
+            smiles_str = pysmiles.write_smiles(frag_graph)
+        else:
+            smiles_str = write_cgsmiles_res_graph(frag_graph)
+        # annotate bonding descriptors and done
+        fragment_str += "#" + frag + "=" + add_bond_descrp(smiles_str,
+                                                           frag_graph) + ","
+    return fragment_str
+
+def write_cgsmiles(molecule, with_fragments=False, all_atom=True):
+    res_str = write_cgsmiles_res_graph(molecule)
+    if with_fragments:
+        fragment_str = write_fragments(molecule, all_atom=all_atom)
+        cgsmiles_str = res_str + "." + fragment_str
+    else:
+        cgsmiles_str = res_str
+    return cgsmiles_str
