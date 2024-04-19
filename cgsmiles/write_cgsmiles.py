@@ -105,6 +105,10 @@ def write_cgsmiles_res_graph(molecule):
 
 def _find_nodes_bonding(molecule, graph):
     """
+    For nodes in `graph` check if they have participate
+    in any edges that have the `bonding` attribute.
+    If yes store the node and the bonding operator
+    beloning to that node.
     """
     edges = nx.get_edge_attributes(molecule, "bonding")
     node_to_bonding = {}
@@ -134,7 +138,7 @@ def _smiles_node_iter(smiles_str):
 
 def add_bond_descrp(smiles_str, molecule, graph):
     """
-    Annotate smiles str with bonding descriptors.
+    Add bonding descriptors to SMILES or CGSmiles string.
     """
     nodes_in_string = {idx: (start, stop) for idx, (start, stop) in enumerate(_smiles_node_iter(smiles_str))}
     nodes_to_bonding = _find_nodes_bonding(molecule, graph)
@@ -183,7 +187,6 @@ def write_fragments(molecule, all_atom=True):
     uniq_frags = defaultdict(list)
     uniq_ids = []
     for node, fragname in fragments.items():
-        print(uniq_ids, uniq_frags)
         fragid = molecule.nodes[node]["fragid"]
         if fragname not in uniq_frags:
             uniq_ids.append(fragid)
@@ -201,7 +204,6 @@ def write_fragments(molecule, all_atom=True):
             smiles_str = write_cgsmiles_res_graph(frag_graph)
 
         # annotate bonding descriptors and done
-        print(smiles_str)
         fragment_str += "#" + frag + "=" + add_bond_descrp(smiles_str,
                                                            molecule,
                                                            frag_graph) + ","
@@ -210,6 +212,28 @@ def write_fragments(molecule, all_atom=True):
 
 def write_cgsmiles(low_res_graph=None, high_res_graph=None, all_atom=True):
     """
+    Write a cgsmiles string from two different resolutions. If only the
+    `high_res_graph` is supplied only the fragments part of the string
+    will be written. Using the `all_atom` flag the fragments are either
+    written using open SMILES standard or CGSmiles string.
+
+    Parameters
+    ----------
+    low_res_graph: nx.Graph
+        the low resolution graph to write; needs fragname attribute to
+        be set for all nodes
+    high_res_graph: nx.Graph
+        the high resolution graph to write; needs the fragid, and fragname
+        attributes to be set. Additionaly, edges between fragments of
+        different fragid need to have a "bonding" edge attribute.
+    all_atom: bool
+        write high_res_graph using open SMILES when True or CGSmiles when
+        False. The default is True
+
+    Returns
+    -------
+    str
+        the CGSmiles string
     """
     if low_res_graph and high_res_graph:
         res_str = write_cgsmiles_res_graph(low_res_graph)
