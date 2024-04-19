@@ -155,18 +155,44 @@ def add_bond_descrp(smiles_str, molecule, graph):
     annotated_str += smiles_str[prev_stop:]
     return annotated_str
 
-def write_fragments(low_res_graph, high_res_graph, all_atom=True):
+def write_fragments(molecule, all_atom=True):
+    """
+    Write fragments of molecule graph. To identify the fragments
+    the all nodes with the same attribute `fragname` and `fragid`
+    are considered as fragment. Bonding between fragments is
+    extracted from the `bonding` edge attributes.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        the graph of the molecule to fragment; must have
+        attributes fragid, fragname, and edge attribute
+        bonding
+    all_atom: bool
+        write all atom SMILES if True (default) otherwise
+        write CGSmiles
+
+    Returns
+    -------
+    str
+    """
     fragment_str = ""
 
     # collect unique fragments
-    fragments = nx.get_node_attributes(low_res_graph, "fragname")
+    fragments = nx.get_node_attributes(molecule, "fragname")
     uniq_frags = defaultdict(list)
-
+    uniq_ids = []
     for node, fragname in fragments.items():
-        uniq_frags[fragname].append(node)
+        print(uniq_ids, uniq_frags)
+        fragid = molecule.nodes[node]["fragid"]
+        if fragname not in uniq_frags:
+            uniq_ids.append(fragid)
+
+        if fragid in uniq_ids:
+            uniq_frags[fragname].append(node)
 
     for frag, nodes in uniq_frags.items():
-        frag_graph = low_res_graph.nodes[nodes[0]]['graph']
+        frag_graph = molecule.subgraph(nodes)
 
         # format graph depending on resolution
         if all_atom:
@@ -175,8 +201,9 @@ def write_fragments(low_res_graph, high_res_graph, all_atom=True):
             smiles_str = write_cgsmiles_res_graph(frag_graph)
 
         # annotate bonding descriptors and done
+        print(smiles_str)
         fragment_str += "#" + frag + "=" + add_bond_descrp(smiles_str,
-                                                           high_res_graph,
+                                                           molecule,
                                                            frag_graph) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
@@ -186,12 +213,14 @@ def write_cgsmiles(low_res_graph=None, high_res_graph=None, all_atom=True):
     """
     if low_res_graph and high_res_graph:
         res_str = write_cgsmiles_res_graph(low_res_graph)
-        fragment_str = write_fragments(low_res_graph,
-                                       high_res_graph,
+        fragment_str = write_fragments(high_res_graph,
                                        all_atom=all_atom)
         cgsmiles_str = res_str + "." + fragment_str
     elif low_res_graph:
         cgsmiles_str = write_cgsmiles_res_graph(low_res_graph)
+    elif high_res_graph:
+        cgsmiles_str = write_fragments(high_res_graph,
+                                       all_atom=all_atom)
     else:
         raise IOError("You need to provide either a high or low resolution graph.")
 
