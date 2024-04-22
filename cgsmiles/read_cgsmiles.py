@@ -177,11 +177,16 @@ def read_cgsmiles(pattern):
             mol_graph.add_node(current, fragname=fragname)
 
             if prev_node is not None:
-                mol_graph.add_edge(prev_node, current)
+                mol_graph.add_edge(prev_node, current, order=1)
 
-            if cycle_edge:
+            # here we have a double edge
+            if cycle_edge and cycle_edge in mol_graph.edges:
+                mol_graph.edges[cycle_edge]["order"] += 1
+
+            elif cycle_edge:
                 mol_graph.add_edge(cycle_edge[0],
-                                   cycle_edge[1])
+                                   cycle_edge[1],
+                                   order=1)
 
             prev_node = current
             current += 1

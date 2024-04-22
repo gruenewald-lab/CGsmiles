@@ -166,25 +166,25 @@ class MoleculeResolver:
         bonding descriptors are replaced by hydrogen atoms.
         """
         for prev_node, node in self.meta_graph.edges:
-            print(prev_node, node)
-            prev_graph = self.meta_graph.nodes[prev_node]['graph']
-            node_graph = self.meta_graph.nodes[node]['graph']
-            edge, bonding = generate_edge(prev_graph,
-                                          node_graph)
+            for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
+                prev_graph = self.meta_graph.nodes[prev_node]['graph']
+                node_graph = self.meta_graph.nodes[node]['graph']
+                edge, bonding = generate_edge(prev_graph,
+                                              node_graph)
 
-            # remove used bonding descriptors
-            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
-            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
-
-            # bonding descriptors are assumed to have bonding order 1
-            # unless they are specifically annotated
-            order = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
-            print(order)
-            if not order:
-                order = 1
-            else:
-                order = float(order[0])
-            self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+                # remove used bonding descriptors
+                prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+                node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+ 
+                # bonding descriptors are assumed to have bonding order 1
+                # unless they are specifically annotated
+                order = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
+                print(order)
+                if not order:
+                    order = 1
+                else:
+                    order = float(order[0])
+                self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
 
     def squash_atoms(self):
         """
