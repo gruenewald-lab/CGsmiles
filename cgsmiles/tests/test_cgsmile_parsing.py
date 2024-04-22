@@ -20,6 +20,14 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA]|3}",
                         ["PMA", "PMA", "PMA"],
                         [(0, 1), (1, 2)]),
+                        # smiple cycle seqeunce
+                        ("{[#PMA]1[#PEO][#PMA]1}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)]),
+                        # complex cycle
+                        ("{[#PMA]1[#PEO]2[#PMA]1[#PEO]2}",
+                        ["PMA", "PEO", "PMA", "PEO"],
+                        [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)]),
                         # simple branch expension
                         ("{[#PMA]([#PEO][#PEO][#OHter])|3}",
                         ["PMA", "PEO", "PEO", "OHter",
