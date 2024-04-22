@@ -49,6 +49,7 @@ def merge_graphs(source_graph, target_graph, max_node=None):
     for node1, node2 in target_graph.edges:
         if correspondence[node1] != correspondence[node2]:
             attrs = target_graph.edges[(node1, node2)]
+            print(attrs)
             source_graph.add_edge(correspondence[node1], correspondence[node2], **attrs)
 
     return correspondence

@@ -5,6 +5,14 @@ from collections import defaultdict
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
+from .pysmiles_utils import strip_aromatic_nodes
+
+def mark_aromatic_edges(graph):
+    for edge in graph.edges:
+        if graph.nodes[edge[0]].get("aromatic", False) and\
+        graph.nodes[edge[1]].get("aromatic", False):
+            graph.edges[edge]["order"] = 1.5
+    return graph
 
 def strip_bonding_descriptors(fragment_string):
     """
@@ -102,7 +110,18 @@ def fragment_iter(fragment_str, all_atom=True):
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile)
+            try:
+                mol_graph = pysmiles.read_smiles(smile)
+            # we have non-ring aromitic fragments that need to be handled
+            # a bit hacky
+            except ValueError:
+                arom_nodes, smile = strip_aromatic_nodes(smile)
+                mol_graph = pysmiles.read_smiles(smile)
+                # overwrite the aromaticity assignment
+                nx.set_node_attributes(mol_graph, arom_nodes, "aromatic")
+                # set the bond order for the aromatic edges
+                mol_graph = mark_aromatic_edges(mol_graph)
+
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         # we deal with a CG resolution graph
         else:

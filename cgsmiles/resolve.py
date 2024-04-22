@@ -3,7 +3,7 @@ import copy
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
-from .read_fragments import read_fragments
+from .read_fragments import read_fragments, mark_aromatic_edges
 from .graph_utils import merge_graphs, sort_nodes_by_attr, annotate_fragments
 from .pysmiles_utils import rebuild_h_atoms
 
@@ -165,7 +165,8 @@ class MoleculeResolver:
         bonding descriptors that formed the edge. Later unconsumed
         bonding descriptors are replaced by hydrogen atoms.
         """
-        for prev_node, node in nx.dfs_edges(self.meta_graph):
+        for prev_node, node in self.meta_graph.edges:
+            print(prev_node, node)
             prev_graph = self.meta_graph.nodes[prev_node]['graph']
             node_graph = self.meta_graph.nodes[node]['graph']
             edge, bonding = generate_edge(prev_graph,
@@ -177,9 +178,12 @@ class MoleculeResolver:
 
             # bonding descriptors are assumed to have bonding order 1
             # unless they are specifically annotated
-            order = re.findall("\d+\.\d+", bonding[0])
+            order = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
+            print(order)
             if not order:
                 order = 1
+            else:
+                order = float(order[0])
             self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
 
     def squash_atoms(self):
@@ -225,6 +229,7 @@ class MoleculeResolver:
 
         # rebuild hydrogen in all-atom case
         if self.all_atom:
+            mark_aromatic_edges(self.molecule)
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms
