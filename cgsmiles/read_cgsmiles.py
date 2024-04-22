@@ -142,7 +142,7 @@ def read_cgsmiles(pattern):
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
-        if stop < len(pattern) and pattern[stop].isdigit() and cycle:
+        if stop < len(pattern) and pattern[stop].isdigit() and in cycle:
             cycle_edge = (current, cycle[pattern[stop]])
         # we open a cycle
         elif stop < len(pattern) and pattern[stop].isdigit():
