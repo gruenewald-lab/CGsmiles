@@ -3,36 +3,64 @@ import networkx as nx
 from cgsmiles import read_cgsmiles
 from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
 
-@pytest.mark.parametrize('smile, nodes, edges',(
-                        # smiple linear seqeunce
+@pytest.mark.parametrize('smile, nodes, edges, orders',(
+                        # smiple linear sequence
                         ("{[#PMA][#PEO][#PMA]}",
                         ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2)]),
+                        [(0, 1), (1, 2)],
+                        [1, 1]),
+                        # smiple linear sequenece with multi-edge
+                        ("{[#PMA]1[#PEO]1}",
+                        ["PMA", "PEO"],
+                        [(0, 1)],
+                        [2]),
                         # simple branched sequence
                         ("{[#PMA][#PMA]([#PEO][#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (2, 3), (1, 4)]),
+                        [(0, 1), (1, 2), (2, 3), (1, 4)],
+                        [1, 1, 1, 1]),
                         # simple sequence two branches
                         ("{[#PMA][#PMA][#PMA]([#PEO][#PEO])([#CH3])[#PMA]}",
                         ["PMA", "PMA", "PMA", "PEO", "PEO", "CH3", "PMA"],
-                        [(0, 1), (1, 2), (2, 3), (3, 4), (2, 5), (2, 6)]),
+                        [(0, 1), (1, 2), (2, 3), (3, 4), (2, 5), (2, 6)],
+                        [1, 1, 1, 1, 1, 1]),
                         # simple linear sequence with expansion
                         ("{[#PMA]|3}",
                         ["PMA", "PMA", "PMA"],
-                        [(0, 1), (1, 2)]),
-                        # smiple cycle seqeunce
+                        [(0, 1), (1, 2)],
+                        [1, 1]),
+                        # smiple cycle sequence
                         ("{[#PMA]1[#PEO][#PMA]1}",
                         ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)]),
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 1]),
+                        # smiple cycle sequence with %
+                        ("{[#PMA]%123[#PEO][#PMA]%123}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 1]),
                         # complex cycle
                         ("{[#PMA]1[#PEO]2[#PMA]1[#PEO]2}",
                         ["PMA", "PEO", "PMA", "PEO"],
-                        [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)]),
-                        # complex cycle
+                        [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)],
+                        [1, 1, 1, 1, 1]),
+                        # complex cycle with %
+                        ("{[#PMA]%134[#PEO]%256[#PMA]%134[#PEO]%256}",
+                        ["PMA", "PEO", "PMA", "PEO"],
+                        [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)],
+                        [1, 1, 1, 1, 1]),
+                        # complex cycle with three times same ID
                         ("{[#PMA]1[#PEO]2[#PMA]1[#PEO]2[#PMA][#PMA]1}",
                         ["PMA", "PEO", "PMA", "PEO", "PMA", "PMA"],
                         [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3), (3, 4),
-                         (4, 5), (0, 5)]),
+                         (4, 5), (0, 5)],
+                        [1, 1, 1, 1, 1, 1, 1, 1]),
+                        # smiple linear sequenece with multi-edge
+                        # in cycle
+                        ("{[#PMA]12[#PMA][#PMA][#PEO]12}",
+                        ["PMA", "PMA", "PMA", "PEO"],
+                        [(0, 1), (1, 2), (2, 3), (0, 3)],
+                        [1, 1, 1, 2]),
                         # simple branch expension
                         ("{[#PMA]([#PEO][#PEO][#OHter])|3}",
                         ["PMA", "PEO", "PEO", "OHter",
@@ -40,31 +68,31 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          "PMA", "PEO", "PEO", "OHter"],
                         [(0, 1), (1, 2), (2, 3),
                          (0, 4), (4, 5), (5, 6), (6, 7),
-                         (4, 8), (8, 9), (9, 10), (10, 11)]
-                         ),
+                         (4, 8), (8, 9), (9, 10), (10, 11)],
+                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
                         # nested branched with expansion
                         ("{[#PMA]([#PEO]|3)|2}",
                         ["PMA", "PEO", "PEO", "PEO",
                          "PMA", "PEO", "PEO", "PEO"],
                         [(0, 1), (1, 2), (2, 3),
-                         (0, 4), (4, 5), (5, 6), (6, 7)]
-                         ),
+                         (0, 4), (4, 5), (5, 6), (6, 7)],
+                        [1, 1, 1, 1, 1, 1, 1]),
                         # nested braching
                         #     0     1      2    3      4      5    6
                         ("{[#PMA][#PMA]([#PEO][#PEO]([#OH])[#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "OH",
                          "PEO", "PMA"],
                         [(0, 1), (1, 2), (2, 3),
-                         (3, 4), (3, 5), (1, 6)]
-                         ),
+                         (3, 4), (3, 5), (1, 6)],
+                        [1, 1, 1, 1, 1, 1]),
                         # nested braching plus expansion
                         #     0     1      2    3      4/5      6     7
                         ("{[#PMA][#PMA]([#PEO][#PEO]([#OH]|2)[#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "OH", "OH",
                          "PEO", "PMA"],
                         [(0, 1), (1, 2), (2, 3),
-                         (3, 4), (4, 5), (3, 6), (1, 7)]
-                         ),
+                         (3, 4), (4, 5), (3, 6), (1, 7)],
+                        [1, 1, 1, 1, 1, 1, 1]),
                         # nested braching plus expansion incl. branch
                         #     0     1      2    3      4      5
                         #           6      7    8      9      10      11
@@ -73,8 +101,8 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          "PMA", "PEO", "PEO", "PEO", "OH", "PMA"],
                         [(0, 1), (1, 2), (2, 3),
                          (3, 4), (3, 5), (1, 6), (6, 7), (7, 8),
-                         (8, 9), (8, 10), (6, 11)]
-                         ),
+                         (8, 9), (8, 10), (6, 11)],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
                         # nested braching plus expansion of nested branch
                         # here the nested branch is expended
                         #  0 - 1 - 10
@@ -89,8 +117,8 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          "PQ", "OH", "PQ", "OH", "PEO", "PMA"],
                         [(0, 1), (1, 2), (1, 10),
                          (2, 3), (3, 4), (3, 5), (5, 6),
-                         (5, 7), (7, 8), (7, 9)]
-                         ),
+                         (5, 7), (7, 8), (7, 9)],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
                         # nested braching plus expansion of nested branch
                         # here the nested branch is expended and a complete
                         # new branch is added
@@ -108,18 +136,20 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          "PQ", "OH", "PQ", "OH", "PEO", "PMA", "CH3", "PMA", "CH3"],
                         [(0, 1), (1, 2), (1, 10),
                          (2, 3), (3, 4), (3, 5), (5, 6),
-                         (5, 7), (7, 8), (7, 9), (10, 11), (10, 12), (12, 13)]
-                         ),
+                         (5, 7), (7, 8), (7, 9), (10, 11), (10, 12), (12, 13)],
+                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
 ))
-def test_read_cgsmiles(smile, nodes, edges):
+def test_read_cgsmiles(smile, nodes, edges, orders):
     """
     Test that the meta-molecule is correctly reproduced
     from the simplified smile string syntax.
     """
     meta_mol = read_cgsmiles(smile)
     assert len(meta_mol.edges) == len(edges)
-    for edge in edges:
+    for edge, order in zip(edges, orders):
         assert meta_mol.has_edge(*edge)
+        assert meta_mol.edges[edge]["order"] == order
+
     fragnames = nx.get_node_attributes(meta_mol, 'fragname')
     assert nodes == list(fragnames.values())
 
