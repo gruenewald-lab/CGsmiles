@@ -150,7 +150,14 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         'O H C H C H H H O H',
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)]),
-
+                        # THF like test case with double edge and squash operator
+                        ("{[#A]1[#B]1}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
+                        [('A', 'O C C H H H H'),
+                         ('B', 'C C H H H H C C H H H H')],
+                        'O C C H H H H C C H H H H',
+                        [(0, 2), (0, 3), (2, 4), (2, 5),
+                         (3, 6), (3, 7), (2, 8), (3, 9),
+                         (8, 9), (9, 12), (9, 13), (8, 10), (8, 11)]),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()
