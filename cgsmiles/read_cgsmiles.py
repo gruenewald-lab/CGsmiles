@@ -45,7 +45,7 @@ def _expand_branch(mol_graph, current, anchor, recipe):
             anchor = current
         for _ in range(0, n_mon):
             mol_graph.add_node(current, fragname=fragname)
-            mol_graph.add_edge(prev_node, current)
+            mol_graph.add_edge(prev_node, current, order=1)
 
             prev_node = current
             current += 1
