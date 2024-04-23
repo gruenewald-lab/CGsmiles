@@ -169,9 +169,11 @@ class MoleculeResolver:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
                 node_graph = self.meta_graph.nodes[node]['graph']
-                edge, bonding = generate_edge(prev_graph,
-                                              node_graph)
-
+                try:
+                    edge, bonding = generate_edge(prev_graph,
+                                                  node_graph)
+                except LookupError:
+                    continue
                 # remove used bonding descriptors
                 prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
                 node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
@@ -179,7 +181,6 @@ class MoleculeResolver:
                 # bonding descriptors are assumed to have bonding order 1
                 # unless they are specifically annotated
                 order = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
-                print(order)
                 if not order:
                     order = 1
                 else:
