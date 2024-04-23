@@ -53,6 +53,10 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     prev_node = anchor
     return mol_graph, current, prev_node
 
+def _get_percent(pattern, stop):
+    end_num = _find_next_character(pattern, ['[', ')', '(', '}'], stop)
+    return pattern[stop+1:end_num]
+
 def read_cgsmiles(pattern):
     """
     Generate a :class:`nx.Graph` from a pattern string according to the
@@ -126,7 +130,7 @@ def read_cgsmiles(pattern):
     branching = False
     # do we have an open cycle
     cycle = {}
-    cycle_edge = None
+    cycle_edges = []
     # each element in the for loop matches a pattern
     # '[' + '#' + some alphanumeric name + ']'
     for match in re.finditer(PATTERNS['place_holder'], pattern):
@@ -142,12 +146,22 @@ def read_cgsmiles(pattern):
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
-        if stop < len(pattern) and pattern[stop].isdigit() and pattern[stop] in cycle:
-            cycle_edge = (current, cycle[pattern[stop]])
-        # we open a cycle
-        elif stop < len(pattern) and pattern[stop].isdigit():
-            cycle_edge = None
-            cycle[pattern[stop]] = current
+        for token in pattern[stop:]:
+            # we close a cycle
+            if token.isdigit() and token in cycle:
+                cycle_edges.append((current, cycle[token]))
+            # we open a cycle
+            elif token.isdigit():
+                cycle[token] = current
+            # we close a cycle with the % syntax
+            elif token == "%" and _get_percent(pattern, stop) in cycle:
+                cycle_edges.append((current, cycle[_get_percent(pattern, stop)]))
+                break
+            elif token == "%":
+                cycle[_get_percent(pattern, stop)] = current
+                break
+            else:
+                break
         # here we check if the atom is followed by a expansion character '|'
         # as in ... [#PEO]|
         if stop < len(pattern) and pattern[stop] == '|':
@@ -180,13 +194,15 @@ def read_cgsmiles(pattern):
                 mol_graph.add_edge(prev_node, current, order=1)
 
             # here we have a double edge
-            if cycle_edge and cycle_edge in mol_graph.edges:
-                mol_graph.edges[cycle_edge]["order"] += 1
-
-            elif cycle_edge:
-                mol_graph.add_edge(cycle_edge[0],
-                                   cycle_edge[1],
-                                   order=1)
+            for cycle_edge in cycle_edges:
+                if cycle_edge in mol_graph.edges:
+                    mol_graph.edges[cycle_edge]["order"] += 1
+                    cycle_edge = None
+                else:
+                    mol_graph.add_edge(cycle_edge[0],
+                                       cycle_edge[1],
+                                       order=1)
+            cycle_edges = []
 
             prev_node = current
             current += 1
