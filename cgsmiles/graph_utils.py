@@ -49,7 +49,6 @@ def merge_graphs(source_graph, target_graph, max_node=None):
     for node1, node2 in target_graph.edges:
         if correspondence[node1] != correspondence[node2]:
             attrs = target_graph.edges[(node1, node2)]
-            print(attrs)
             source_graph.add_edge(correspondence[node1], correspondence[node2], **attrs)
 
     return correspondence
@@ -72,7 +71,6 @@ def sort_nodes_by_attr(graph, sort_attr="fragid"):
     """
     fragids = nx.get_node_attributes(graph, "fragid")
     sorted_ids = sorted(fragids.items(), key=lambda item: (item[1], item[0]))
-    print(sorted_ids)
     mapping = {old[0]: new for new, old in enumerate(sorted_ids)}
     new_graph = nx.relabel_nodes(graph, mapping, copy=True)
     return new_graph
