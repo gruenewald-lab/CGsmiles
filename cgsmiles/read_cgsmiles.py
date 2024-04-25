@@ -3,9 +3,9 @@ import re
 import numpy as np
 import networkx as nx
 
-PATTERNS = {"bond_anchor": "\[\$.*?\]",
-            "place_holder": "\[\#.*?\]",
-            "annotation": "\|.*?\|",
+PATTERNS = {"bond_anchor": r"\[\$.*?\]",
+            "place_holder": r"\[\#.*?\]",
+            "annotation": r"\|.*?\|",
             "fragment": r'#(\w+)=((?:\[.*?\]|[^,\[\]]+)*)',
             "seq_pattern": r'\{([^}]*)\}(?:\.\{([^}]*)\})?'}
 
