@@ -14,6 +14,12 @@ def mark_aromatic_edges(graph):
             graph.edges[edge]["order"] = 1.5
     return graph
 
+def _adjust_aromatic_hcount(graph, aromatic_nodes):
+    for node, aromatic in aromatic_nodes.items():
+        if aromatic:
+            graph.nodes[node]['hcount'] = graph.nodes[node]['hcount'] - 1
+    return graph
+
 def strip_bonding_descriptors(fragment_string):
     """
     Processes a CGBigSmile fragment string by
@@ -121,6 +127,8 @@ def fragment_iter(fragment_str, all_atom=True):
                 nx.set_node_attributes(mol_graph, arom_nodes, "aromatic")
                 # set the bond order for the aromatic edges
                 mol_graph = mark_aromatic_edges(mol_graph)
+                # for all aromatic edges reduce hcount by 1
+                _adjust_aromatic_hcount(mol_graph, arom_nodes)
 
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         # we deal with a CG resolution graph
