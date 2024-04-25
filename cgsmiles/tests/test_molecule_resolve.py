@@ -158,6 +158,14 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [(0, 2), (0, 3), (2, 4), (2, 5),
                          (3, 6), (3, 7), (2, 8), (3, 9),
                          (8, 9), (9, 12), (9, 13), (8, 10), (8, 11)]),
+                        # Toluene like test case with squash operator and aromaticity
+                        ("{[#SC3]1[#TC5][#TC5]1}.{#SC3=Cc(c[!])c[!],#TC5=[!]ccc[!]}",
+                        [('SC3', 'C C H H H C H C H'),
+                         ('TC5', 'C H C H C H')],
+                        'C C H H H C H C H C H C H C H',
+                        [(0, 1), (0, 2), (0, 3), (0, 4), (1, 5),
+                         (1, 7), (5, 9), (5, 6), (7, 13), (7, 8),
+                         (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)]),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     meta_mol, molecule = MoleculeResolver(smile).resolve()

@@ -227,7 +227,7 @@ class MoleculeResolver:
 
         # contract atoms with squash descriptors
         self.squash_atoms()
-
+        print(self.molecule.edges(data=True))
         # rebuild hydrogen in all-atom case
         if self.all_atom:
             mark_aromatic_edges(self.molecule)
