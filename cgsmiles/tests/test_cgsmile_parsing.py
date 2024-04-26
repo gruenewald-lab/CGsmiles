@@ -158,6 +158,14 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
                         ("[$]COC[$]",
                          "COC",
                         {0: ["$"], 2: ["$"]}),
+                        # smiple bonding multiletter atom
+                        ("Clc[$]c[$]",
+                         "Clcc",
+                        {1: ["$"], 2: ["$"]}),
+                        # smiple bonding multiletter atom
+                        ("Clc[$]c[$]",
+                         "Clcc",
+                        {1: ["$"], 2: ["$"]}),
                         # simple symmetric but with explicit hydrogen
                         ("[$][CH2]O[CH2][$]",
                          "[CH2]O[CH2]",
@@ -185,6 +193,7 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
 ))
 def test_strip_bonding_descriptors(big_smile, smile, bonding):
     new_smile, new_bonding = strip_bonding_descriptors(big_smile)
+    print(new_smile, new_bonding)
     assert new_smile == smile
     assert new_bonding == bonding
 

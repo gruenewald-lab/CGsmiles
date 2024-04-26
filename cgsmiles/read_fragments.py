@@ -20,12 +20,36 @@ def _adjust_aromatic_hcount(graph, aromatic_nodes):
             graph.nodes[node]['hcount'] = graph.nodes[node]['hcount'] - 1
     return graph
 
+class SmilesIter(object):
+    def __init__(self, collection):
+        self.collection = collection
+        self.index = 0
+
+    def __next__(self):
+        try:
+            result = self.collection[self.index]
+            self.index += 1
+        except IndexError:
+            raise StopIteration
+        return result
+
+    def peek(self):
+        try:
+            result = self.collection[self.index]
+        except IndexError:
+            return ""
+        return result
+
+    def __iter__(self):
+        self.index = 0
+        return self
+
 def strip_bonding_descriptors(fragment_string):
     """
-    Processes a CGBigSmile fragment string by
+    Processes a CGSmiles fragment string by
     stripping the bonding descriptors and storing
     them in a dict with reference to the atom they
-    refer to. Furthermore, a cleaned SMILE or CGsmile
+    refer to. Furthermore, a cleaned SMILES or CGsmiles
     string is returned.
 
     Parameters
@@ -41,7 +65,7 @@ def strip_bonding_descriptors(fragment_string):
         a dict mapping bonding descriptors
         to the nodes within the string
     """
-    smile_iter = iter(fragment_string)
+    smile_iter = SmilesIter(fragment_string)
     bonding_descrpt = defaultdict(list)
     smile = ""
     node_count = 0
@@ -74,11 +98,16 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = anchor
             smile += token
         else:
-            if token not in '] H @ . - = # $ : / \\ + - %'\
-                and not token.isdigit():
+            if token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
+                smile += token
+            else:
+                if token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
+                    smile += (token + next(smile_iter))
+                else:
+                    smile += token
                 prev_node = node_count
                 node_count += 1
-            smile += token
+
     return smile, bonding_descrpt
 
 def fragment_iter(fragment_str, all_atom=True):
