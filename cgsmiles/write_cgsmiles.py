@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import networkx as nx
 import pysmiles
 from pysmiles.write_smiles import _get_ring_marker
@@ -116,18 +116,35 @@ def _find_nodes_bonding(molecule, fragname):
     beloning to that node.
     """
     edges = nx.get_edge_attributes(molecule, "bonding")
-    node_to_bonding = defaultdict(list)
-    for edge in edges:
-        print(edge)
-        if molecule.nodes[edge[0]]["fragname"] == fragname:
-            min_node = _find_min_node(molecule, edge[0])
-            node = edge[0] - min_node
-            node_to_bonding[node].append(edges[edge][0])
-        elif molecule.nodes[edge[1]]["fragname"] == fragname:
-            min_node = _find_min_node(molecule, edge[1])
-            node = edge[1] - min_node
-            node_to_bonding[node].append(edges[edge][1])
-    print(node_to_bonding)
+    node_to_bonding = defaultdict(dict)
+    for node in molecule.nodes:
+        if molecule.nodes[node]["fragname"] == fragname:
+            # if the node matches the fragname we look
+            # how it is connected to the other nodes via
+            # bonding operators
+            bond_operators = []
+            for neigh in nx.neighbors(molecule, node):
+                # bonding operators are not neccesarily symmetric so
+                # we have to keep track of the order of the edge
+                for idx, edge in enumerate([(node, neigh), (neigh, node)]):
+                    bond_op = edges.get(edge, None)
+                    if bond_op:
+                        bond_operators.append(bond_op[idx])
+                        break
+            # no bonding operators found let's move on
+            if len(bond_operators) == 0:
+                continue
+
+            # we found some operators now we see if they are
+            # already accounted for and if the number here is
+            # higher what is already accounted for
+            min_node = _find_min_node(molecule, node)
+            relative_node = node - min_node
+            for bond_op, count in Counter(bond_operators).items():
+                print(bond_op, count)
+                if count > node_to_bonding[relative_node].get(bond_op, 0):
+                    node_to_bonding[relative_node][bond_op] = count
+
     return node_to_bonding
 
 def _smiles_node_iter(smiles_str):
@@ -162,8 +179,9 @@ def add_bond_descrp(smiles_str, molecule, fragname):
     for node, descriptors in nodes_to_bonding.items():
         start, stop = nodes_in_string[node]
         annotated_str += smiles_str[prev_stop:stop]
-        for descriptor in descriptors:
-            annotated_str += f"[{descriptor}]"
+        for descriptor, count in descriptors.items():
+            for _ in range(0, count):
+                annotated_str += f"[{descriptor}]"
         prev_stop = stop
 
     annotated_str += smiles_str[prev_stop:]
