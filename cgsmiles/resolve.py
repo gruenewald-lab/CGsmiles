@@ -180,7 +180,7 @@ class MoleculeResolver:
  
                 # bonding descriptors are assumed to have bonding order 1
                 # unless they are specifically annotated
-                order = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
+                order = re.findall(r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", bonding[0])
                 if not order:
                     order = 1
                 else:
