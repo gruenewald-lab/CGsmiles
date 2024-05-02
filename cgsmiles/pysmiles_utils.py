@@ -7,7 +7,7 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
     """
     Helper function which add hydrogen atoms to the molecule graph.
 
-    First the hcount attribute produced by pysmiles us updated, because
+    First the hcount attribute produced by pysmiles is updated, because
     fragments have no bonds at time of reading so pysmiles does not
     know the connectivity. Hence the hcount is redone based on the
     actual connectivity of the final molecule.

@@ -202,8 +202,7 @@ class MoleculeResolver:
                                                 self_loops=False)
 
             # add the fragment id of the sequashed node
-            self.molecule.nodes[node_to_keep]['fragid'] +=\
-            self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
 
     def resolve(self):
 
