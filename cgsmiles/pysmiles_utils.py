@@ -37,7 +37,7 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             bonds = round(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
                                mol_graph.neighbors(node)]))
             charge = mol_graph.nodes[node].get('charge', 0)
-            hcount = pysmiles.smiles_helper.VALENCES[ele][0] -\
+            hcount = pysmiles.smiles_helper._valence(mol_graph, node, minimum=0) -\
                      bonds +\
                      charge
             # in this case we only rebuild hydrogen atoms that are not
