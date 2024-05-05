@@ -24,6 +24,11 @@ from cgsmiles.resolve import generate_edge
                          {0: ['>'], 1: ['$5']},
                          (3, 0),
                          ('<', '>')),
+                        # left right with annotated > <
+                        ({0: ['$'], 1: ['>1'], 3: ['<1']},
+                         {0: ['>1'], 1: ['$5']},
+                         (3, 0),
+                         ('<1', '>1')),
                         # left right selective bonding
                         # with identifier
                         ({0: ['$'], 1: ['>'], 3: ['<1']},
@@ -53,6 +58,16 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
                          (11, 14), (11, 15), (11, 16), (16, 17)]),
+                        # smiple linear seqeunce with bond-order in link
+                        ("{[#TC1][#TC4][#TC1]}.{#TC1=[$1]=CC=[$2],#TC4=[$1]=CC=[$2]}",
+                        #         0 1 2 3 4 5            6 7 8 9
+                        [('TC1', 'C C H H H H'), ('TC4', 'C C H H'),
+                        #       10 11 12 13 14 15
+                         ('TC1', 'C C H H H H')],
+                        'C C H H H H C C H H C C H H H H',
+                        [(0, 1), (0, 2), (1, 3), (1, 4), (1, 5), (0, 6), (6, 7),
+                         (6, 8), (7, 9), (7, 11), (10, 11), (10, 12), (10, 13),
+                         (10, 14), (11, 15)]),
                         # smiple linear seqeunce unconsumed bonding descrpt
                         ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]CO[>]C[$],#OHter=[$][O]}",
                         #           0 1             2 3 4 5 6 7 8
@@ -73,6 +88,16 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
                          (11, 14), (11, 15), (11, 16), (16, 17)]),
+                        # smiple linear seqeunce with ionic ending
+                        ("{[#OH][#PEO]|2[#ON]}.{#PEO=[$]COC[$],#OH=[$]O,#ON=[$][O-]}",
+                        #           0 1             2 3 4 5 6 7 8
+                        [('OH', 'O H'), ('PEO', 'C O C H H H H'),
+                        #        9 10 11 12 13 14 15         16 17
+                         ('PEO', 'C O C H H H H'), ('ON', 'O')],
+                        'O H C O C H H H H C O C H H H H O',
+                        [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
+                         (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
+                         (11, 14), (11, 15), (11, 16)]),
                         # uncomsumed bonding IDs; note that this is not the same
                         # molecule as previous test case. Here one of the OH branches
                         # and replaces an CH2 group with CH-OH
@@ -82,9 +107,9 @@ def test_generate_edge(bonds_source, bonds_target, edge, btypes):
                         #       9 10 11 12 13 14 15           16 17
                          ('PEO', 'C O C H H H H'), ('OHter', 'O H')],
                         'O H C O C H H H H C O C H H H H O H',
-                        [(0, 1), (0, 2), (2, 3), (2, 5), (2, 9), (3, 4),
+                        [(0, 1), (0, 2), (2, 3), (2, 5), (2, 11), (3, 4),
                          (4, 6), (4, 7), (4, 8), (9, 10), (9, 12), (9, 13),
-                         (10, 11), (11, 15), (11, 14), (11, 16), (16, 17)]),
+                         (10, 11), (11, 15), (11, 14), (9, 16), (16, 17)]),
                         # simple branched sequence
                         ("{[#Hter][#PE]([#PEO][#Hter])[#PE]([#PEO][#Hter])[#Hter]}.{#Hter=[$]H,#PE=[$]CC[$][$],#PEO=[$]COC[$]}",
                         [('Hter', 'H'), ('PE', 'C C H H H'), ('PEO', 'C O C H H H H'), ('Hter', 'H'),
@@ -173,5 +198,9 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     def _ele_match(n1, n2):
         return n1["element"] == n2["element"]
 
+    print(smile)
+    print(ref_graph.edges)
+    print(molecule.edges)
+    assert ref_graph.edges == molecule.edges
     # check that reference graph and molecule are isomorphic
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_ele_match)

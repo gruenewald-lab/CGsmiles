@@ -127,31 +127,35 @@ def test_read_cgsmiles(smile, nodes, edges):
                         # smiple symmetric bonding
                         ("[$]COC[$]",
                          "COC",
-                        {0: ["$"], 2: ["$"]}),
+                        {0: ["$1"], 2: ["$1"]}),
+                        # smiple symmetric bonding with more than one name
+                        ("[$1A]COC[$1A]",
+                         "COC",
+                        {0: ["$1A1"], 2: ["$1A1"]}),
                         # simple symmetric but with explicit hydrogen
                         ("[$][CH2]O[CH2][$]",
                          "[CH2]O[CH2]",
-                        {0: ["$"], 2: ["$"]}),
+                        {0: ["$1"], 2: ["$1"]}),
                         # smiple symmetric bonding; multiple descript
                         ("[$]COC[$][$1]",
                          "COC",
-                        {0: ["$"], 2: ["$", "$1"]}),
+                        {0: ["$1"], 2: ["$1", "$11"]}),
                         # named different bonding descriptors
                         ("[$1]CCCC[$2]",
                          "CCCC",
-                        {0: ["$1"], 3: ["$2"]}),
+                        {0: ["$11"], 3: ["$21"]}),
                         # ring and bonding descriptors
                         ("[$1]CC[$2]C1CCCCC1",
                          "CCC1CCCCC1",
-                        {0: ["$1"], 1: ["$2"]}),
+                        {0: ["$11"], 1: ["$21"]}),
                         # bonding descript. after branch
                         ("C(COC[$1])[$2]CCC[$3]",
                          "C(COC)CCC",
-                        {0: ["$2"], 3: ["$1"], 6: ["$3"]}),
+                        {0: ["$21"], 3: ["$11"], 6: ["$31"]}),
                         # left rigth bonding desciptors
                         ("[>]COC[<]",
                         "COC",
-                        {0: [">"], 2: ["<"]})
+                        {0: [">1"], 2: ["<1"]})
 ))
 def test_strip_bonding_descriptors(big_smile, smile, bonding):
     new_smile, new_bonding = strip_bonding_descriptors(big_smile)
@@ -161,50 +165,50 @@ def test_strip_bonding_descriptors(big_smile, smile, bonding):
 @pytest.mark.parametrize('fragment_str, nodes, edges',(
                         # single fragment
                         ("{#PEO=[$]COC[$]}",
-                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  (1, {"atomname": "O1", "fragname": "PEO", "element": "O"}),
-                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                 )},
                         {"PEO": [(0, 1), (1, 2)]}),
                         # single fragment but with explicit hydrogen in smiles
                         ("{#PEO=[$][CH2]O[CH2][$]}",
-                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  (1, {"atomname": "O1", "fragname": "PEO", "element": "O"}),
-                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                 )},
                         {"PEO": [(0, 1), (1, 2)]}),
                         # test NH3 terminal
                         ("{#AMM=N[$]}",
-                        {"AMM": ((0, {"atomname": "N0", "fragname": "AMM", "bonding": ["$"], "element": "N"}),
+                        {"AMM": ((0, {"atomname": "N0", "fragname": "AMM", "bonding": ["$1"], "element": "N"}),
                                 )},
                         {"AMM": []}),
                         # single fragment + 1 terminal (i.e. only 1 bonding descrpt
                         ("{#PEO=[$]COC[$],#OHter=[$][OH]}",
-                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  (1, {"atomname": "O1", "fragname": "PEO", "element": "O"}),
-                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  ),
-                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$"], "element": "O"}),)},
+                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$1"], "element": "O"}),)},
                         {"PEO": [(0, 1), (1, 2)],
                          "OHter": []}),
                         # single fragment + 1 terminal but multiple bond descritp.
                         # this adjust the hydrogen count
                         ("{#PEO=[$]COC[$][$1],#OHter=[$][OH]}",
-                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  (1, {"atomname": "O1", "fragname": "PEO", "element": "O"}),
-                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$", "$1"], "element": "C"}),
+                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$1", "$11"], "element": "C"}),
                                  ),
-                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$"], "element": "O"}),)},
+                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$1"], "element": "O"}),)},
                         {"PEO": [(0, 1), (1, 2)],
                          "OHter": []}),
                         # single fragment + 1 terminal but multiple bond descritp.
                         # but explicit hydrogen in the smiles string
                         ("{#PEO=[$][CH2]O[CH2][$][$1],#OHter=[$][OH]}",
-                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$"], "element": "C"}),
+                        {"PEO": ((0, {"atomname": "C0", "fragname": "PEO", "bonding": ["$1"], "element": "C"}),
                                  (1, {"atomname": "O1", "fragname": "PEO", "element": "O"}),
-                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$", "$1"], "element": "C"}),
+                                 (2, {"atomname": "C2", "fragname": "PEO", "bonding": ["$1", "$11"], "element": "C"}),
                                  ),
-                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$"], "element": "O"}),
+                         "OHter": ((0, {"atomname": "O0", "fragname": "OHter", "bonding": ["$1"], "element": "O"}),
                                    )},
                         {"PEO": [(0, 1), (1, 2),],
                          "OHter": []}),

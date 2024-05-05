@@ -6,6 +6,35 @@ import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 
+class PeekIter(object):
+    """
+    Custom iter that allows looking ahead, without
+    advancing the actual iter.
+    """
+    def __init__(self, collection):
+        self.collection = collection
+        self.index = 0
+
+    def __next__(self):
+        try:
+            result = self.collection[self.index]
+            self.index += 1
+        except IndexError:
+            raise StopIteration
+        return result
+
+    def peek(self):
+        try:
+            result = self.collection[self.index]
+        except IndexError:
+            return ""
+        return result
+
+    def __iter__(self):
+        self.index = 0
+        return self
+
+
 def strip_bonding_descriptors(fragment_string):
     """
     Processes a CGBigSmile fragment string by
@@ -27,11 +56,13 @@ def strip_bonding_descriptors(fragment_string):
         a dict mapping bonding descriptors
         to the nodes within the string
     """
-    smile_iter = iter(fragment_string)
+    bond_to_order = {'-': 1, '=': 2, '#': 3, '$': 4, ':': 1.5, '.': 0}
+    smile_iter = PeekIter(fragment_string)
     bonding_descrpt = defaultdict(list)
     smile = ""
     node_count = 0
     prev_node = 0
+    current_order = None
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
@@ -41,7 +72,14 @@ def strip_bonding_descriptors(fragment_string):
                 while peek != ']':
                     bond_descrp += peek
                     peek = next(smile_iter)
-                bonding_descrpt[prev_node].append(bond_descrp)
+                if smile_iter.peek() in bond_to_order:
+                    order = bond_to_order[next(smile_iter)]
+                elif current_order:
+                    order = current_order
+                    current_order = None
+                else:
+                    order = 1
+                bonding_descrpt[prev_node].append(bond_descrp + str(order))
             else:
                 atom = token
                 while peek != ']':
@@ -59,8 +97,10 @@ def strip_bonding_descriptors(fragment_string):
         elif token == ')':
             prev_node = anchor
             smile += token
+        elif token in bond_to_order:
+            current_order = bond_to_order[token]
         else:
-            if token not in '] H @ . - = # $ : / \\ + - %'\
+            if token not in '] H @ $ / \\ + - %'\
                 and not token.isdigit():
                 prev_node = node_count
                 node_count += 1

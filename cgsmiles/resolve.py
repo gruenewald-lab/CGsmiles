@@ -21,7 +21,7 @@ def compatible(left, right):
     -------
     bool
     """
-    if left == right and left not in '> <':
+    if left == right and left[0] not in '> <':
         return True
     l, r = left[0], right[0]
     if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
@@ -177,9 +177,7 @@ class MoleculeResolver:
 
             # bonding descriptors are assumed to have bonding order 1
             # unless they are specifically annotated
-            order = re.findall("\d+\.\d+", bonding[0])
-            if not order:
-                order = 1
+            order = int(bonding[0][-1])
             self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
 
     def squash_atoms(self):
