@@ -1,12 +1,11 @@
 import re
+import copy
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
-from .graph_utils import merge_graphs, sort_nodes, annotate_fragments
-
-VALENCES = pysmiles.smiles_helper.VALENCES
-VALENCES.update({"H": (1,)})
+from .graph_utils import merge_graphs, sort_nodes_by_attr, annotate_fragments
+from .pysmiles_utils import rebuild_h_atoms
 
 def compatible(left, right):
     """
@@ -22,7 +21,7 @@ def compatible(left, right):
     -------
     bool
     """
-    if left == right and left not in '> <':
+    if left == right and left[0] not in '> <':
         return True
     l, r = left[0], right[0]
     if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
@@ -129,6 +128,10 @@ class MoleculeResolver:
 
     def resolve_disconnected_molecule(self):
         """
+        Given a connected graph of nodes with associated fragment graphs
+        generate a disconnected graph of the fragments and annotate
+        each fragment graph to the node in the higher resolution
+        graph.
         """
         for meta_node in self.meta_graph.nodes:
             fragname = self.meta_graph.nodes[meta_node]['fragname']
@@ -139,18 +142,19 @@ class MoleculeResolver:
 
             for node in fragment.nodes:
                 new_node = correspondence[node]
-                attrs = self.molecule.nodes[new_node]
+                attrs = copy.deepcopy(self.molecule.nodes[new_node])
                 graph_frag.add_node(correspondence[node], **attrs)
-                nx.set_node_attributes(graph_frag, meta_node, 'fragid')
+                nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
                 new_b = correspondence[b]
+                attrs = copy.deepcopy(fragment.edges[(a, b)])
                 graph_frag.add_edge(new_a,
-                                    new_b)
+                                    new_b,
+                                    **attrs)
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
-
 
     def edges_from_bonding_descrpt(self):
         """
@@ -167,54 +171,39 @@ class MoleculeResolver:
             edge, bonding = generate_edge(prev_graph,
                                           node_graph)
 
-            #To DO - clean copying of bond-list attribute
-            # this is a bit of a workaround because at this stage the
-            # bonding list is actually shared between all residues of
-            # of the same type; so we first make a copy then we replace
-            # the list sans used bonding descriptor
-            prev_bond_list = prev_graph.nodes[edge[0]]['bonding'].copy()
-            prev_bond_list.remove(bonding[0])
-            prev_graph.nodes[edge[0]]['bonding'] = prev_bond_list
-            node_bond_list = node_graph.nodes[edge[1]]['bonding'].copy()
-            node_bond_list.remove(bonding[1])
-            node_graph.nodes[edge[1]]['bonding'] = node_bond_list
-            order = re.findall("\d+\.\d+", bonding[0])
+            # remove used bonding descriptors
+            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+
             # bonding descriptors are assumed to have bonding order 1
             # unless they are specifically annotated
-            if not order:
-                order = 1
+            order = int(bonding[0][-1])
             self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
 
-    def replace_unconsumed_bonding_descrpt(self):
+    def squash_atoms(self):
         """
-        We allow multiple bonding descriptors per atom, which
-        however, are not always consumed. In this case the left
-        over bonding descriptors are replaced by hydrogen atoms.
+        Applies the squash operator by removing the duplicate node
+        adding, all edges from that node to the remaining one, and
+        annotate the other node with the fragid of the removed
+        node.
         """
-        for meta_node in self.meta_graph.nodes:
-            graph = self.meta_graph.nodes[meta_node]['graph']
-            bonding = nx.get_node_attributes(graph, "bonding")
-            for node, bondings in bonding.items():
-                if bondings:
-                    element = graph.nodes[node]['element']
-                    bonds = round(sum([self.molecule.edges[(node, neigh)]['order'] for neigh in\
-                                       self.molecule.neighbors(node)]))
-                    hcount = VALENCES[element][0] - bonds
-                    attrs = {attr: graph.nodes[node][attr] for attr in ['fragname', 'fragid']}
-                    attrs['element'] = 'H'
-                    for _ in range(0, hcount):
-                        new_node = len(self.molecule.nodes) + 1
-                        graph.add_edge(node, new_node)
-                        attrs['atomname'] = "H" + str(len(graph.nodes)-1)
-                        graph.nodes[new_node].update(attrs)
-                        self.molecule.add_edge(node, new_node, order=1)
-                        self.molecule.nodes[new_node].update(attrs)
-        # now we want to sort the atoms
-        sort_nodes(self.molecule)
-        # and redo the meta molecule
-        self.meta_graph = annotate_fragments(self.meta_graph, self.molecule)
+        bondings = nx.get_edge_attributes(self.molecule, 'bonding')
+        squashed = False
+        for edge, bonding in bondings.items():
+            if not bonding[0].startswith('!'):
+                continue
+            # let's squash two nodes
+            node_to_keep, node_to_remove = edge
+            self.molecule = nx.contracted_nodes(self.molecule,
+                                                node_to_keep,
+                                                node_to_remove,
+                                                self_loops=False)
+
+            # add the fragment id of the sequashed node
+            self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
 
     def resolve(self):
+
         if self.cgsmiles_string is not None:
             self.meta_graph = read_cgsmiles(self.cgsmiles_string)
 
@@ -222,9 +211,24 @@ class MoleculeResolver:
             self.fragment_dict.update(read_fragments(self.fragment_string,
                                                      all_atom=self.all_atom))
 
+        # add disconnected fragments to graph
         self.resolve_disconnected_molecule()
+
+        # connect valid bonding descriptors
         self.edges_from_bonding_descrpt()
+
+        # contract atoms with squash descriptors
+        self.squash_atoms()
+
+        # rebuild hydrogen in all-atom case
         if self.all_atom:
-            self.replace_unconsumed_bonding_descrpt()
+            rebuild_h_atoms(self.molecule)
+
+        # sort the atoms
+        self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
+
+        # and redo the meta molecule
+        self.meta_graph = annotate_fragments(self.meta_graph,
+                                             self.molecule)
 
         return self.meta_graph, self.molecule
