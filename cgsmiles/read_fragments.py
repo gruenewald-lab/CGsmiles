@@ -12,26 +12,27 @@ class PeekIter(object):
     advancing the actual iter.
     """
     def __init__(self, collection):
-        self.collection = collection
-        self.index = 0
+        self.collection = iter(collection)
+        self._peek = None
 
     def __next__(self):
-        try:
-            result = self.collection[self.index]
-            self.index += 1
-        except IndexError:
-            raise StopIteration
-        return result
+        if self._peek:
+            item = self._peek
+            self._peek = None
+        else:
+            item = next(self.collection)
+        return item
 
     def peek(self):
+        if self._peek:
+            return self._peek
         try:
-            result = self.collection[self.index]
-        except IndexError:
-            return ""
-        return result
+            self._peek = next(self)
+        except StopIteration:
+            self._peek = None
+        return self._peek
 
     def __iter__(self):
-        self.index = 0
         return self
 
 
