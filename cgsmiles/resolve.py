@@ -28,7 +28,7 @@ def compatible(left, right):
         return left[1:] == right[1:]
     return False
 
-def generate_edge(source, target, bond_attribute="bonding"):
+def match_bonding_descriptors(source, target, bond_attribute="bonding"):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -170,8 +170,8 @@ class MoleculeResolver:
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
                 node_graph = self.meta_graph.nodes[node]['graph']
                 try:
-                    edge, bonding = generate_edge(prev_graph,
-                                                  node_graph)
+                    edge, bonding = match_bonding_descriptors(prev_graph,
+                                                              node_graph)
                 except LookupError:
                     continue
                 # remove used bonding descriptors
