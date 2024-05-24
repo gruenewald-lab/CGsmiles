@@ -1,7 +1,7 @@
 import pytest
 import networkx as nx
 from cgsmiles import MoleculeResolver
-from cgsmiles.resolve import generate_edge
+from cgsmiles.resolve import match_bonding_descriptors
 
 @pytest.mark.parametrize('bonds_source, bonds_target, edge, btypes',(
                         # single bond source each
@@ -37,12 +37,14 @@ from cgsmiles.resolve import generate_edge
                          ('<1', '>1')),
 
 ))
-def test_generate_edge(bonds_source, bonds_target, edge, btypes):
+def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
     source = nx.path_graph(5)
     target = nx.path_graph(4)
     nx.set_node_attributes(source, bonds_source, "bonding")
     nx.set_node_attributes(target, bonds_target, "bonding")
-    new_edge, new_btypes = generate_edge(source, target, bond_attribute="bonding")
+    new_edge, new_btypes = match_bonding_descriptors(source,
+                                                     target,
+                                                     bond_attribute="bonding")
     assert new_edge == edge
     assert new_btypes == btypes
 
