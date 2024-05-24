@@ -156,7 +156,9 @@ def read_cgsmiles(pattern):
                 cycle[token] = current
             # we close a cycle with the % syntax
             elif token == "%" and _get_percent(pattern, stop) in cycle:
-                cycle_edges.append((current, cycle[_get_percent(pattern, stop)]))
+                ring_marker = _get_percent(pattern, stop)
+                cycle_edges.append((current, cycle[ring_marker]))
+                del cycle[ring_marker]
                 break
             elif token == "%":
                 cycle[_get_percent(pattern, stop)] = current
@@ -276,4 +278,10 @@ def read_cgsmiles(pattern):
             # when all nested branches are completed
             if len(branch_anchor) == 0:
                 recipes = defaultdict(list)
+
+    # raise some errors for strange stuff
+    if cycle:
+        msg = "You have a dangling ring index."
+        raise SyntaxError(msg)
+
     return mol_graph
