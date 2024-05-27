@@ -73,7 +73,7 @@ def strip_bonding_descriptors(fragment_string):
                 while peek != ']':
                     bond_descrp += peek
                     peek = next(smile_iter)
-                if smile_iter.peek() in bond_to_order:
+                if smile_iter.peek() in bond_to_order and node_count == 0:
                     order = bond_to_order[next(smile_iter)]
                 elif current_order:
                     order = current_order
@@ -98,6 +98,7 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
         elif token in bond_to_order:
             current_order = bond_to_order[token]
+            smile += token
         elif token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
             smile += token
         else:
@@ -105,7 +106,7 @@ def strip_bonding_descriptors(fragment_string):
                 smile += (token + next(smile_iter))
             else:
                 smile += token
-
+            current_order = None
             prev_node = node_count
             node_count += 1
 
@@ -140,7 +141,6 @@ def fragment_iter(fragment_str, all_atom=True):
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
         smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
-
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
