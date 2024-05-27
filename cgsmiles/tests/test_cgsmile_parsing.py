@@ -162,6 +162,10 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
                         ("[$1A]COC[$1A]",
                          "COC",
                         {0: ["$1A1"], 2: ["$1A1"]}),
+                        # smiple bonding multiletter atom
+                        ("Clc[$]c[$]",
+                         "Clcc",
+                        {1: ["$1"], 2: ["$1"]}),
                         # simple symmetric but with explicit hydrogen
                         ("[$][CH2]O[CH2][$]",
                          "[CH2]O[CH2]",
