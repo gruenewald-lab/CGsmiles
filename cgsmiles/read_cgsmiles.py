@@ -154,13 +154,15 @@ def read_cgsmiles(pattern):
             # we open a cycle
             elif token.isdigit():
                 cycle[token] = current
-            # we close a cycle with the % syntax
-            elif token == "%" and _get_percent(pattern, stop) in cycle:
-                ring_marker = _get_percent(pattern, stop)
-                cycle_edges.append((current, cycle[ring_marker]))
-                del cycle[ring_marker]
-                break
+            # we found a ring indicator
             elif token == "%":
+                ring_marker = _get_percent(pattern, stop)
+                # we close the ring
+                if ring_marker in cycle:
+                    cycle_edges.append((current, cycle[ring_marker]))
+                    del cycle[ring_marker]
+                    break
+                # we open a new ring
                 cycle[_get_percent(pattern, stop)] = current
                 break
             else:
