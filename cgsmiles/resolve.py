@@ -7,6 +7,13 @@ from .read_fragments import read_fragments
 from .graph_utils import merge_graphs, sort_nodes_by_attr, annotate_fragments
 from .pysmiles_utils import rebuild_h_atoms
 
+def mark_aromatic_edges(graph):
+    for edge in graph.edges:
+        if graph.nodes[edge[0]].get("aromatic", False) and\
+        graph.nodes[edge[1]].get("aromatic", False):
+            graph.edges[edge]["order"] = 1.5
+    return graph
+
 def compatible(left, right):
     """
     Check bonding descriptor compatibility according
@@ -225,6 +232,7 @@ class MoleculeResolver:
 
         # rebuild hydrogen in all-atom case
         if self.all_atom:
+            mark_aromatic_edges(self.molecule)
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms
