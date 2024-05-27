@@ -1,4 +1,5 @@
 import pysmiles
+import math
 
 VALENCES = pysmiles.smiles_helper.VALENCES
 VALENCES.update({"H": (1,)})
@@ -34,7 +35,7 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             ele = mol_graph.nodes[node]['element']
             # hcount is the valance minus the degree minus
             # the number of bonding descriptors
-            bonds = round(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
+            bonds = math.ceil(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
                                mol_graph.neighbors(node)]))
             charge = mol_graph.nodes[node].get('charge', 0)
             hcount = pysmiles.smiles_helper._valence(mol_graph, node, minimum=0) -\
