@@ -182,6 +182,10 @@ class MoleculeResolver:
                 # unless they are specifically annotated
                 order = int(bonding[0][-1])
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+                if self.all_atom:
+                    for edge_node in edge:
+                        if self.molecule.nodes[edge_node]['element'] != 'H':
+                            self.molecule.nodes[edge_node]['hcount'] -= 1
 
     def squash_atoms(self):
         """
@@ -225,8 +229,6 @@ class MoleculeResolver:
 
         # rebuild hydrogen in all-atom case
         if self.all_atom:
-            print(self.molecule.edges(data='order'))
-            pysmiles.smiles_helper.mark_aromatic_edges(self.molecule)
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms
