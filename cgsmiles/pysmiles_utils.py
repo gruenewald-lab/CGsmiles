@@ -31,7 +31,7 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             mol_graph.nodes[node]['hcount'] = 0
 
         if mol_graph.nodes[node].get('bonding', False) and  \
-        mol_graph.nodes[node].get('ele,emt', '*') == "H":
+        mol_graph.nodes[node].get('element', '*') == "H":
             mol_graph.nodes[node]['single_h_frag'] = True
 
     for edge in mol_graph.edges:
@@ -40,7 +40,9 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
 
     pysmiles.smiles_helper.mark_aromatic_atoms(mol_graph, strict=False)
     pysmiles.smiles_helper.mark_aromatic_edges(mol_graph)
+
     nx.set_node_attributes(mol_graph, 0, 'hcount')
+
     pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
     pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
 
