@@ -28,6 +28,7 @@ jobs:
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
+        pip install git+https://github.com/pckroon/pysmiles.git
         pip install -r requirements-tests.txt
         
     - name: Run pytest with codecoverage
