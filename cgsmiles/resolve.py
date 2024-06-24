@@ -28,7 +28,7 @@ def compatible(left, right):
         return left[1:] == right[1:]
     return False
 
-def generate_edge(source, target, bond_attribute="bonding"):
+def match_bonding_descriptors(source, target, bond_attribute="bonding"):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -165,20 +165,27 @@ class MoleculeResolver:
         bonding descriptors that formed the edge. Later unconsumed
         bonding descriptors are replaced by hydrogen atoms.
         """
-        for prev_node, node in nx.dfs_edges(self.meta_graph):
-            prev_graph = self.meta_graph.nodes[prev_node]['graph']
-            node_graph = self.meta_graph.nodes[node]['graph']
-            edge, bonding = generate_edge(prev_graph,
-                                          node_graph)
+        for prev_node, node in self.meta_graph.edges:
+            for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
+                prev_graph = self.meta_graph.nodes[prev_node]['graph']
+                node_graph = self.meta_graph.nodes[node]['graph']
+                try:
+                    edge, bonding = match_bonding_descriptors(prev_graph,
+                                                              node_graph)
+                except LookupError:
+                    continue
+                # remove used bonding descriptors
+                prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+                node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
 
-            # remove used bonding descriptors
-            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
-            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
-
-            # bonding descriptors are assumed to have bonding order 1
-            # unless they are specifically annotated
-            order = int(bonding[0][-1])
-            self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+                # bonding descriptors are assumed to have bonding order 1
+                # unless they are specifically annotated
+                order = int(bonding[0][-1])
+                self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+                if self.all_atom:
+                    for edge_node in edge:
+                        if self.molecule.nodes[edge_node]['element'] != 'H':
+                            self.molecule.nodes[edge_node]['hcount'] -= 1
 
     def squash_atoms(self):
         """
