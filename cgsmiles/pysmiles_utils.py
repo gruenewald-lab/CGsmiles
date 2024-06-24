@@ -1,7 +1,5 @@
+import networkx as nx
 import pysmiles
-
-VALENCES = pysmiles.smiles_helper.VALENCES
-VALENCES.update({"H": (1,)})
 
 def rebuild_h_atoms(mol_graph, keep_bonding=False):
     """
@@ -29,27 +27,25 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
         graph describing the full molecule without hydrogen atoms
     """
     for node in mol_graph.nodes:
-        if mol_graph.nodes[node].get('bonding', False):
-            # get the degree
-            ele = mol_graph.nodes[node]['element']
-            # hcount is the valance minus the degree minus
-            # the number of bonding descriptors
-            bonds = round(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
-                               mol_graph.neighbors(node)]))
-            charge = mol_graph.nodes[node].get('charge', 0)
-            hcount = pysmiles.smiles_helper._valence(mol_graph, node, minimum=0) -\
-                     bonds +\
-                     charge
-            # in this case we only rebuild hydrogen atoms that are not
-            # replaced by bonding operators.
-            if keep_bonding:
-                hcount -= len(mol_graph.nodes[node]['bonding'])
+        if mol_graph.nodes[node].get('aromatic', False):
+            mol_graph.nodes[node]['hcount'] = 0
 
-            mol_graph.nodes[node]['hcount'] = hcount
-            if ele == "H":
-                mol_graph.nodes[node]['single_h_frag'] = True
+        if mol_graph.nodes[node].get('bonding', False) and  \
+        mol_graph.nodes[node].get('element', '*') == "H":
+            mol_graph.nodes[node]['single_h_frag'] = True
 
+    for edge in mol_graph.edges:
+        if mol_graph.edges[edge]['order'] == 1.5:
+            mol_graph.edges[edge]['order'] = 1
+
+    pysmiles.smiles_helper.mark_aromatic_atoms(mol_graph, strict=False)
+    pysmiles.smiles_helper.mark_aromatic_edges(mol_graph)
+
+    nx.set_node_attributes(mol_graph, 0, 'hcount')
+
+    pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
     pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
+
     for node in mol_graph.nodes:
         if mol_graph.nodes[node].get("element", "*") == "H" and\
         not mol_graph.nodes[node].get("single_h_frag", False):

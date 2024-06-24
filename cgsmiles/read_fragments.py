@@ -38,21 +38,21 @@ class PeekIter(object):
 
 def strip_bonding_descriptors(fragment_string):
     """
-    Processes a CGBigSmile fragment string by
+    Processes a CGSmiles fragment string by
     stripping the bonding descriptors and storing
     them in a dict with reference to the atom they
-    refer to. Furthermore, a cleaned SMILE or CGsmile
+    refer to. Furthermore, a cleaned SMILES or CGSmiles
     string is returned.
 
     Parameters
     ----------
     fragment_string: str
-        a CGBigsmile fragment string
+        a CGSmiles fragment string
 
     Returns
     -------
     str:
-        a canonical SMILES or CGsmiles string
+        a canonical SMILES or CGSmiles string
     dict:
         a dict mapping bonding descriptors
         to the nodes within the string
@@ -73,7 +73,7 @@ def strip_bonding_descriptors(fragment_string):
                 while peek != ']':
                     bond_descrp += peek
                     peek = next(smile_iter)
-                if smile_iter.peek() in bond_to_order:
+                if smile_iter.peek() in bond_to_order and node_count == 0:
                     order = bond_to_order[next(smile_iter)]
                 elif current_order:
                     order = current_order
@@ -87,8 +87,6 @@ def strip_bonding_descriptors(fragment_string):
                     atom += peek
                     peek = next(smile_iter)
                 smile = smile + atom + "]"
-                #if peek not in '] H @ . - = # $ : / \\ + - %'\
-                #and not token.isdigit():
                 prev_node = node_count
                 node_count += 1
 
@@ -100,12 +98,18 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
         elif token in bond_to_order:
             current_order = bond_to_order[token]
-        else:
-            if token not in '] H @ $ / \\ + - %'\
-                and not token.isdigit():
-                prev_node = node_count
-                node_count += 1
             smile += token
+        elif token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
+            smile += token
+        else:
+            if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
+                smile += (token + next(smile_iter))
+            else:
+                smile += token
+            current_order = None
+            prev_node = node_count
+            node_count += 1
+
     return smile, bonding_descrpt
 
 def fragment_iter(fragment_str, all_atom=True):
@@ -137,13 +141,12 @@ def fragment_iter(fragment_str, all_atom=True):
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
         smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
-
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile)
+            mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         # we deal with a CG resolution graph
         else:
