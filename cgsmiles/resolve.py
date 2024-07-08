@@ -294,7 +294,7 @@ class MoleculeResolver:
         # in all-atom MD there are common naming conventions
         # that might be expected and hence we set them here
         if all_atom:
-            set_atom_names_atomsitic(self.meta_graph, self.molecule)
+            set_atom_names_atomistic(self.meta_graph, self.molecule)
 
         return self.meta_graph, self.molecule
 
