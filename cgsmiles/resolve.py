@@ -109,51 +109,49 @@ class MoleculeResolver:
         self.fragment_dicts = fragment_dicts
         # this is the current meta_graph
         self.meta_graph = nx.Graph()
-
+        # if the last resolution is all_atom
+        self.last_all_atom = last_all_atom
+        # what is the current resolution level
+        self.resolution_counter = 0
         # here we figure out how many resolutions
         # we are dealing with
         elements = re.findall(r"\{[^\}]+\}", pattern)
 
         # case 1) we have a meta graph only described
         # and the fragment come from elsewhere
-        if len(elements) == 1 and self.fragment_dicts:
+        if self.fragment_dicts:
+            msg = ("You cannot provide a fragment dict and fragments defined as CGSmiles string."
+                   "Instead first read all fragments using cgsmiles.read_fragments then provide "
+                   "all fragments together to the MoleculeResolver")
+            if len(elements) != 1: raise IOError(msg)
             self.molecule = read_cgsmiles(elements[0])
-            self.fragment_strs = None
-            # the number of resolutions available
-            self.resolutions = len(self.fragment_dicts)
-            # turn the framgent strings into an iterator
-            self.fragment_strs = None
-            self.fragment_dicts = self.fragment_dicts
         else:
             # case 2)
             # a meta_graph is provided which means we only
             # have fragments to deal with
             if meta_graph:
-                self.fragment_strs = elements
+                fragment_strs = elements
                 self.molecule = meta_graph
             # case 3) a string containing both fragments and
             # the meta sequence is provided
             else:
                 self.molecule = read_cgsmiles(elements[0])
-                self.fragment_strs = elements[1:]
+                fragment_strs = elements[1:]
 
-            # the number of resolutions available
-            self.resolutions = len(self.fragment_strs)
+            # now we populate the fragment dicts
+            self.fragment_dicts = []
+            for idx, fragment_str in enumerate(fragment_strs):
+                all_atom = (idx == len(fragment_strs) - 1 and self.last_all_atom)
+                f_dict = read_fragments(fragment_str, all_atom=all_atom)
+                self.fragment_dicts.append(f_dict)
+
+        self.resolutions = len(self.fragment_dicts)
 
         # at this stage there are no atomnames for the nodes
         new_names = nx.get_node_attributes(self.molecule, "fragname")
         nx.set_node_attributes(self.meta_graph, new_names, "atomname")
 
-        # if the last resolution is all_atom
-        self.last_all_atom = last_all_atom
-
-        # what is the current resolution
-        self.resolution_counter = 0
-
-        # the next resolution fragments
-        self.fragment_dict = {}
-
-    def resolve_disconnected_molecule(self):
+    def resolve_disconnected_molecule(self, fragment_dict):
         """
         Given a connected graph of nodes with associated fragment graphs
         generate a disconnected graph of the fragments and annotate
@@ -162,7 +160,7 @@ class MoleculeResolver:
         """
         for meta_node in self.meta_graph.nodes:
             fragname = self.meta_graph.nodes[meta_node]['fragname']
-            fragment = self.fragment_dict[fragname]
+            fragment = fragment_dict[fragname]
             correspondence = merge_graphs(self.molecule, fragment)
 
             graph_frag = nx.Graph()
@@ -250,18 +248,10 @@ class MoleculeResolver:
         Resolve a CGSmiles string once and return the next resolution.
         """
         # check if this is an all-atom level resolution
-        if self.resolution_counter == self.resolutions -1 and self.last_all_atom:
-            all_atom = True
-        else:
-            all_atom = False
+        all_atom = (self.resolution_counter == self.resolutions - 1 and self.last_all_atom)
 
         # get the next set of fragments
-        if self.fragment_strs:
-            fragment_str = self.fragment_strs[self.resolution_counter]
-            # read the fragment str and populate dict
-            self.fragment_dict = read_fragments(fragment_str, all_atom=all_atom)
-        else:
-            self.fragment_dict = self.fragment_dicts[self.resolution_counter ]
+        fragment_dict = self.fragment_dicts[self.resolution_counter]
 
         # set the previous molecule as meta_graph
         self.meta_graph = self.molecule
@@ -274,7 +264,7 @@ class MoleculeResolver:
         self.molecule = nx.Graph()
 
         # add disconnected fragments to graph
-        self.resolve_disconnected_molecule()
+        self.resolve_disconnected_molecule(fragment_dict)
 
         # connect valid bonding descriptors
         self.edges_from_bonding_descrpt(all_atom=all_atom)
@@ -307,7 +297,7 @@ class MoleculeResolver:
         """
         Iterator returning all resolutions in oder.
         """
-        for _ in range(self.resolutions):
+        for r in range(self.resolutions):
             meta_graph, molecule = self.resolve()
             yield meta_graph, molecule
 
