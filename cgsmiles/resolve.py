@@ -249,23 +249,19 @@ class MoleculeResolver:
         """
         Resolve a CGSmiles string once and return the next resolution.
         """
-        # increment the resolution counter
-        self.resolution_counter += 1
-
         # check if this is an all-atom level resolution
-        if self.resolution_counter == self.resolutions and self.last_all_atom:
+        if self.resolution_counter == self.resolutions -1 and self.last_all_atom:
             all_atom = True
         else:
             all_atom = False
 
         # get the next set of fragments
         if self.fragment_strs:
-            fragment_str = self.fragment_strs[self.resolution_counter - 1]  # -1 because the counter has already been incremented #FIXME
-
+            fragment_str = self.fragment_strs[self.resolution_counter]
             # read the fragment str and populate dict
-            self.fragment_dict = read_fragments(fragment_str, all_atom=all_atom))
+            self.fragment_dict = read_fragments(fragment_str, all_atom=all_atom)
         else:
-            self.fragment_dict = self.fragment_dicts[self.resolution_counter - 1]  # FIXME
+            self.fragment_dict = self.fragment_dicts[self.resolution_counter ]
 
         # set the previous molecule as meta_graph
         self.meta_graph = self.molecule
@@ -301,6 +297,9 @@ class MoleculeResolver:
         # that might be expected and hence we set them here
         if all_atom:
             set_atom_names_atomistic(self.meta_graph, self.molecule)
+
+        # increment the resolution counter
+        self.resolution_counter += 1
 
         return self.meta_graph, self.molecule
 
