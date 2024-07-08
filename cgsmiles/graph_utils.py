@@ -116,7 +116,7 @@ def annotate_fragments(meta_graph, molecule):
     return meta_graph
 
 
-def set_atom_names_atomsitic(meta_graph, molecule):
+def set_atom_names_atomistic(meta_graph, molecule):
     """
     Set atomnames according to commonly used convention
     in molecular dynamics (MD) forcefields. This convention

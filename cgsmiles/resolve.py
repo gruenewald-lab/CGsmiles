@@ -94,7 +94,7 @@ class MoleculeResolver:
             the cgsmiles string to resolve
         meta_graph: `:class:nx.Graph`
             a potential higher resolution graph
-        fragment_dict: dict[`:class:nx.Garph`]
+        fragment_dict: dict[str, nx.Graph]
             a dict of fragment graphs
         last_all_atom: bool
             if the last resolution is at the all
@@ -185,7 +185,7 @@ class MoleculeResolver:
         however, the meta_graph edge gets an attribute with the
         bonding descriptors that formed the edge.
 
-        Later unconsumed descriptors are discarded and the valance
+        Later unconsumed descriptors are discarded and the valence
         filled in using hydrogen atoms in case of an atomistic molecule.
 
         Parameters
