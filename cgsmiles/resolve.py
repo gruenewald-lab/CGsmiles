@@ -123,7 +123,7 @@ class MoleculeResolver:
             self.resolutions = len(self.fragment_dicts)
             # turn the framgent strings into an iterator
             self.fragment_strs = None
-            self.fragment_dicts = iter(self.fragment_dicts)
+            self.fragment_dicts = self.fragment_dicts
         else:
             # case 2)
             # a meta_graph is provided which means we only

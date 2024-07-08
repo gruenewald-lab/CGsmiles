@@ -1,7 +1,10 @@
+import re
 import pytest
 import networkx as nx
 from cgsmiles import MoleculeResolver
 from cgsmiles.resolve import match_bonding_descriptors
+from cgsmiles.read_cgsmiles import read_cgsmiles
+from cgsmiles.read_fragments import read_fragments
 
 @pytest.mark.parametrize('bonds_source, bonds_target, edge, btypes',(
                         # single bond source each
@@ -215,9 +218,35 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     def _ele_match(n1, n2):
         return n1["element"] == n2["element"]
 
-    print(smile)
-    print(ref_graph.edges)
-    print(molecule.edges)
     #assert ref_graph.edges == molecule.edges
     # check that reference graph and molecule are isomorphic
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_ele_match)
+
+
+@pytest.mark.parametrize('case, cgsmiles_str, ref_string',(
+    # case 1: here only the meta-graph is described by the
+    # cgsmiles string the fragments are provided via a dict
+    (1, "{[#A][#B]}.{#A=[#A1][#A2][>],#B=[<][#B1][#B2]}",
+    "{[#A1][#A2][#B1][#B2]}"),
+    # case 2: opposite case of 1; here only the fragments are
+    # described by the input string
+    (2, "{[#A][#B]}.{#A=[#A1][#A2][>],#B=[<][#B1][#B2]}",
+    "{[#A1][#A2][#B1][#B2]}"),))
+def test_resolve_cases(case, cgsmiles_str, ref_string):
+    elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+    if case == 1:
+        fragment_dict = read_fragments(elements[-1], all_atom=False)
+        meta_mol, molecule = MoleculeResolver(fragment_dicts=[fragment_dict],
+                                              pattern=elements[0],
+                                              last_all_atom=False).resolve()
+    elif case == 2:
+        meta_input = read_cgsmiles(elements[0])
+        meta_mol, molecule = MoleculeResolver(meta_graph=meta_input,
+                                              pattern=elements[1],
+                                              last_all_atom=False).resolve()
+    ref_graph = read_cgsmiles(ref_string)
+
+    def _atomname_match(n1, n2):
+        return n1["fragname"] == n2["atomname"]
+    assert nx.is_isomorphic(ref_graph, molecule, node_match=_atomname_match)
+
