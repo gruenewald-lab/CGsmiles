@@ -139,8 +139,6 @@ class MoleculeResolver:
 
             # the number of resolutions available
             self.resolutions = len(self.fragment_strs)
-            # turn the framgent strings into an iterator
-            self.fragment_strs = iter(self.fragment_strs)
 
         # at this stage there are no atomnames for the nodes
         new_names = nx.get_node_attributes(self.molecule, "fragname")
@@ -262,16 +260,12 @@ class MoleculeResolver:
 
         # get the next set of fragments
         if self.fragment_strs:
-            fragment_str = next(self.fragment_strs)
-
-            # empty the fragment dict just as a precaution
-            self.fragment_dict = {}
+            fragment_str = self.fragment_strs[self.resolution_counter - 1]  # -1 because the counter has already been incremented #FIXME
 
             # read the fragment str and populate dict
-            self.fragment_dict.update(read_fragments(fragment_str,
-                                                     all_atom=all_atom))
+            self.fragment_dict = read_fragments(fragment_str, all_atom=all_atom))
         else:
-            self.fragment_dict = next(self.fragment_dicts)
+            self.fragment_dict = self.fragment_dicts[self.resolution_counter - 1]  # FIXME
 
         # set the previous molecule as meta_graph
         self.meta_graph = self.molecule
