@@ -3,7 +3,10 @@ import copy
 import networkx as nx
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
-from .graph_utils import merge_graphs, sort_nodes_by_attr, annotate_fragments
+from .graph_utils import (merge_graphs,
+                          sort_nodes_by_attr,
+                          annotate_fragments,
+                          set_atom_names_atomsitic)
 from .pysmiles_utils import rebuild_h_atoms
 
 def compatible(left, right):
@@ -287,6 +290,11 @@ class MoleculeResolver:
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
                                              self.molecule)
+
+        # in all-atom MD there are common naming conventions
+        # that might be expected and hence we set them here
+        if all_atom:
+            set_atom_names_atomsitic(self.meta_graph, self.molecule)
 
         return self.meta_graph, self.molecule
 

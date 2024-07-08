@@ -114,3 +114,17 @@ def annotate_fragments(meta_graph, molecule):
         meta_graph.nodes[meta_node]['graph'] = graph_frag
 
     return meta_graph
+
+
+def set_atom_names_atomsitic(meta_graph, molecule):
+    """
+    Set atomnames according to commonly used convention
+    in molecular dynamics (MD) forcefields. This convention
+    is defined as element plus counter for atom in residue.
+    """
+    for meta_node in meta_graph.nodes:
+        fraggraph = meta_graph.nodes[meta_node]['graph']
+        for idx, node in enumerate(fraggraph.nodes):
+            atomname = fraggraph.nodes[node]['element'] + str(idx)
+            fraggraph.nodes[node]['atomname'] = atomname
+            molecule.nodes[node]['atomname'] = atomname
