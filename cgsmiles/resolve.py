@@ -6,7 +6,7 @@ from .read_fragments import read_fragments
 from .graph_utils import (merge_graphs,
                           sort_nodes_by_attr,
                           annotate_fragments,
-                          set_atom_names_atomsitic)
+                          set_atom_names_atomistic)
 from .pysmiles_utils import rebuild_h_atoms
 
 def compatible(left, right):
@@ -305,3 +305,11 @@ class MoleculeResolver:
         for _ in range(self.resolutions):
             meta_graph, molecule = self.resolve()
             yield meta_graph, molecule
+
+    def resolve_all(self):
+        """
+        Resolve all layers and return final molecule
+        as well as the last layer above that.
+        """
+        *_, (meta_graph, graph) = resolver.resolve_iter()
+        return meta_graph, graph
