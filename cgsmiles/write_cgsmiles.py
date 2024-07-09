@@ -31,7 +31,7 @@ def write_cgsmiles_graph(molecule):
     """
     molecule = molecule.copy()
     # should be any node with order 1
-    start = 0
+    start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
     predecessors = defaultdict(list)
@@ -117,10 +117,10 @@ def _find_min_node(molecule, node):
 
 def _find_nodes_bonding(molecule, fragname):
     """
-    For nodes in `graph` check if they have participate
+    For nodes in `graph` check if they participate
     in any edges that have the `bonding` attribute.
     If yes store the node and the bonding operator
-    beloning to that node.
+    belonging to that node.
     """
     edges = nx.get_edge_attributes(molecule, "bonding")
     node_to_bonding = defaultdict(list)
@@ -189,7 +189,7 @@ def add_bond_descrp(smiles_str, molecule, fragname):
 def write_cgsmiles_fragments(fragment_dict, all_atom=True):
     """
     Write fragments of molecule graph. To identify the fragments
-    the all nodes with the same attribute `fragname` and `fragid`
+    all nodes with the same `fragname` and `fragid` attributes
     are considered as fragment. Bonding between fragments is
     extracted from the `bonding` edge attributes.
 
