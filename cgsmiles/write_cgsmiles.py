@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import networkx as nx
 import pysmiles
 from pysmiles.write_smiles import _get_ring_marker
@@ -125,7 +125,6 @@ def _find_nodes_bonding(molecule, fragname):
     edges = nx.get_edge_attributes(molecule, "bonding")
     node_to_bonding = defaultdict(list)
     for edge in edges:
-        #nprint(edge)
         if molecule.nodes[edge[0]]["fragname"] == fragname:
             min_node = _find_min_node(molecule, edge[0])
             node = edge[0] - min_node
@@ -134,7 +133,6 @@ def _find_nodes_bonding(molecule, fragname):
             min_node = _find_min_node(molecule, edge[1])
             node = edge[1] - min_node
             node_to_bonding[node].append(edges[edge][1])
-    #print(node_to_bonding)
     return node_to_bonding
 
 def _smiles_node_iter(smiles_str):
