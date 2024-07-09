@@ -390,7 +390,8 @@ class MoleculeResolver:
     @classmethod
     def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True):
         """
-        Initiate a MoleculeResolver instance from a cgsmiles string.
+        Initiate a MoleculeResolver instance from a cgsmiles string
+        and a `meta_graph` that describes the lowest resolution.
 
         Parameters
         ----------
@@ -423,7 +424,8 @@ class MoleculeResolver:
     @classmethod
     def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True):
         """
-        Initiate a MoleculeResolver instance from a cgsmiles string.
+        Initiate a MoleculeResolver instance from a cgsmiles string, describing
+        one molecule and fragment_dicts containing fragments for each resolution.
 
         Parameters
         ----------
@@ -441,6 +443,10 @@ class MoleculeResolver:
         """
         # here we figure out how many resolutions we are dealing with
         elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        if len(elements) > 1:
+            msg = ("Your cgsmiles string can only describe one "
+                   "resolution of a molecule when using this function.")
+            raise IOError(msg)
         # the first one describes our lowest resolution
         molecule = read_cgsmiles(elements[0])
         resolver_obj = cls(molecule_graph=molecule,
