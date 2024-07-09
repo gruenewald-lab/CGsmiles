@@ -1,12 +1,13 @@
 import re
+import copy
 import networkx as nx
-import pysmiles
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
-from .graph_utils import merge_graphs, sort_nodes, annotate_fragments
-
-VALENCES = pysmiles.smiles_helper.VALENCES
-VALENCES.update({"H": (1,)})
+from .graph_utils import (merge_graphs,
+                          sort_nodes_by_attr,
+                          annotate_fragments,
+                          set_atom_names_atomistic)
+from .pysmiles_utils import rebuild_h_atoms
 
 def compatible(left, right):
     """
@@ -22,14 +23,14 @@ def compatible(left, right):
     -------
     bool
     """
-    if left == right and left not in '> <':
+    if left == right and left[0] not in '> <':
         return True
     l, r = left[0], right[0]
     if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
         return left[1:] == right[1:]
     return False
 
-def generate_edge(source, target, bond_attribute="bonding"):
+def match_bonding_descriptors(source, target, bond_attribute="bonding"):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -70,161 +71,385 @@ def generate_edge(source, target, bond_attribute="bonding"):
 
 class MoleculeResolver:
     """
-    Resolve the molecule described by a CGBigSmile
-    string.
+    Resolve the molecule(s) described by a CGSmiles string and return a nx.Graph
+    of the molecule.
+
+    First, this class has to be initiated using one of three class construction
+    methods. When trying to read a CGSmiles string always use the first method.
+    The other constructors can be used in case fragments or the lowest
+    resolution molecule are defined by graphs that come from elsewhere.
+
+    `self.from_string`:           use when fragments and lowest resolution are
+                                  described in one CGSmiles string.
+    `self.from_graph`:            use when fragments are described by CGSmiles
+                                  strings but the lowest resolution is given
+                                  as nx.Graph
+    `self.from_fragment_dicts`:   use when fragments are given as nx.Graphs
+                                  and the lowest resolution is provided as
+                                  CGSmiles string
+
+    Once the `MoleculeResolver` is initiated you can call the `resolve_iter` to
+    loop over the different levels of resolution. The resolve iter will always
+    return the previous lower resolution graph as well as the current higher
+    resolution graph. For example, if the CGSmiles string describes a monomer
+    sequence of a regular polymer, the lower resolution graph will be the graph
+    of this monomer sequence and the higher resolution graph the full molecule.
+
+    Basic Examples
+    --------------
+    Blocky-copolymer of PE and PEO with the first resolution being the sequence
+    of blocks, followed by the monomer graph, and then the full molecule.
+
+    >>> cgsmiles_str = "{[#B1][#B2][#B1]}.{#B1=[#PEO]|4,#B2=[#PE]|2}.{#PEO=[>]COC[<],#PE=[>]CC[<]}"
+    >>> resolver = MoleculeResolver.from_string(cgsmiles_str)
+    >>> for low_res, high_res in resolver.resolve_iter():
+            print(low_res.nodes(data='fragname'))
+            print(high_res.nodes(data='atomname))
+
+    To only access the final resolution level you can simply call `resolve all`:
+    >>> monomer_graph, full_molecule = resolver.resolve_all()
+
+    Advanced API Examples
+    ---------------------
+    Alternatively, one could have gotten the block level graph from somewhere
+    else defined as `nx.Graph` in that case:
+    >>> # the string only defines the fragments
+    >>> cgsmiles_str = "{#B1=[#PEO]|4,#B2=[#PE]|2}.{#PEO=[>]COC[<],#PE=[>]CC[<]}"
+    >>> block_graph = nx.Graph()
+    >>> block_graph.add_edges_from([(0, 1), (1, 2), (2, 3)])
+    >>> nx.set_node_attributes(block_graph, {0: "B1", 1: "B2", 2: "B1"}, 'fragname')
+    >>> resolver = MoleculeResolver.from_graph(cgsmiles_str, block_graph)
+
+    Finally, there is the option of having the fragments from elsewhere for
+    example a library. Then only the graph defined as CGSmiles string. In this
+    case the `from_fragment_dicts` method can be used. Please note that the
+    fragment graphs need to have the following attributes as a graph returned
+    by the `cgsmiles.read_fragments` function.
+    >>> fragment_dicts = []
+    >>> for frag_string in ["{#B1=[#PEO]|4,#B2=[#PE]|2}", "{#PEO=[>]COC[<],#PE=[>]CC[<]}"]:
+    >>>     frag_dict = read_fragments(frag_string)
+    >>>     fragment_dicts.append(frag_dict)
+    >>> cgsmiles_str = "{[#B1][#B2][#B1]}"
+    >>> resolver = MoleculeResolver.from_fragment_dicts(cgsmiles_str, fragment_dicts)
+
+    Subclassing
+    -----------
+    More advanced workflows can easily be implemented by subclassing the MoleculeResolver
+    and adding new constructors that peform more complex preparation instructions for
+    example.
     """
-
     def __init__(self,
-                 pattern,
-                 meta_graph=None,
-                 fragment_dict={},
-                 all_atom=True):
+                 molecule_graph,
+                 fragment_dicts,
+                 last_all_atom=True):
 
-        # let's start by setting some attributes
-        # this is the fragment string
-        self.fragment_str = None
-        # this is the cgsmiles string
-        self.cgsmiles_str = None
-        # this is the dict with the fragments
-        # either provided and/or extracted
-        # from the fragment string
-        self.fragment_dict = fragment_dict
-        # this is the lower resolution graph
-        self.meta_graph = meta_graph
-        # this is the higher resolution graph
-        self.molecule = nx.Graph()
-        # this attribute stores if the fragments
-        # follow open_smiles syntax or cg_smiles
-        # syntax
-        self.all_atom = all_atom
-
-        # here we figure out what we are dealing with
-        elements = re.findall(r"\{[^\}]+\}", pattern)
-        # case 1)
-        # a meta_graph is provided which means we only
-        # have fragments to deal with
-        if meta_graph:
-            if len(elements) > 1:
-                msg = ("When providing a meta_graph, the pattern can only"
-                       "contain fragment.")
-                raise IOError(msg)
-            else:
-                self.fragment_string = elements[0]
-
-        # case 2) we have a meta graph only described
-        # and the fragment come from elsewhere
-        elif len(elements) == 1 and self.fragment_dict:
-            self.cgsmiles_string = elements[0]
-
-        # case 3) a string containing both fragments and
-        # the meta sequence is provided
-        else:
-            if len(elements) < 2:
-                msg = ("When providing a meta_graph, the pattern can only"
-                       "contain fragment.")
-                raise IOError(msg)
-            else:
-                self.cgsmiles_string = elements[0]
-                self.fragment_string = elements[1]
-
-    def resolve_disconnected_molecule(self):
         """
+        Parameters
+        ----------
+        molecule_graph: `:class:nx.Graph`
+            a lower resolution molecule graph to be resolved to higher
+            resolutions molecule graphs. Each node must have the fragname
+            with a dict entry in the next fragment_dicts list.
+        fragment_dicts: list[dict[str, nx.Graph]]
+            a dict of fragment graphs per resolution. Each graph must have the
+            same attributes as returned by the `cgsmiles.read_fragments`
+            function.
+        last_all_atom: bool
+            if the last resolution is at the all atom level. If True the code
+            will use pysmiles to parse the fragments and return the all-atom
+            molecule. Default: True
+        """
+        self.meta_graph = nx.Graph()
+        self.fragment_dicts = fragment_dicts
+        self.molecule = molecule_graph
+        self.last_all_atom = last_all_atom
+        self.resolution_counter = 0
+        self.resolutions = len(self.fragment_dicts)
+        new_names = nx.get_node_attributes(self.molecule, "fragname")
+        nx.set_node_attributes(self.meta_graph, new_names, "atomname")
+
+    @staticmethod
+    def read_fragment_strings(fragment_strings, last_all_atom=True):
+        """
+        Read a list of CGSmiles fragment_strings and return a list
+        of dicts with the fragment graphs. If `last_all_atom` is
+        True then pysmiles is used to read the last fragment string
+        provided in the list.
+
+        Parameters
+        ----------
+        fragment_strings: list[str]
+            list of CGSmiles fragment strings
+        last_all_atom: bool
+            if the last string in the list is an all atom string
+            and should be read using pysmiles.
+
+        Returns
+        -------
+        list[dict[str, nx.Graph]]
+            a list of the fragment dicts composed of the fragment
+            name and a nx.Graph describing the fragment
+        """
+        fragment_dicts = []
+        for idx, fragment_str in enumerate(fragment_strings):
+            all_atom = (idx == len(fragment_strings) - 1 and last_all_atom)
+            f_dict = read_fragments(fragment_str, all_atom=all_atom)
+            fragment_dicts.append(f_dict)
+        return fragment_dicts
+
+    def resolve_disconnected_molecule(self, fragment_dict):
+        """
+        Given a connected graph of nodes with associated fragment graphs
+        generate a disconnected graph of the fragments and annotate
+        each fragment graph to the node in the higher resolution
+        graph.
+
+        Parameters
+        ----------
+        fragment_dict: dict[str, nx.Graph]
+            a dict of fragment graphs
         """
         for meta_node in self.meta_graph.nodes:
             fragname = self.meta_graph.nodes[meta_node]['fragname']
-            fragment = self.fragment_dict[fragname]
+            fragment = fragment_dict[fragname]
             correspondence = merge_graphs(self.molecule, fragment)
 
             graph_frag = nx.Graph()
 
             for node in fragment.nodes:
                 new_node = correspondence[node]
-                attrs = self.molecule.nodes[new_node]
+                attrs = copy.deepcopy(self.molecule.nodes[new_node])
                 graph_frag.add_node(correspondence[node], **attrs)
-                nx.set_node_attributes(graph_frag, meta_node, 'fragid')
+                nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
                 new_b = correspondence[b]
+                attrs = copy.deepcopy(fragment.edges[(a, b)])
                 graph_frag.add_edge(new_a,
-                                    new_b)
+                                    new_b,
+                                    **attrs)
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
-
-    def edges_from_bonding_descrpt(self):
+    def edges_from_bonding_descrpt(self, all_atom=False):
         """
-        Make edges according to the bonding descriptors stored
+        Makes edges according to the bonding descriptors stored
         in the node attributes of meta_molecule residue graph.
+
         If a bonding descriptor is consumed it is removed from the list,
-        however, the meta_molecule edge gets an attribute with the
-        bonding descriptors that formed the edge. Later unconsumed
-        bonding descriptors are replaced by hydrogen atoms.
-        """
-        for prev_node, node in nx.dfs_edges(self.meta_graph):
-            prev_graph = self.meta_graph.nodes[prev_node]['graph']
-            node_graph = self.meta_graph.nodes[node]['graph']
-            edge, bonding = generate_edge(prev_graph,
-                                          node_graph)
+        however, the meta_graph edge gets an attribute with the
+        bonding descriptors that formed the edge.
 
-            #To DO - clean copying of bond-list attribute
-            # this is a bit of a workaround because at this stage the
-            # bonding list is actually shared between all residues of
-            # of the same type; so we first make a copy then we replace
-            # the list sans used bonding descriptor
-            prev_bond_list = prev_graph.nodes[edge[0]]['bonding'].copy()
-            prev_bond_list.remove(bonding[0])
-            prev_graph.nodes[edge[0]]['bonding'] = prev_bond_list
-            node_bond_list = node_graph.nodes[edge[1]]['bonding'].copy()
-            node_bond_list.remove(bonding[1])
-            node_graph.nodes[edge[1]]['bonding'] = node_bond_list
-            order = re.findall("\d+\.\d+", bonding[0])
-            # bonding descriptors are assumed to have bonding order 1
-            # unless they are specifically annotated
-            if not order:
-                order = 1
-            self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+        Later unconsumed descriptors are discarded and the valence
+        filled in using hydrogen atoms in case of an atomistic molecule.
 
-    def replace_unconsumed_bonding_descrpt(self):
+        Parameters
+        ----------
+        all_atom: bool
+            if the high resolution level graph has all-atom resolution
+            default: False
         """
-        We allow multiple bonding descriptors per atom, which
-        however, are not always consumed. In this case the left
-        over bonding descriptors are replaced by hydrogen atoms.
+        for prev_node, node in self.meta_graph.edges:
+            for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
+                prev_graph = self.meta_graph.nodes[prev_node]['graph']
+                node_graph = self.meta_graph.nodes[node]['graph']
+                try:
+                    edge, bonding = match_bonding_descriptors(prev_graph,
+                                                              node_graph)
+                except LookupError:
+                    continue
+                # remove used bonding descriptors
+                prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+                node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+
+                # bonding descriptors are assumed to have bonding order 1
+                # unless they are specifically annotated
+                order = int(bonding[0][-1])
+                self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+                if all_atom:
+                    for edge_node in edge:
+                        if self.molecule.nodes[edge_node]['element'] != 'H':
+                            self.molecule.nodes[edge_node]['hcount'] -= 1
+
+    def squash_atoms(self):
         """
-        for meta_node in self.meta_graph.nodes:
-            graph = self.meta_graph.nodes[meta_node]['graph']
-            bonding = nx.get_node_attributes(graph, "bonding")
-            for node, bondings in bonding.items():
-                if bondings:
-                    element = graph.nodes[node]['element']
-                    bonds = round(sum([self.molecule.edges[(node, neigh)]['order'] for neigh in\
-                                       self.molecule.neighbors(node)]))
-                    hcount = VALENCES[element][0] - bonds
-                    attrs = {attr: graph.nodes[node][attr] for attr in ['fragname', 'fragid']}
-                    attrs['element'] = 'H'
-                    for _ in range(0, hcount):
-                        new_node = len(self.molecule.nodes) + 1
-                        graph.add_edge(node, new_node)
-                        attrs['atomname'] = "H" + str(len(graph.nodes)-1)
-                        graph.nodes[new_node].update(attrs)
-                        self.molecule.add_edge(node, new_node, order=1)
-                        self.molecule.nodes[new_node].update(attrs)
-        # now we want to sort the atoms
-        sort_nodes(self.molecule)
-        # and redo the meta molecule
-        self.meta_graph = annotate_fragments(self.meta_graph, self.molecule)
+        Applies the squash operator by removing the duplicate node
+        adding, all edges from that node to the remaining one, and
+        annotate the other node with the fragid of the removed
+        node.
+        """
+        bondings = nx.get_edge_attributes(self.molecule, 'bonding')
+        squashed = False
+        for edge, bonding in bondings.items():
+            if not bonding[0].startswith('!'):
+                continue
+            # let's squash two nodes
+            node_to_keep, node_to_remove = edge
+            self.molecule = nx.contracted_nodes(self.molecule,
+                                                node_to_keep,
+                                                node_to_remove,
+                                                self_loops=False)
+
+            # add the fragment id of the sequashed node
+            self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
 
     def resolve(self):
-        if self.cgsmiles_string is not None:
-            self.meta_graph = read_cgsmiles(self.cgsmiles_string)
+        """
+        Resolve a CGSmiles string once and return the next resolution.
+        """
+        # check if this is an all-atom level resolution
+        all_atom = (self.resolution_counter == self.resolutions - 1 and self.last_all_atom)
 
-        if self.fragment_string is not None:
-            self.fragment_dict.update(read_fragments(self.fragment_string,
-                                                     all_atom=self.all_atom))
+        # get the next set of fragments
+        fragment_dict = self.fragment_dicts[self.resolution_counter]
 
-        self.resolve_disconnected_molecule()
-        self.edges_from_bonding_descrpt()
-        if self.all_atom:
-            self.replace_unconsumed_bonding_descrpt()
+        # set the previous molecule as meta_graph
+        self.meta_graph = self.molecule
+
+        # now we have to switch the node names and the fragment names
+        new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
+        nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
+
+        # create an empty molecule graph
+        self.molecule = nx.Graph()
+
+        # add disconnected fragments to graph
+        self.resolve_disconnected_molecule(fragment_dict)
+
+        # connect valid bonding descriptors
+        self.edges_from_bonding_descrpt(all_atom=all_atom)
+
+        # contract atoms with squash descriptors
+        self.squash_atoms()
+
+        # rebuild hydrogen in all-atom case
+        if all_atom:
+            rebuild_h_atoms(self.molecule)
+
+        # sort the atoms
+        self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
+
+        # and redo the meta molecule
+        self.meta_graph = annotate_fragments(self.meta_graph,
+                                             self.molecule)
+
+        # in all-atom MD there are common naming conventions
+        # that might be expected and hence we set them here
+        if all_atom:
+            set_atom_names_atomistic(self.meta_graph, self.molecule)
+
+        # increment the resolution counter
+        self.resolution_counter += 1
 
         return self.meta_graph, self.molecule
+
+    def resolve_iter(self):
+        """
+        Iterator returning all resolutions in oder.
+        """
+        for _ in range(self.resolutions):
+            meta_graph, molecule = self.resolve()
+            yield meta_graph, molecule
+
+    def resolve_all(self):
+        """
+        Resolve all layers and return final moleculs as well as the previous
+        resolution graph.
+        """
+        *_, (meta_graph, graph) = self.resolve_iter()
+        return meta_graph, graph
+
+    @classmethod
+    def from_string(cls, cgsmiles_str, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        # the first one describes our lowest resolution
+        molecule = read_cgsmiles(elements[0])
+        # the rest are fragment lists
+        fragment_dicts = cls.read_fragment_strings(elements[1:],
+                                                   last_all_atom=last_all_atom)
+        resolver_obj = cls(molecule_graph=molecule,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+        return resolver_obj
+
+    @classmethod
+    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string
+        and a `meta_graph` that describes the lowest resolution.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        meta_graph: nx.Graph
+            a graph describing the lowest resolution. All nodes must have the
+            fragname attribute set.
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        # all elements are are fragment lists
+        fragment_dicts = cls.read_fragment_strings(elements,
+                                                   last_all_atom=last_all_atom)
+        if not all('fragname' in meta_graph.nodes[n] for n in meta_graph.nodes):
+            msg = "All nodes must have the fragname attribute set."
+            raise IOError(msg)
+
+        resolver_obj = cls(molecule_graph=meta_graph,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+
+        return resolver_obj
+
+    @classmethod
+    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string, describing
+        one molecule and fragment_dicts containing fragments for each resolution.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        fragment_dicts: list[dict[str, nx.Graph]]
+            a dict of fragment graphs per resolution. Each graph must have the
+            same attributes as returned by the `cgsmiles.read_fragments`
+            function.
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        if len(elements) > 1:
+            msg = ("Your cgsmiles string can only describe one "
+                   "resolution of a molecule when using this function.")
+            raise IOError(msg)
+        # the first one describes our lowest resolution
+        molecule = read_cgsmiles(elements[0])
+        resolver_obj = cls(molecule_graph=molecule,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+        return resolver_obj

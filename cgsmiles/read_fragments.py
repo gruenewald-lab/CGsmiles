@@ -6,50 +6,87 @@ import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 
+class PeekIter(object):
+    """
+    Custom iter that allows looking ahead, without
+    advancing the actual iter.
+    """
+    def __init__(self, collection):
+        self.collection = iter(collection)
+        self._peek = None
+
+    def __next__(self):
+        if self._peek:
+            item = self._peek
+            self._peek = None
+        else:
+            item = next(self.collection)
+        return item
+
+    def peek(self):
+        if self._peek:
+            return self._peek
+        try:
+            self._peek = next(self)
+        except StopIteration:
+            self._peek = None
+        return self._peek
+
+    def __iter__(self):
+        return self
+
+
 def strip_bonding_descriptors(fragment_string):
     """
-    Processes a CGBigSmile fragment string by
+    Processes a CGSmiles fragment string by
     stripping the bonding descriptors and storing
     them in a dict with reference to the atom they
-    refer to. Furthermore, a cleaned SMILE or CGsmile
+    refer to. Furthermore, a cleaned SMILES or CGSmiles
     string is returned.
 
     Parameters
     ----------
     fragment_string: str
-        a CGBigsmile fragment string
+        a CGSmiles fragment string
 
     Returns
     -------
     str:
-        a canonical SMILES or CGsmiles string
+        a canonical SMILES or CGSmiles string
     dict:
         a dict mapping bonding descriptors
         to the nodes within the string
     """
-    smile_iter = iter(fragment_string)
+    bond_to_order = {'-': 1, '=': 2, '#': 3, '$': 4, ':': 1.5, '.': 0}
+    smile_iter = PeekIter(fragment_string)
     bonding_descrpt = defaultdict(list)
     smile = ""
     node_count = 0
     prev_node = 0
+    current_order = None
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
-            if peek in ['$', '>', '<']:
+            if peek in ['$', '>', '<', '!']:
                 bond_descrp = peek
                 peek = next(smile_iter)
                 while peek != ']':
                     bond_descrp += peek
                     peek = next(smile_iter)
-                bonding_descrpt[prev_node].append(bond_descrp)
+                if smile_iter.peek() in bond_to_order and node_count == 0:
+                    order = bond_to_order[next(smile_iter)]
+                elif current_order:
+                    order = current_order
+                    current_order = None
+                else:
+                    order = 1
+                bonding_descrpt[prev_node].append(bond_descrp + str(order))
             else:
                 atom = token
                 while peek != ']':
                     atom += peek
                     peek = next(smile_iter)
                 smile = smile + atom + "]"
-                #if peek not in '] H @ . - = # $ : / \\ + - %'\
-                #and not token.isdigit():
                 prev_node = node_count
                 node_count += 1
 
@@ -59,46 +96,21 @@ def strip_bonding_descriptors(fragment_string):
         elif token == ')':
             prev_node = anchor
             smile += token
-        else:
-            if token not in '] H @ . - = # $ : / \\ + - %'\
-                and not token.isdigit():
-                prev_node = node_count
-                node_count += 1
+        elif token in bond_to_order:
+            current_order = bond_to_order[token]
             smile += token
+        elif token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
+            smile += token
+        else:
+            if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
+                smile += (token + next(smile_iter))
+            else:
+                smile += token
+            current_order = None
+            prev_node = node_count
+            node_count += 1
+
     return smile, bonding_descrpt
-
-def _rebuild_h_atoms(mol_graph):
-    # special hack around to fix
-    # pysmiles bug for a single
-    # atom molecule; we assume that the
-    # hcount is just wrong and set it to
-    # the valance number minus bonds minus
-    # bonding connectors
-    if len(mol_graph.nodes) == 1:
-        ele = mol_graph.nodes[0]['element']
-        # for N and P we assume the regular valency
-        hcount = pysmiles.smiles_helper.VALENCES[ele][0]
-        if mol_graph.nodes[0].get('bonding', False):
-            hcount -= 1
-        mol_graph.nodes[0]['hcount'] = hcount
-    else:
-        for node in mol_graph.nodes:
-            if mol_graph.nodes[node].get('bonding', False):
-                # get the degree
-                ele = mol_graph.nodes[node]['element']
-                # hcount is the valance minus the degree minus
-                # the number of bonding descriptors
-                bonds = round(sum([mol_graph.edges[(node, neigh)]['order'] for neigh in\
-                                   mol_graph.neighbors(node)]))
-                charge = mol_graph.nodes[node].get('charge', 0)
-                hcount = pysmiles.smiles_helper.VALENCES[ele][0] -\
-                         bonds -\
-                         len(mol_graph.nodes[node]['bonding']) +\
-                         charge
-                mol_graph.nodes[node]['hcount'] = hcount
-
-    pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
-    return mol_graph
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -129,16 +141,13 @@ def fragment_iter(fragment_str, all_atom=True):
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
         smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
-
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile)
+            mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-            # we need to rebuild hydrogen atoms now
-            _rebuild_h_atoms(mol_graph)
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)

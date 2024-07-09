@@ -16,7 +16,7 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+       py_version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v2
@@ -28,6 +28,7 @@ jobs:
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
+        pip install git+https://github.com/pckroon/pysmiles.git
         pip install -r requirements-tests.txt
         
     - name: Run pytest with codecoverage

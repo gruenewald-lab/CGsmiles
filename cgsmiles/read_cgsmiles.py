@@ -3,9 +3,9 @@ import re
 import numpy as np
 import networkx as nx
 
-PATTERNS = {"bond_anchor": "\[\$.*?\]",
-            "place_holder": "\[\#.*?\]",
-            "annotation": "\|.*?\|",
+PATTERNS = {"bond_anchor": r"\[\$.*?\]",
+            "place_holder": r"\[\#.*?\]",
+            "annotation": r"\|.*?\|",
             "fragment": r'#(\w+)=((?:\[.*?\]|[^,\[\]]+)*)',
             "seq_pattern": r'\{([^}]*)\}(?:\.\{([^}]*)\})?'}
 
@@ -13,7 +13,7 @@ def _find_next_character(string, chars, start):
     for idx, token in enumerate(string[start:]):
         if token in chars:
             return idx+start
-    return np.inf
+    return len(string)
 
 def _expand_branch(mol_graph, current, anchor, recipe):
     """
@@ -45,13 +45,17 @@ def _expand_branch(mol_graph, current, anchor, recipe):
             anchor = current
         for _ in range(0, n_mon):
             mol_graph.add_node(current, fragname=fragname)
-            mol_graph.add_edge(prev_node, current)
+            mol_graph.add_edge(prev_node, current, order=1)
 
             prev_node = current
             current += 1
 
     prev_node = anchor
     return mol_graph, current, prev_node
+
+def _get_percent(pattern, stop):
+    end_num = _find_next_character(pattern, ['[', ')', '(', '}'], stop)
+    return pattern[stop+1:end_num]
 
 def read_cgsmiles(pattern):
     """
@@ -126,7 +130,7 @@ def read_cgsmiles(pattern):
     branching = False
     # do we have an open cycle
     cycle = {}
-    cycle_edge = None
+    cycle_edges = []
     # each element in the for loop matches a pattern
     # '[' + '#' + some alphanumeric name + ']'
     for match in re.finditer(PATTERNS['place_holder'], pattern):
@@ -142,12 +146,28 @@ def read_cgsmiles(pattern):
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
-        if stop < len(pattern) and pattern[stop].isdigit() and cycle:
-            cycle_edge = (current, cycle[pattern[stop]])
-        # we open a cycle
-        elif stop < len(pattern) and pattern[stop].isdigit():
-            cycle_edge = None
-            cycle[pattern[stop]] = current
+        for token in pattern[stop:]:
+            # we close a cycle
+            if token.isdigit() and token in cycle:
+                cycle_edges.append((current, cycle[token]))
+                del cycle[token]
+            # we open a cycle
+            elif token.isdigit():
+                cycle[token] = current
+            # we found a ring indicator
+            elif token == "%":
+                ring_marker = _get_percent(pattern, stop)
+                # we close the ring
+                if ring_marker in cycle:
+                    cycle_edges.append((current, cycle[ring_marker]))
+                    del cycle[ring_marker]
+                    break
+                # we open a new ring
+                cycle[_get_percent(pattern, stop)] = current
+                break
+            else:
+                break
+
         # here we check if the atom is followed by a expansion character '|'
         # as in ... [#PEO]|
         if stop < len(pattern) and pattern[stop] == '|':
@@ -177,15 +197,21 @@ def read_cgsmiles(pattern):
             mol_graph.add_node(current, fragname=fragname)
 
             if prev_node is not None:
-                mol_graph.add_edge(prev_node, current)
+                mol_graph.add_edge(prev_node, current, order=1)
 
-            if cycle_edge:
-                mol_graph.add_edge(cycle_edge[0],
-                                   cycle_edge[1])
+            # here we have a double edge
+            for cycle_edge in cycle_edges:
+                if cycle_edge in mol_graph.edges:
+                    mol_graph.edges[cycle_edge]["order"] += 1
+                else:
+                    mol_graph.add_edge(cycle_edge[0],
+                                       cycle_edge[1],
+                                       order=1)
 
             prev_node = current
             current += 1
 
+        cycle_edges = []
         # here we check if the residue considered before is the
         # last residue of a branch (i.e. '...[#residue])'
         # that is the case if the branch closure comes before
@@ -254,4 +280,10 @@ def read_cgsmiles(pattern):
             # when all nested branches are completed
             if len(branch_anchor) == 0:
                 recipes = defaultdict(list)
+
+    # raise some errors for strange stuff
+    if cycle:
+        msg = "You have a dangling ring index."
+        raise SyntaxError(msg)
+
     return mol_graph
