@@ -13,7 +13,7 @@ def _find_next_character(string, chars, start):
     for idx, token in enumerate(string[start:]):
         if token in chars:
             return idx+start
-    return np.inf
+    return len(string)
 
 def _expand_branch(mol_graph, current, anchor, recipe):
     """
