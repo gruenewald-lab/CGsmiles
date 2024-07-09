@@ -410,7 +410,7 @@ class MoleculeResolver:
         # all elements are are fragment lists
         fragment_dicts = cls.read_fragment_strings(elements,
                                                    last_all_atom=last_all_atom)
-        if all('fragname' in meta_graph.nodes[n] for n in meta_graph):
+        if not all('fragname' in meta_graph.nodes[n] for n in meta_graph.nodes):
             msg = "All nodes must have the fragname attribute set."
             raise IOError(msg)
 
