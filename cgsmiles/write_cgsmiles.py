@@ -3,11 +3,13 @@ import networkx as nx
 import pysmiles
 from pysmiles.write_smiles import _get_ring_marker
 
+order_to_symbol = {0: '.', 1: '-', 1.5: ':', 2: '=', 3: '#', 4: '$'}
+
 def format_node(molecule, current):
     node = "[#{}]".format(molecule.nodes[current]['fragname'])
     return node
 
-def write_cgsmiles_res_graph(molecule):
+def write_cgsmiles_graph(molecule):
     """
     Creates a SMILES string describing `molecule` according to the OpenSMILES
     standard. `molecule` should be a single connected component.
@@ -45,6 +47,11 @@ def write_cgsmiles_res_graph(molecule):
             edges.add(frozenset((n_idx, n_jdx)))
     total_edges = set(map(frozenset, molecule.edges))
     ring_edges = total_edges - edges
+
+    # we need to patch on top to make rings
+    for edge in molecule.edges:
+        if molecule.edges[edge]['order'] == 2:
+            ring_edges.add(frozenset(edge))
 
     atom_to_ring_idx = defaultdict(list)
     ring_idx_to_bond = {}
@@ -101,9 +108,14 @@ def write_cgsmiles_res_graph(molecule):
             branch_depth -= 1
 
     smiles += ')' * branch_depth
-    return smiles
+    return "{" + smiles + "}"
 
-def _find_nodes_bonding(molecule, graph):
+def _find_min_node(molecule, node):
+    fragid = molecule.nodes[node]["fragid"]
+    node_to_fragid = nx.get_node_attributes(molecule, "fragid")
+    return min([node for node, _id in node_to_fragid.items() if _id == fragid ])
+
+def _find_nodes_bonding(molecule, fragname):
     """
     For nodes in `graph` check if they have participate
     in any edges that have the `bonding` attribute.
@@ -111,13 +123,18 @@ def _find_nodes_bonding(molecule, graph):
     beloning to that node.
     """
     edges = nx.get_edge_attributes(molecule, "bonding")
-    node_to_bonding = {}
+    node_to_bonding = defaultdict(list)
     for edge in edges:
-        if edge[0] in graph:
-            node_to_bonding[edge[0]] = edges[edge][0]
-        elif edge[1] in graph:
-            node_to_bonding[edge[1]] = edges[edge][1]
-
+        #nprint(edge)
+        if molecule.nodes[edge[0]]["fragname"] == fragname:
+            min_node = _find_min_node(molecule, edge[0])
+            node = edge[0] - min_node
+            node_to_bonding[node].append(edges[edge][0])
+        elif molecule.nodes[edge[1]]["fragname"] == fragname:
+            min_node = _find_min_node(molecule, edge[1])
+            node = edge[1] - min_node
+            node_to_bonding[node].append(edges[edge][1])
+    #print(node_to_bonding)
     return node_to_bonding
 
 def _smiles_node_iter(smiles_str):
@@ -136,30 +153,42 @@ def _smiles_node_iter(smiles_str):
         if node in organic_subset and not batom:
             yield idx, idx + 1
 
-def add_bond_descrp(smiles_str, molecule, graph):
+def add_bond_descrp(smiles_str, molecule, fragname):
     """
     Add bonding descriptors to SMILES or CGSmiles string.
     """
     nodes_in_string = {idx: (start, stop) for idx, (start, stop) in enumerate(_smiles_node_iter(smiles_str))}
-    nodes_to_bonding = _find_nodes_bonding(molecule, graph)
-    # no bonding descriptor to add
+    nodes_to_bonding = nx.get_node_attributes(molecule, 'bonding')
+
     if len(nodes_to_bonding) == 0:
         return smiles_str
 
     first_node = min(nodes_to_bonding.keys())
     annotated_str = smiles_str[:nodes_in_string[first_node][0]]
     prev_stop = nodes_in_string[first_node][0]
-    for node, descriptors in nodes_to_bonding.items():
+    for idx, (node, descriptors) in enumerate(nodes_to_bonding.items()):
         start, stop = nodes_in_string[node]
-        annotated_str += smiles_str[prev_stop:stop]
+        if idx != 0 or len(annotated_str) > 0:
+            annotated_str += smiles_str[prev_stop:stop]
+        else:
+            write_after = True
+
         for descriptor in descriptors:
-            annotated_str += f"[{descriptor}]"
+            descriptor, order = descriptor[:-1], int(descriptor[-1])
+            if order != 1:
+                order_symbol = order_to_symbol[order]
+                annotated_str += f"[{descriptor}]{order_symbol}"
+            else:
+                annotated_str += f"[{descriptor}]"
+
+        if idx == 0 and write_after:
+            annotated_str += smiles_str[prev_stop:stop]
         prev_stop = stop
 
     annotated_str += smiles_str[prev_stop:]
     return annotated_str
 
-def write_fragments(molecule, all_atom=True):
+def write_cgsmiles_fragments(fragment_dict, all_atom=True):
     """
     Write fragments of molecule graph. To identify the fragments
     the all nodes with the same attribute `fragname` and `fragid`
@@ -181,22 +210,7 @@ def write_fragments(molecule, all_atom=True):
     str
     """
     fragment_str = ""
-
-    # collect unique fragments
-    fragments = nx.get_node_attributes(molecule, "fragname")
-    uniq_frags = defaultdict(list)
-    uniq_ids = []
-    for node, fragname in fragments.items():
-        fragid = molecule.nodes[node]["fragid"]
-        if fragname not in uniq_frags:
-            uniq_ids.append(fragid)
-
-        if fragid in uniq_ids:
-            uniq_frags[fragname].append(node)
-
-    for frag, nodes in uniq_frags.items():
-        frag_graph = molecule.subgraph(nodes)
-
+    for fragname, frag_graph in fragment_dict.items():
         # format graph depending on resolution
         if all_atom:
             smiles_str = pysmiles.write_smiles(frag_graph)
@@ -204,48 +218,8 @@ def write_fragments(molecule, all_atom=True):
             smiles_str = write_cgsmiles_res_graph(frag_graph)
 
         # annotate bonding descriptors and done
-        fragment_str += "#" + frag + "=" + add_bond_descrp(smiles_str,
-                                                           molecule,
-                                                           frag_graph) + ","
+        fragment_str += "#" + fragname + "=" + add_bond_descrp(smiles_str,
+                                                               frag_graph,
+                                                               fragname) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
-
-def write_cgsmiles(low_res_graph=None, high_res_graph=None, all_atom=True):
-    """
-    Write a cgsmiles string from two different resolutions. If only the
-    `high_res_graph` is supplied only the fragments part of the string
-    will be written. Using the `all_atom` flag the fragments are either
-    written using open SMILES standard or CGSmiles string.
-
-    Parameters
-    ----------
-    low_res_graph: nx.Graph
-        the low resolution graph to write; needs fragname attribute to
-        be set for all nodes
-    high_res_graph: nx.Graph
-        the high resolution graph to write; needs the fragid, and fragname
-        attributes to be set. Additionaly, edges between fragments of
-        different fragid need to have a "bonding" edge attribute.
-    all_atom: bool
-        write high_res_graph using open SMILES when True or CGSmiles when
-        False. The default is True
-
-    Returns
-    -------
-    str
-        the CGSmiles string
-    """
-    if low_res_graph and high_res_graph:
-        res_str = write_cgsmiles_res_graph(low_res_graph)
-        fragment_str = write_fragments(high_res_graph,
-                                       all_atom=all_atom)
-        cgsmiles_str = res_str + "." + fragment_str
-    elif low_res_graph:
-        cgsmiles_str = write_cgsmiles_res_graph(low_res_graph)
-    elif high_res_graph:
-        cgsmiles_str = write_fragments(high_res_graph,
-                                       all_atom=all_atom)
-    else:
-        raise IOError("You need to provide either a high or low resolution graph.")
-
-    return cgsmiles_str
