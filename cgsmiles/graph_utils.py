@@ -42,7 +42,7 @@ def merge_graphs(source_graph, target_graph, max_node=None):
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
         correspondence[node] = idx
-        new_atom = copy.copy(target_graph.nodes[node])
+        new_atom = copy.deepcopy(target_graph.nodes[node])
         new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
         source_graph.add_node(idx, **new_atom)
 
