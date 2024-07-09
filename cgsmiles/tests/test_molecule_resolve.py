@@ -198,7 +198,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)]),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
-    meta_mol, molecule = MoleculeResolver(smile).resolve()
+    meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()
 
     # loop and compare fragments first
     for node, ref in zip(meta_mol.nodes, ref_frags):
@@ -236,14 +236,14 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
     elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
     if case == 1:
         fragment_dict = read_fragments(elements[-1], all_atom=False)
-        meta_mol, molecule = MoleculeResolver(fragment_dicts=[fragment_dict],
-                                              pattern=elements[0],
-                                              last_all_atom=False).resolve()
+        meta_mol, molecule = MoleculeResolver.from_fragment_dicts(fragment_dicts=[fragment_dict],
+                                                                  cgsmiles_str=elements[0],
+                                                                  last_all_atom=False).resolve()
     elif case == 2:
         meta_input = read_cgsmiles(elements[0])
-        meta_mol, molecule = MoleculeResolver(meta_graph=meta_input,
-                                              pattern=elements[1],
-                                              last_all_atom=False).resolve()
+        meta_mol, molecule = MoleculeResolver.from_graph(meta_graph=meta_input,
+                                                         cgsmiles_str=elements[1],
+                                                         last_all_atom=False).resolve()
     ref_graph = read_cgsmiles(ref_string)
 
     def _atomname_match(n1, n2):

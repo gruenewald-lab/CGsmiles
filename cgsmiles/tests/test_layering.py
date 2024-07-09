@@ -35,7 +35,7 @@ def test_layering_of_resolutions(cgsmiles_str, ref_strings):
         return n1["fragname"] == n2["fragname"]
 
     cgsmiles_str = cgsmiles_str.strip().replace('\n','').replace(' ','')
-    resolver = MoleculeResolver(cgsmiles_str, last_all_atom=False)
+    resolver = MoleculeResolver.from_string(cgsmiles_str, last_all_atom=False)
     for (low_graph, high_graph), ref_str in zip(resolver.resolve_iter(), ref_strings):
         ref_graph = cgsmiles.read_cgsmiles(ref_str)
         nx.is_isomorphic(ref_graph, high_graph, node_match=_node_match)

@@ -71,85 +71,132 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding"):
 
 class MoleculeResolver:
     """
-    Resolve the molecule(s) described by a
-    CGSmiles string. Each execution of the
-    resolve function will return the next
-    resolved molecule and the graph of the
-    previous resolution.
+    Resolve the molecule(s) described by a CGSmiles string and return a nx.Graph
+    of the molecule.
 
-    Use the resolve_iter method to loop over
-    all possible molecule resolutions enconded
-    in the CGSmiles string.
+    First, this class has to be initiated using one of three class construction
+    methods. When trying to read a CGSmiles string always use the first method.
+    The other constructors can be used in case fragments or the lowest
+    resolution molecule are defined by graphs that come from elsewhere.
+
+    `self.from_string`:           use when fragments and lowest resolution are
+                                  described in one CGSmiles string.
+    `self.from_graph`:            use when fragments are described by CGSmiles
+                                  strings but the lowest resolution is given
+                                  as nx.Graph
+    `self.from_fragment_dicts`:   use when fragments are given as nx.Graphs
+                                  and the lowest resolution is provided as
+                                  CGSmiles string
+
+    Once the `MoleculeResolver` is initiated you can call the `resolve_iter` to
+    loop over the different levels of resolution. The resolve iter will always
+    return the previous lower resolution graph as well as the current higher
+    resolution graph. For example, if the CGSmiles string describes a monomer
+    sequence of a regular polymer, the lower resolution graph will be the graph
+    of this monomer sequence and the higher resolution graph the full molecule.
+
+    Basic Examples
+    --------------
+    Blocky-copolymer of PE and PEO with the first resolution being the sequence
+    of blocks, followed by the monomer graph, and then the full molecule.
+
+    >>> cgsmiles_str = "{[#B1][#B2][#B1]}.{#B1=[#PEO]|4,#B2=[#PE]|2}.{#PEO=[>]COC[<],#PE=[>]CC[<]}"
+    >>> resolver = MoleculeResolver.from_string(cgsmiles_str)
+    >>> for low_res, high_res in resolver.resolve_iter():
+            print(low_res.nodes(data='fragname'))
+            print(high_res.nodes(data='atomname))
+
+    To only access the final resolution level you can simply call `resolve all`:
+    >>> monomer_graph, full_molecule = resolver.resolve_all()
+
+    Advanced API Examples
+    ---------------------
+    Alternatively, one could have gotten the block level graph from somewhere
+    else defined as `nx.Graph` in that case:
+    >>> # the string only defines the fragments
+    >>> cgsmiles_str = "{#B1=[#PEO]|4,#B2=[#PE]|2}.{#PEO=[>]COC[<],#PE=[>]CC[<]}"
+    >>> block_graph = nx.Graph()
+    >>> block_graph.add_edges_from([(0, 1), (1, 2), (2, 3)])
+    >>> nx.set_node_attributes(block_graph, {0: "B1", 1: "B2", 2: "B1"}, 'fragname')
+    >>> resolver = MoleculeResolver.from_graph(cgsmiles_str, block_graph)
+
+    Finally, there is the option of having the fragments from elsewhere for
+    example a library. Then only the graph defined as CGSmiles string. In this
+    case the `from_fragment_dicts` method can be used. Please note that the
+    fragment graphs need to have the following attributes as a graph returned
+    by the `cgsmiles.read_fragments` function.
+    >>> fragment_dicts = []
+    >>> for frag_string in ["{#B1=[#PEO]|4,#B2=[#PE]|2}", "{#PEO=[>]COC[<],#PE=[>]CC[<]}"]:
+    >>>     frag_dict = read_fragments(frag_string)
+    >>>     fragment_dicts.append(frag_dict)
+    >>> cgsmiles_str = "{[#B1][#B2][#B1]}"
+    >>> resolver = MoleculeResolver.from_fragment_dicts(cgsmiles_str, fragment_dicts)
+
+    Subclassing
+    -----------
+    More advanced workflows can easily be implemented by subclassing the MoleculeResolver
+    and adding new constructors that peform more complex preparation instructions for
+    example.
     """
     def __init__(self,
-                 pattern,
-                 meta_graph=None,
-                 fragment_dicts=[],
+                 molecule_graph,
+                 fragment_dicts,
                  last_all_atom=True):
 
         """
         Parameters
         ----------
-        pattern: str
-            the cgsmiles string to resolve
-        meta_graph: `:class:nx.Graph`
-            a potential higher resolution graph
+        molecule_graph: `:class:nx.Graph`
+            a lower resolution molecule graph to be resolved to higher
+            resolutions molecule graphs. Each node must have the fragname
+            with a dict entry in the next fragment_dicts list.
         fragment_dicts: list[dict[str, nx.Graph]]
-            a dict of fragment graphs per resolution
+            a dict of fragment graphs per resolution. Each graph must have the
+            same attributes as returned by the `cgsmiles.read_fragments`
+            function.
         last_all_atom: bool
-            if the last resolution is at the all
-            atom level. If True the code will use
-            pysmiles to parse the fragments and
-            return the all-atom molecule.
-            Default: True
+            if the last resolution is at the all atom level. If True the code
+            will use pysmiles to parse the fragments and return the all-atom
+            molecule. Default: True
         """
-        # this is the dict with the fragments
-        # either provided and/or extracted
-        # from the fragment string
-        self.fragment_dicts = fragment_dicts
-        # this is the current meta_graph
         self.meta_graph = nx.Graph()
-        # if the last resolution is all_atom
+        self.fragment_dicts = fragment_dicts
+        self.molecule = molecule_graph
         self.last_all_atom = last_all_atom
-        # what is the current resolution level
         self.resolution_counter = 0
-        # here we figure out how many resolutions
-        # we are dealing with
-        elements = re.findall(r"\{[^\}]+\}", pattern)
-
-        # case 1) we have a meta graph only described
-        # and the fragment come from elsewhere
-        if self.fragment_dicts:
-            msg = ("You cannot provide a fragment dict and fragments defined as CGSmiles string."
-                   "Instead first read all fragments using cgsmiles.read_fragments then provide "
-                   "all fragments together to the MoleculeResolver")
-            if len(elements) != 1: raise IOError(msg)
-            self.molecule = read_cgsmiles(elements[0])
-        else:
-            # case 2)
-            # a meta_graph is provided which means we only
-            # have fragments to deal with
-            if meta_graph:
-                fragment_strs = elements
-                self.molecule = meta_graph
-            # case 3) a string containing both fragments and
-            # the meta sequence is provided
-            else:
-                self.molecule = read_cgsmiles(elements[0])
-                fragment_strs = elements[1:]
-
-            # now we populate the fragment dicts
-            self.fragment_dicts = []
-            for idx, fragment_str in enumerate(fragment_strs):
-                all_atom = (idx == len(fragment_strs) - 1 and self.last_all_atom)
-                f_dict = read_fragments(fragment_str, all_atom=all_atom)
-                self.fragment_dicts.append(f_dict)
-
         self.resolutions = len(self.fragment_dicts)
-
-        # at this stage there are no atomnames for the nodes
         new_names = nx.get_node_attributes(self.molecule, "fragname")
         nx.set_node_attributes(self.meta_graph, new_names, "atomname")
+
+    @staticmethod
+    def read_fragment_strings(fragment_strings, last_all_atom=True):
+        """
+        Read a list of CGSmiles fragment_strings and return a list
+        of dicts with the fragment graphs. If `last_all_atom` is
+        True then pysmiles is used to read the last fragment string
+        provided in the list.
+
+        Parameters
+        ----------
+        fragment_strings: list[str]
+            list of CGSmiles fragment strings
+        last_all_atom: bool
+            if the last string in the list is an all atom string
+            and should be read using pysmiles.
+
+        Returns
+        -------
+        list[dict[str, nx.Graph]]
+            a list of the fragment dicts composed of the fragment
+            name and a nx.Graph describing the fragment
+        """
+        fragment_dicts = []
+        for idx, fragment_str in enumerate(fragment_strings):
+            all_atom = (idx == len(fragment_strings) - 1 and last_all_atom)
+            print(idx == len(fragment_strings) - 1, last_all_atom)
+            f_dict = read_fragments(fragment_str, all_atom=all_atom)
+            fragment_dicts.append(f_dict)
+        return fragment_dicts
 
     def resolve_disconnected_molecule(self, fragment_dict):
         """
@@ -157,6 +204,11 @@ class MoleculeResolver:
         generate a disconnected graph of the fragments and annotate
         each fragment graph to the node in the higher resolution
         graph.
+
+        Parameters
+        ----------
+        fragment_dict: dict[str, nx.Graph]
+            a dict of fragment graphs
         """
         for meta_node in self.meta_graph.nodes:
             fragname = self.meta_graph.nodes[meta_node]['fragname']
@@ -297,14 +349,102 @@ class MoleculeResolver:
         """
         Iterator returning all resolutions in oder.
         """
-        for r in range(self.resolutions):
+        for _ in range(self.resolutions):
             meta_graph, molecule = self.resolve()
             yield meta_graph, molecule
 
     def resolve_all(self):
         """
-        Resolve all layers and return final molecule
-        as well as the last layer above that.
+        Resolve all layers and return final moleculs as well as the previous
+        resolution graph.
         """
-        *_, (meta_graph, graph) = resolver.resolve_iter()
+        *_, (meta_graph, graph) = self.resolve_iter()
         return meta_graph, graph
+
+    @classmethod
+    def from_string(cls, cgsmiles_str, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        # the first one describes our lowest resolution
+        molecule = read_cgsmiles(elements[0])
+        # the rest are fragment lists
+        fragment_dicts = cls.read_fragment_strings(elements[1:],
+                                                   last_all_atom=last_all_atom)
+        resolver_obj = cls(molecule_graph=molecule,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+        return resolver_obj
+
+    @classmethod
+    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        meta_graph: nx.Graph
+            a graph describing the lowest resolution. All nodes must have the
+            fragname attribute set.
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        # all elements are are fragment lists
+        fragment_dicts = cls.read_fragment_strings(elements,
+                                                   last_all_atom=last_all_atom)
+        if len(nx.get_node_attributes(meta_graph, 'fragname')) != len(meta_graph.nodes):
+            msg = "All nodes must have the fragname attribute set."
+            raise IOError(msg)
+
+        resolver_obj = cls(molecule_graph=meta_graph,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+
+        return resolver_obj
+
+    @classmethod
+    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True):
+        """
+        Initiate a MoleculeResolver instance from a cgsmiles string.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        fragment_dicts: list[dict[str, nx.Graph]]
+            a dict of fragment graphs per resolution. Each graph must have the
+            same attributes as returned by the `cgsmiles.read_fragments`
+            function.
+        last_all_atom: bool
+            if the last resolution is all-atom and is read using pysmiles
+
+        Returns
+        -------
+        :class:`MoleculeResolver`
+        """
+        # here we figure out how many resolutions we are dealing with
+        elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        # the first one describes our lowest resolution
+        molecule = read_cgsmiles(elements[0])
+        resolver_obj = cls(molecule_graph=molecule,
+                           fragment_dicts=fragment_dicts,
+                           last_all_atom=last_all_atom)
+        return resolver_obj
