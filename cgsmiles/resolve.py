@@ -193,7 +193,6 @@ class MoleculeResolver:
         fragment_dicts = []
         for idx, fragment_str in enumerate(fragment_strings):
             all_atom = (idx == len(fragment_strings) - 1 and last_all_atom)
-            print(idx == len(fragment_strings) - 1, last_all_atom)
             f_dict = read_fragments(fragment_str, all_atom=all_atom)
             fragment_dicts.append(f_dict)
         return fragment_dicts
@@ -411,7 +410,7 @@ class MoleculeResolver:
         # all elements are are fragment lists
         fragment_dicts = cls.read_fragment_strings(elements,
                                                    last_all_atom=last_all_atom)
-        if len(nx.get_node_attributes(meta_graph, 'fragname')) != len(meta_graph.nodes):
+        if all('fragname' in meta_graph.nodes[n] for n in meta_graph):
             msg = "All nodes must have the fragname attribute set."
             raise IOError(msg)
 
