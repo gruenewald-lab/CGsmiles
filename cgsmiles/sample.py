@@ -20,10 +20,8 @@ def _find_complementary_bonding_descriptor(bonding_descriptor):
 
 class MoleculeSampler:
     """
-    Given a fragment string in CGSmiles format
-    and probabilities for residues to occur,
-    return a random molecule with target
-    molecular weight.
+    Given a fragment string in CGSmiles format and probabilities for residues
+    to occur, return a random molecule with target molecular weight.
     """
     def __init__(self,
                  pattern,
@@ -37,18 +35,14 @@ class MoleculeSampler:
         ----------
         pattern: str
             the cgsmiles string to resolve
-        target_length: int
-            the target molecular weight in unit
-            of number of monomers
-        fragment_probabilities: dict[str, float]
-            dictionary connecting probability
-            to fragment names
+        target_weight: int
+            the target molecular weight in unit of number of monomers
         bonding_probabilities: dict[str, float]
-            probabilty that two bonding descriptors
-            will connect
+            probability that two bonding descriptors will connect
+        start: str
+            fragment name of the fragment to start with
         all_atom: bool
-            if the fragments are all-atom
-            resolution
+            if the fragments are all-atom resolution
         """
         self.molecule = nx.Graph()
         self.bonding_probabilities = bonding_probabilities
@@ -76,6 +70,12 @@ class MoleculeSampler:
                     self.fragments_by_bonding[bonding].append((fragname, node))
 
     def update_open_bonds(self):
+        """
+        Collect all nodes which have an open bonding descriptor and store
+        them as keys with a list of nodes as values. We assume that all
+        descriptors have the same probability according to `bonding_probabilites`
+        irrespective of the fragment type.
+        """
         self.current_open_bonds = defaultdict(list)
         open_bonds = nx.get_node_attributes(self.molecule, 'bonding')
         for node, bonding_types in open_bonds.items():
@@ -84,9 +84,17 @@ class MoleculeSampler:
 
     def pick_bonding(self):
         """
-        Given a momomer to connect to the growing molecule see if there is
-        a matching bonding descriptor and what the probabilitiy of forming
-        this bond is.
+        Pick an open bonding descriptor according to `bonding_probabilities`
+        and then pick a fragment that has the complementory bonding descriptor.
+
+        Returns
+        -------
+        int, int, str, str, str
+            the source node
+            the target node
+            the fragment name
+            the bonding descriptor
+            the complementary bonding descriptor
         """
         probs = [self.bonding_probabilities[bond_type] for bond_type in self.current_open_bonds]
         bonding = np.random.choice(list(self.current_open_bonds.keys()), p=probs)
@@ -97,8 +105,8 @@ class MoleculeSampler:
 
     def sample(self):
         """
-        Sample one molecule given a fragment string and a target molecular
-        weigth.
+        From a list of cgsmiles fragment graphs generate a new random molecule
+        according by stitching them together.
         """
         if self.start:
             fragment = self.fragment_dict[self.start]
