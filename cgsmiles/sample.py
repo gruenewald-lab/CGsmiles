@@ -7,16 +7,8 @@ from .read_fragments import read_fragments
 from .graph_utils import (merge_graphs,
                           sort_nodes_by_attr,
                           set_atom_names_atomistic)
-from .pysmiles_utils import rebuild_h_atoms
-
-def _find_complementary_bonding_descriptor(bonding_descriptor):
-    if bonding_descriptor[0] == '<':
-        compl = '>' + bonding_descriptor[1:]
-    elif bonding_descriptor[0] == '>':
-        compl = '<' + bonding_descriptor[1:]
-    else:
-        compl = bonding_descriptor
-    return compl
+from .pysmiles_utils import rebuild_h_atoms, compute_mass
+from .cgsmiles_utils import find_open_bonds, find_complementary_bonding_descriptor
 
 class MoleculeSampler:
     """
@@ -24,90 +16,163 @@ class MoleculeSampler:
     to occur, return a random molecule with target molecular weight.
     """
     def __init__(self,
-                 pattern,
+                 fragment_dict,
                  target_weight,
                  bonding_probabilities,
+                 fragment_masses=None,
+                 termination_probabilities=None,
                  start=None,
                  all_atom=True):
 
         """
         Parameters
         ----------
-        pattern: str
-            the cgsmiles string to resolve
+        fragment_dict: dict[str, nx.Graph]
+            a dict of fragment graphs at one resolution. Each graph must have
+            the same attributes as returned by the `cgsmiles.read_fragments`
+            function.
         target_weight: int
             the target molecular weight in unit of number of monomers
         bonding_probabilities: dict[str, float]
             probability that two bonding descriptors will connect
+        fragment_masses: dict[str, float]
+            masses of the molecule fragments; if all_atom is True
+            these can be left out and are automatically computed from
+            the element masses
+        termination_probabilities: dict[str, float]
+            probability that a fragment is a chain terminal, which means
+            all descriptors will be removed from that fragment and
+            terminate chain growth. No additional terminal residue is
+            specified; this should be used for coarse-grained polymers
+            without specific end-group.
         start: str
             fragment name of the fragment to start with
         all_atom: bool
             if the fragments are all-atom resolution
         """
-        self.molecule = nx.Graph()
+        self.fragment_dict = fragment_dict
         self.bonding_probabilities = bonding_probabilities
+        self.termination_probabilities = termination_probabilities
         self.all_atom = all_atom
         self.target_weight = target_weight
         self.start = start
         self.current_open_bonds = defaultdict(list)
+        self.current_weight = 0
 
-        fragment_strings = re.findall(r"\{[^\}]+\}", pattern)
-
-        if len(fragment_strings) > 1:
-            raise IOError("Sampling can only be done on one resolution.")
-
-        self.fragment_dict = {}
-        self.fragment_dict.update(read_fragments(fragment_strings[0],
-                                                 all_atom=all_atom))
+        # we need to make sure that we have the molecular
+        # masses so we can compute the target weight
+        self.fragments_by_bonding = defaultdict(list)
+        if fragment_masses:
+            guess_mass_from_PTE = False
+            self.fragment_masses = fragment_masses
+        elif all_atom:
+            self.fragment_masses = {}
+            guess_mass_from_PTE = True
+        else:
+            msg = ("No fragment masses were provided but the resolution"
+                   "is not all_atom. We cannot guess masses for abitrary"
+                   "CG molecules.")
+            raise IOError(msg)
 
         # we need to store which bonding descriptors is present in which
         # fragment so we can later just look them up
-        self.fragments_by_bonding = defaultdict(list)
         for fragname, fraggraph  in self.fragment_dict.items():
+            if guess_mass_from_PTE:
+                mass = compute_mass(fraggraph)
+                self.fragment_masses[fragname] = mass
             bondings = nx.get_node_attributes(fraggraph, "bonding")
             for node, bondings in bondings.items():
                 for bonding in bondings:
                     self.fragments_by_bonding[bonding].append((fragname, node))
 
-    def update_open_bonds(self):
-        """
-        Collect all nodes which have an open bonding descriptor and store
-        them as keys with a list of nodes as values. We assume that all
-        descriptors have the same probability according to `bonding_probabilites`
-        irrespective of the fragment type.
-        """
-        self.current_open_bonds = defaultdict(list)
-        open_bonds = nx.get_node_attributes(self.molecule, 'bonding')
-        for node, bonding_types in open_bonds.items():
-            for bonding_types in bonding_types:
-                self.current_open_bonds[bonding_types].append(node)
-
-    def pick_bonding(self):
+    def grow_chain(self, molecule):
         """
         Pick an open bonding descriptor according to `bonding_probabilities`
         and then pick a fragment that has the complementory bonding descriptor.
 
+        Parameters
+        ----------
+        molecule: nx.Graph
+            the molecule to extend
+
         Returns
         -------
-        int, int, str, str, str
-            the source node
-            the target node
-            the fragment name
-            the bonding descriptor
-            the complementary bonding descriptor
+        nx.Graph
+            the grown molecule
+        str
+            the fragment name of the added fragment
         """
-        probs = [self.bonding_probabilities[bond_type] for bond_type in self.current_open_bonds]
+        # 1. get the probabilties of any bonding descriptor on the chain to
+        #    form the new bond
+        probs = np.array([self.bonding_probabilities[bond_type[:-1]] for bond_type in self.current_open_bonds])
+        probs = probs / sum(probs)
+        # 2. pick a random bonding descriptor according to these probs
         bonding = np.random.choice(list(self.current_open_bonds.keys()), p=probs)
-        source_node = np.random.choice(self.current_open_bonds[bonding])
-        compl_bonding = _find_complementary_bonding_descriptor(bonding)
+        # 3. get a corresponding node; it may be that one descriptor is found on
+        #    several nodes
+        source_node = random.choice(self.current_open_bonds[bonding])
+        # 4. get the complementary matching bonding descriptor
+        compl_bonding = find_complementary_bonding_descriptor(bonding)
+        # 5. pick a new fragment that has such bonding descriptor
         fragname, target_node = random.choice(self.fragments_by_bonding[compl_bonding])
-        return (source_node, target_node, fragname, bonding, compl_bonding)
+        # 6. add the new fragment and do some book-keeping
+        correspondence = merge_graphs(molecule, self.fragment_dict[fragname])
+        molecule.add_edge(source_node,
+                          correspondence[target_node],
+                          bonding=(bonding, compl_bonding))
+        molecule.nodes[source_node]['bonding'].remove(bonding)
+        molecule.nodes[correspondence[target_node]]['bonding'].remove(compl_bonding)
+        self.current_open_bonds = find_open_bonds(molecule)
+        return molecule, fragname
 
-    def sample(self):
+    def terminate_branch(self, molecule, fragname, fragid):
+        """
+        Probabilistically terminate a branch by removing all
+        bonding descriptors from the last fragment.
+
+        Parameters
+        ----------
+        molecule: nx.Graph
+            the molecule graph
+        fragname: str
+            the fragment by name to consider
+        fragid: int
+            the id of the fragment
+
+        Returns
+        -------
+        nx.Graph
+        """
+        term_prob = self.termination_probabilities.get(fragname, 0)
+        # probability check for termination
+        if random.random() < term_prob:
+            # check if there are more open bonding descriptors
+            # if the number is the same as would get removed
+            # then we are not on a branch
+            active_bonds = nx.get_node_attributes(molecule, 'bonding')
+            target_nodes = [ node for node in active_bonds if molecule.nodes[node]['fragid'] == fragid]
+            if len(target_nodes) < len(active_bonds):
+                for node in target_nodes:
+                    del molecule.nodes[node]['bonding']
+                self.current_open_bonds = find_open_bonds(molecule)
+        return molecule
+
+    def sample(self, target_weight):
         """
         From a list of cgsmiles fragment graphs generate a new random molecule
         according by stitching them together.
+
+        Parameters
+        ----------
+        target_weight
+            the weight of the polymer to generate
+
+        Returns
+        -------
+        nx.Graph
+            the graph of the molecule
         """
+        molecule = nx.Graph()
         if self.start:
             fragment = self.fragment_dict[self.start]
         else:
@@ -115,33 +180,61 @@ class MoleculeSampler:
             fragname = random.choice(list(self.fragment_dict.keys()))
             fragment = self.fragment_dict[fragname]
 
-        merge_graphs(self.molecule, fragment)
-        self.update_open_bonds()
+        merge_graphs(molecule, fragment)
+        self.current_open_bonds = find_open_bonds(molecule)
+
+        current_weight = 0
 
         # next we add monomers one after the other
-        for _ in np.arange(0, self.target_weight):
-            # pick a bonding connector
-            source, target, fragname, bonding, compl_bonding = self.pick_bonding()
-            correspondence = merge_graphs(self.molecule, self.fragment_dict[fragname])
-            self.molecule.add_edge(source, correspondence[target], bonding=(bonding, compl_bonding))
-            print(source, bonding, self.molecule.nodes[source]['bonding'])
-            self.molecule.nodes[source]['bonding'].remove(bonding)
-            print(correspondence[target],bonding, self.molecule.nodes[correspondence[target]]['bonding'])
-            self.molecule.nodes[correspondence[target]]['bonding'].remove(compl_bonding)
-            self.update_open_bonds()
+        fragid = 1
+        while current_weight < target_weight:
+            molecule, fragname = self.grow_chain(molecule)
+            if self.termination_probabilities:
+                molecule = self.terminate_branch(molecule, fragname, fragid)
+            fragid += 1
+            current_weight += self.fragment_masses[fragname]
 
         if self.all_atom:
-            rebuild_h_atoms(self.molecule)
+            rebuild_h_atoms(molecule)
 
         # sort the atoms
-        self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
+        molecule = sort_nodes_by_attr(molecule, sort_attr=("fragid"))
 
         # in all-atom MD there are common naming conventions
         # that might be expected and hence we set them here
 #        if self.all_atom:
 #            set_atom_names_atomistic(self.molecule)
 
-        return self.molecule
+        return molecule
 
-# pick a bonding descriptor
-# then pick a fragment that has this bonding descriptor
+    @classmethod
+    def from_fragment_string(cls,
+                             cgsmiles_str,
+                             **kwargs):
+        """
+        Initiate a MoleculeSampler instance from a cgsmiles string, describing
+        the fragments fragments making up the polymer at one resolution.
+
+        Parameters
+        ----------
+        cgsmiles_str: str
+        **kwargs:
+            same as MoleculeSampler.__init__
+
+        Returns
+        -------
+        :class:`MoleculeSampler`
+        """
+        fragment_strings = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+
+        if len(fragment_strings) > 1:
+            raise IOError("Sampling can only be done on one resolution.")
+
+        all_atom = kwargs.get('all_atom', True)
+        fragment_dict = read_fragments(fragment_strings[0],
+                                       all_atom=all_atom)
+
+        sampler = cls(fragment_dict,
+                      **kwargs)
+
+        return sampler
