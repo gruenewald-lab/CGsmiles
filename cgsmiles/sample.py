@@ -150,12 +150,12 @@ class MoleculeSampler:
         """
         term_prob = self.termination_probabilities.get(fragname, 0)
         # probability check for termination
-        if random.random() < term_prob:
+        if random.random() <= term_prob:
             # check if there are more open bonding descriptors
             # if the number is the same as would get removed
             # then we are not on a branch
             active_bonds = nx.get_node_attributes(molecule, 'bonding')
-            target_nodes = [ node for node in active_bonds if molecule.nodes[node]['fragid'] == fragid]
+            target_nodes = [node for node in active_bonds if molecule.nodes[node]['fragid'] == fragid]
             if len(target_nodes) < len(active_bonds):
                 for node in target_nodes:
                     del molecule.nodes[node]['bonding']
