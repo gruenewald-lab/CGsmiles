@@ -22,7 +22,8 @@ class MoleculeSampler:
                  fragment_masses=None,
                  termination_probabilities=None,
                  start=None,
-                 all_atom=True):
+                 all_atom=True,
+                 seed=None):
 
         """
         Parameters
@@ -52,6 +53,8 @@ class MoleculeSampler:
         seed: int
             set random seed for all processes; default is None
         """
+        # first initalize the random number generator
+        random.seed(a=seed)
         self.fragment_dict = fragment_dict
         self.bonding_probabilities = bonding_probabilities
         self.termination_probabilities = termination_probabilities
@@ -87,7 +90,7 @@ class MoleculeSampler:
                 for bonding in bondings:
                     self.fragments_by_bonding[bonding].append((fragname, node))
 
-    def grow_chain(self, molecule, seed=None):
+    def grow_chain(self, molecule):
         """
         Pick an open bonding descriptor according to `bonding_probabilities`
         and then pick a fragment that has the complementory bonding descriptor.
@@ -112,12 +115,10 @@ class MoleculeSampler:
         bonding = np.random.choice(list(self.current_open_bonds.keys()), p=probs)
         # 3. get a corresponding node; it may be that one descriptor is found on
         #    several nodes
-        random.seed(a=seed)
         source_node = random.choice(self.current_open_bonds[bonding])
         # 4. get the complementary matching bonding descriptor
         compl_bonding = find_complementary_bonding_descriptor(bonding)
         # 5. pick a new fragment that has such bonding descriptor
-        random.seed(a=seed)
         fragname, target_node = random.choice(self.fragments_by_bonding[compl_bonding])
         # 6. add the new fragment and do some book-keeping
         correspondence = merge_graphs(molecule, self.fragment_dict[fragname])
@@ -129,7 +130,7 @@ class MoleculeSampler:
         self.current_open_bonds = find_open_bonds(molecule)
         return molecule, fragname
 
-    def terminate_branch(self, molecule, fragname, fragid, seed=None):
+    def terminate_branch(self, molecule, fragname, fragid):
         """
         Probabilistically terminate a branch by removing all
         bonding descriptors from the last fragment.
@@ -148,7 +149,6 @@ class MoleculeSampler:
         nx.Graph
         """
         term_prob = self.termination_probabilities.get(fragname, 0)
-        random.seed(a=seed)
         # probability check for termination
         if random.random() < term_prob:
             # check if there are more open bonding descriptors
@@ -162,7 +162,12 @@ class MoleculeSampler:
                 self.current_open_bonds = find_open_bonds(molecule)
         return molecule
 
-    def sample(self, target_weight, seed=None):
+    def patch_endgroup(self, molecule):
+        """
+        Stick endgroups on polymer.
+        """
+
+    def sample(self, target_weight):
         """
         From a list of cgsmiles fragment graphs generate a new random molecule
         according by stitching them together.
@@ -182,7 +187,6 @@ class MoleculeSampler:
             fragment = self.fragment_dict[self.start]
         else:
             # intialize the molecule; all fragements have the same probability
-            random.seed(a=seed)
             fragname = random.choice(list(self.fragment_dict.keys()))
             fragment = self.fragment_dict[fragname]
 
@@ -194,9 +198,9 @@ class MoleculeSampler:
         # next we add monomers one after the other
         fragid = 1
         while current_weight < target_weight:
-            molecule, fragname = self.grow_chain(molecule, seed=seed)
+            molecule, fragname = self.grow_chain(molecule)
             if self.termination_probabilities:
-                molecule = self.terminate_branch(molecule, fragname, fragid, seed=seed)
+                molecule = self.terminate_branch(molecule, fragname, fragid)
             fragid += 1
             current_weight += self.fragment_masses[fragname]
 
