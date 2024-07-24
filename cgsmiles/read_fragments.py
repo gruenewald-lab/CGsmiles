@@ -151,7 +151,7 @@ def fragment_iter(fragment_str, all_atom=True):
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
-            nx.set_node_attributes(mol_graph, 1, 'fragid')
+            nx.set_node_attributes(mol_graph, 0, 'fragid')
             fragnames = nx.get_node_attributes(mol_graph, 'fragname')
             nx.set_node_attributes(mol_graph, fragnames, 'atomname')
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
