@@ -116,15 +116,31 @@ def annotate_fragments(meta_graph, molecule):
     return meta_graph
 
 
-def set_atom_names_atomistic(meta_graph, molecule):
+def set_atom_names_atomistic(molecule, meta_graph=None):
     """
     Set atomnames according to commonly used convention
     in molecular dynamics (MD) forcefields. This convention
     is defined as element plus counter for atom in residue.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        the molecule for which to adjust the atomnames
+    meta_graph: nx.Graph
+        optional; get the fragments from the meta_graph
+        attributes which is faster in some cases
     """
-    for meta_node in meta_graph.nodes:
-        fraggraph = meta_graph.nodes[meta_node]['graph']
-        for idx, node in enumerate(fraggraph.nodes):
-            atomname = fraggraph.nodes[node]['element'] + str(idx)
-            fraggraph.nodes[node]['atomname'] = atomname
+    fraglist = defaultdict(list)
+    if meta_graph:
+        for meta_node in meta_graph.nodes:
+            fraggraph = meta_graph.nodes[meta_node]['graph']
+            fraglist[meta_node] += list(fraggraph.nodes)
+    else:
+        fragids = nx.get_node_attributes(molecule, 'fragid')
+        for fragid, node in fragids.items():
+            fraglist[fragid].append(node)
+
+    for fragnodes in fraglist.values():
+        for idx, node in enumerate(fragnodes):
+            atomname = molecule.nodes[node]['element'] + str(idx)
             molecule.nodes[node]['atomname'] = atomname
