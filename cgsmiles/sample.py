@@ -17,11 +17,10 @@ class MoleculeSampler:
     """
     def __init__(self,
                  fragment_dict,
-                 target_weight,
                  bonding_probabilities,
+                 branch_term_probs=None,
+                 bond_term_probs=None,
                  fragment_masses=None,
-                 termination_probabilities=None,
-                 start=None,
                  all_atom=True,
                  seed=None):
 
@@ -40,12 +39,12 @@ class MoleculeSampler:
             masses of the molecule fragments; if all_atom is True
             these can be left out and are automatically computed from
             the element masses
-        termination_probabilities: dict[str, float]
-            probability that a fragment is a chain terminal, which means
-            all descriptors will be removed from that fragment and
-            terminate chain growth. No additional terminal residue is
-            specified; this should be used for coarse-grained polymers
-            without specific end-group.
+        branch_term_probs: dict[str, float]
+            probability that a branched fragment is a chain terminal;
+            if terminal_probabilities are given
+        bond_term_probs: dict[str, float]
+            probability that a certain bonding descriptor connection
+            is present at the terminal
         start: str
             fragment name of the fragment to start with
         all_atom: bool
@@ -57,12 +56,9 @@ class MoleculeSampler:
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
         self.bonding_probabilities = bonding_probabilities
-        self.termination_probabilities = termination_probabilities
+        self.branch_term_probs = branch_term_probs
+        self.bond_term_probs = bond_term_probs
         self.all_atom = all_atom
-        self.target_weight = target_weight
-        self.start = start
-        self.current_open_bonds = defaultdict(list)
-        self.current_weight = 0
 
         # we need to make sure that we have the molecular
         # masses so we can compute the target weight
@@ -90,7 +86,7 @@ class MoleculeSampler:
                 for bonding in bondings:
                     self.fragments_by_bonding[bonding].append((fragname, node))
 
-    def grow_chain(self, molecule):
+    def add_fragment(self, molecule, open_bonds, bonding_probabilities):
         """
         Pick an open bonding descriptor according to `bonding_probabilities`
         and then pick a fragment that has the complementory bonding descriptor.
@@ -99,6 +95,11 @@ class MoleculeSampler:
         ----------
         molecule: nx.Graph
             the molecule to extend
+        open_bonds: dict[list[abc.hashable]]
+            a dict of bonding active descriptors with list of nodes
+            in molecule as value
+        bonding_probabilities:
+            the porbabilities that bonding connector forms a bond
 
         Returns
         -------
@@ -109,13 +110,13 @@ class MoleculeSampler:
         """
         # 1. get the probabilties of any bonding descriptor on the chain to
         #    form the new bond
-        probs = np.array([self.bonding_probabilities[bond_type[:-1]] for bond_type in self.current_open_bonds])
+        probs = np.array([bonding_probabilities[bond_type[:-1]] for bond_type in open_bonds])
         probs = probs / sum(probs)
         # 2. pick a random bonding descriptor according to these probs
-        bonding = np.random.choice(list(self.current_open_bonds.keys()), p=probs)
+        bonding = random.choices(list(open_bonds.keys()), weights=probs)[0]
         # 3. get a corresponding node; it may be that one descriptor is found on
         #    several nodes
-        source_node = random.choice(self.current_open_bonds[bonding])
+        source_node = random.choice(open_bonds[bonding])
         # 4. get the complementary matching bonding descriptor
         compl_bonding = find_complementary_bonding_descriptor(bonding)
         # 5. pick a new fragment that has such bonding descriptor
@@ -127,8 +128,30 @@ class MoleculeSampler:
                           bonding=(bonding, compl_bonding))
         molecule.nodes[source_node]['bonding'].remove(bonding)
         molecule.nodes[correspondence[target_node]]['bonding'].remove(compl_bonding)
-        self.current_open_bonds = find_open_bonds(molecule)
         return molecule, fragname
+
+    def terminate_fragment(self, molecule, fragid):
+        """
+        If bonding probabilities for terminal residues are given
+        select one terminal to add to the given fragment. If no
+        terminal bonding probabilities are defined the active bonding
+        descriptors of all nodes will be removed.
+
+        Parameters
+        ----------
+        molecule: nx.Graph
+            the molecule graph
+        fragid: int
+            the id of the fragment
+        """
+        target_nodes = [node for node in molecule.nodes if  molecule.nodes[node]['fragid'] == fragid]
+        open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
+        # if terminal fragment bonding probabilties are given; add them here
+        if self.bond_term_probs:
+            self.add_fragment(molecule, open_bonds, self.bond_term_probs)
+
+        for node in target_nodes:
+            del molecule.nodes[node]['bonding']
 
     def terminate_branch(self, molecule, fragname, fragid):
         """
@@ -148,7 +171,7 @@ class MoleculeSampler:
         -------
         nx.Graph
         """
-        term_prob = self.termination_probabilities.get(fragname, 0)
+        term_prob = self.branch_term_probs.get(fragname, -1)
         # probability check for termination
         if random.random() <= term_prob:
             # check if there are more open bonding descriptors
@@ -157,25 +180,20 @@ class MoleculeSampler:
             active_bonds = nx.get_node_attributes(molecule, 'bonding')
             target_nodes = [node for node in active_bonds if molecule.nodes[node]['fragid'] == fragid]
             if len(target_nodes) < len(active_bonds):
-                for node in target_nodes:
-                    del molecule.nodes[node]['bonding']
-                self.current_open_bonds = find_open_bonds(molecule)
+                self.terminate_fragment(molecule, fragid)
         return molecule
 
-    def patch_endgroup(self, molecule):
-        """
-        Stick endgroups on polymer.
-        """
-
-    def sample(self, target_weight):
+    def sample(self, target_weight, start_fragment=None):
         """
         From a list of cgsmiles fragment graphs generate a new random molecule
         according by stitching them together.
 
         Parameters
         ----------
-        target_weight
+        target_weight: int
             the weight of the polymer to generate
+        start_fragment: str
+            the fragment name to start with
 
         Returns
         -------
@@ -183,26 +201,28 @@ class MoleculeSampler:
             the graph of the molecule
         """
         molecule = nx.Graph()
-        if self.start:
-            fragment = self.fragment_dict[self.start]
+        if start_fragment:
+            fragment = self.fragment_dict[start_fragment]
         else:
             # intialize the molecule; all fragements have the same probability
             fragname = random.choice(list(self.fragment_dict.keys()))
             fragment = self.fragment_dict[fragname]
 
         merge_graphs(molecule, fragment)
-        self.current_open_bonds = find_open_bonds(molecule)
+        open_bonds = find_open_bonds(molecule)
 
         current_weight = 0
 
         # next we add monomers one after the other
         fragid = 1
         while current_weight < target_weight:
-            molecule, fragname = self.grow_chain(molecule)
-            if self.termination_probabilities:
-                molecule = self.terminate_branch(molecule, fragname, fragid)
-            fragid += 1
+            open_bonds = find_open_bonds(molecule)
+            molecule, fragname = self.add_fragment(molecule,
+                                                   open_bonds,
+                                                   self.bonding_probabilities)
+            molecule = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
+            fragid += 1
 
         if self.all_atom:
             rebuild_h_atoms(molecule)
@@ -212,8 +232,8 @@ class MoleculeSampler:
 
         # in all-atom MD there are common naming conventions
         # that might be expected and hence we set them here
-#        if self.all_atom:
-#            set_atom_names_atomistic(self.molecule)
+        if self.all_atom:
+            set_atom_names_atomistic(molecule)
 
         return molecule
 
