@@ -19,6 +19,7 @@ class MoleculeSampler:
                  fragment_dict,
                  bonding_probabilities,
                  branch_term_probs=None,
+                 terminal_fragments=[],
                  bond_term_probs=None,
                  fragment_masses=None,
                  all_atom=True,
@@ -63,6 +64,7 @@ class MoleculeSampler:
         # we need to make sure that we have the molecular
         # masses so we can compute the target weight
         self.fragments_by_bonding = defaultdict(list)
+        self.terminals_by_bonding = defaultdict(list)
         if fragment_masses:
             guess_mass_from_PTE = False
             self.fragment_masses = fragment_masses
@@ -77,6 +79,7 @@ class MoleculeSampler:
 
         # we need to store which bonding descriptors is present in which
         # fragment so we can later just look them up
+        print(terminal_fragments)
         for fragname, fraggraph  in self.fragment_dict.items():
             if guess_mass_from_PTE:
                 mass = compute_mass(fraggraph)
@@ -84,9 +87,13 @@ class MoleculeSampler:
             bondings = nx.get_node_attributes(fraggraph, "bonding")
             for node, bondings in bondings.items():
                 for bonding in bondings:
-                    self.fragments_by_bonding[bonding].append((fragname, node))
+                    print(bonding, fragname)
+                    if fragname in terminal_fragments:
+                        self.terminals_by_bonding[bonding].append((fragname, node))
+                    else:
+                        self.fragments_by_bonding[bonding].append((fragname, node))
 
-    def add_fragment(self, molecule, open_bonds, bonding_probabilities):
+    def add_fragment(self, molecule, open_bonds, fragments, bonding_probabilities):
         """
         Pick an open bonding descriptor according to `bonding_probabilities`
         and then pick a fragment that has the complementory bonding descriptor.
@@ -98,6 +105,8 @@ class MoleculeSampler:
         open_bonds: dict[list[abc.hashable]]
             a dict of bonding active descriptors with list of nodes
             in molecule as value
+        fragments: dict[list[str]]
+            a dict of fragment names indexed by their bonding descriptors
         bonding_probabilities:
             the porbabilities that bonding connector forms a bond
 
@@ -120,7 +129,7 @@ class MoleculeSampler:
         # 4. get the complementary matching bonding descriptor
         compl_bonding = find_complementary_bonding_descriptor(bonding)
         # 5. pick a new fragment that has such bonding descriptor
-        fragname, target_node = random.choice(self.fragments_by_bonding[compl_bonding])
+        fragname, target_node = random.choice(fragments[compl_bonding])
         # 6. add the new fragment and do some book-keeping
         correspondence = merge_graphs(molecule, self.fragment_dict[fragname])
         molecule.add_edge(source_node,
@@ -144,11 +153,14 @@ class MoleculeSampler:
         fragid: int
             the id of the fragment
         """
-        target_nodes = [node for node in molecule.nodes if  molecule.nodes[node]['fragid'] == fragid]
+        target_nodes = [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
         open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
         # if terminal fragment bonding probabilties are given; add them here
         if self.bond_term_probs:
-            self.add_fragment(molecule, open_bonds, self.bond_term_probs)
+            self.add_fragment(molecule,
+                              open_bonds,
+                              self.terminals_by_bonding,
+                              self.bond_term_probs)
 
         for node in target_nodes:
             del molecule.nodes[node]['bonding']
@@ -178,7 +190,7 @@ class MoleculeSampler:
             # if the number is the same as would get removed
             # then we are not on a branch
             active_bonds = nx.get_node_attributes(molecule, 'bonding')
-            target_nodes = [node for node in active_bonds if molecule.nodes[node]['fragid'] == fragid]
+            target_nodes = [node for node in active_bonds if fragid in molecule.nodes[node]['fragid']]
             if len(target_nodes) < len(active_bonds):
                 self.terminate_fragment(molecule, fragid)
         return molecule
@@ -219,6 +231,7 @@ class MoleculeSampler:
             open_bonds = find_open_bonds(molecule)
             molecule, fragname = self.add_fragment(molecule,
                                                    open_bonds,
+                                                   self.fragments_by_bonding,
                                                    self.bonding_probabilities)
             molecule = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
@@ -263,7 +276,6 @@ class MoleculeSampler:
         all_atom = kwargs.get('all_atom', True)
         fragment_dict = read_fragments(fragment_strings[0],
                                        all_atom=all_atom)
-
         sampler = cls(fragment_dict,
                       **kwargs)
 
