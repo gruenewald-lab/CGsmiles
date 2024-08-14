@@ -136,9 +136,10 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
             fraggraph = meta_graph.nodes[meta_node]['graph']
             fraglist[meta_node] += list(fraggraph.nodes)
     else:
-        fragids = nx.get_node_attributes(molecule, 'fragid')
-        for fragid, node in fragids.items():
-            fraglist[fragid].append(node)
+        node_to_fragid = nx.get_node_attributes(molecule, 'fragid')
+        for node, fragids in node_to_fragid.items():
+            assert len(fragids) == 1
+            fraglist[fragids[0]].append(node)
 
     for fragnodes in fraglist.values():
         for idx, node in enumerate(fragnodes):

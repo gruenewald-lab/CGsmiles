@@ -109,8 +109,6 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     nx.set_node_attributes(ref_graph, atomnames, 'atomname')
     nx.set_node_attributes(ref_graph, 'test', 'fragname')
     nx.set_edge_attributes(ref_graph, edges, 'bonding')
-    for edge in edges:
-        del ref_graph.edges[edge]['order']
     assertEqualGraphs(ref_graph, molecule)
 
 @pytest.mark.parametrize('graph_str, bonding_probablities, terminal_fragments, bond_term_probs, fragment_masses, all_atom, masses_out, frags_out, ters_out',
@@ -180,7 +178,8 @@ def test_init_mol_sampler(graph_str,
                                                    all_atom=all_atom)
     for mol, mass in sampler.fragment_masses.items():
         pytest.approx(masses_out[mol], mass)
-    print(sampler.fragments_by_bonding)
-    print(frags_out)
     assert sampler.fragments_by_bonding == frags_out
     assert sampler.terminals_by_bonding == ters_out
+
+
+

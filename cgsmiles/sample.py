@@ -134,7 +134,8 @@ class MoleculeSampler:
         correspondence = merge_graphs(molecule, self.fragment_dict[fragname])
         molecule.add_edge(source_node,
                           correspondence[target_node],
-                          bonding=(bonding, compl_bonding))
+                          bonding=(bonding, compl_bonding),
+                          order = int(bonding[-1]))
         molecule.nodes[source_node]['bonding'].remove(bonding)
         molecule.nodes[correspondence[target_node]]['bonding'].remove(compl_bonding)
         return molecule, fragname
@@ -163,7 +164,8 @@ class MoleculeSampler:
                               self.bond_term_probs)
 
         for node in target_nodes:
-            del molecule.nodes[node]['bonding']
+            if 'bonding' in molecule.nodes[node]:
+                del molecule.nodes[node]['bonding']
 
     def terminate_branch(self, molecule, fragname, fragid):
         """

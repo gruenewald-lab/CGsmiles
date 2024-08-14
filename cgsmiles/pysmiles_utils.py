@@ -1,7 +1,7 @@
 import networkx as nx
 import pysmiles
 
-def compute_mass(molecule):
+def compute_mass(input_molecule):
     """
     Compute the mass of a molecule from the PTE.
 
@@ -15,6 +15,11 @@ def compute_mass(molecule):
     float
         the atomic mass
     """
+    molecule = input_molecule.copy()
+    print(molecule.nodes(data=True))
+    # we need to add the hydrogen atoms
+    # for computing the mass
+    rebuild_h_atoms(molecule)
     mass = 0
     for node in molecule.nodes:
         element = molecule.nodes[node]['element']
