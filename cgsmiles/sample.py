@@ -79,7 +79,6 @@ class MoleculeSampler:
 
         # we need to store which bonding descriptors is present in which
         # fragment so we can later just look them up
-        print(terminal_fragments)
         for fragname, fraggraph  in self.fragment_dict.items():
             if guess_mass_from_PTE:
                 mass = compute_mass(fraggraph)
@@ -87,7 +86,6 @@ class MoleculeSampler:
             bondings = nx.get_node_attributes(fraggraph, "bonding")
             for node, bondings in bondings.items():
                 for bonding in bondings:
-                    print(bonding, fragname)
                     if fragname in terminal_fragments:
                         self.terminals_by_bonding[bonding].append((fragname, node))
                     else:
@@ -162,10 +160,13 @@ class MoleculeSampler:
                               open_bonds,
                               self.terminals_by_bonding,
                               self.bond_term_probs)
+            fragid += 1
 
         for node in target_nodes:
             if 'bonding' in molecule.nodes[node]:
                 del molecule.nodes[node]['bonding']
+
+        return fragid
 
     def terminate_branch(self, molecule, fragname, fragid):
         """
@@ -194,8 +195,8 @@ class MoleculeSampler:
             active_bonds = nx.get_node_attributes(molecule, 'bonding')
             target_nodes = [node for node in active_bonds if fragid in molecule.nodes[node]['fragid']]
             if len(target_nodes) < len(active_bonds):
-                self.terminate_fragment(molecule, fragid)
-        return molecule
+                fragid  = self.terminate_fragment(molecule, fragid)
+        return molecule, fragid
 
     def sample(self, target_weight, start_fragment=None):
         """
@@ -235,7 +236,7 @@ class MoleculeSampler:
                                                    open_bonds,
                                                    self.fragments_by_bonding,
                                                    self.bonding_probabilities)
-            molecule = self.terminate_branch(molecule, fragname, fragid)
+            molecule, fragid = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
             fragid += 1
 
