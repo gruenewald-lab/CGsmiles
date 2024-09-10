@@ -1,5 +1,6 @@
 import re
 import random
+import time
 from collections import defaultdict
 import numpy as np
 import networkx as nx
@@ -173,6 +174,8 @@ class MoleculeSampler:
             set random seed for all processes; default is None
         """
         # first initialize the random number generator
+        if seed is None:
+            seed = time.time_ns()
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
         # we need to set some defaults and attributes
@@ -287,7 +290,7 @@ class MoleculeSampler:
         fragid: int
             the id of the fragment
         """
-        target_nodes = [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
+        target_nodes = {node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']}
         open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
         # if terminal fragment bonding probabilities are given; add them here
         if self.terminal_reactivities:
@@ -297,7 +300,7 @@ class MoleculeSampler:
                               self.terminal_reactivities,
                               self.fragment_reactivities)
             fragid += 1
-            target_nodes += [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
+            target_nodes.update({node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']})
 
         for node in target_nodes:
             if 'bonding' in molecule.nodes[node]:
