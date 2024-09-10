@@ -32,6 +32,104 @@ class MoleculeSampler:
     """
     Given a fragment string in CGSmiles format and probabilities for residues
     to occur, return a random molecule with target molecular weight.
+
+    First, this class has to be initiated using the class construction
+    method `from_string`, which makes sure to read and resolve the fragment
+    graphs provided in the CGSmiles string.
+
+    Once the `MoleculeSampler` is initiated you can call the `sampler` method
+    in order to generate a new random polymer molecule from the fragment string
+    that was provided.
+
+    In addition to just randomly creating a molecule reactivities and termination
+    probabilities can be provided to steer the outcome. The sampler features a
+    two level connectivity determination. First using the `polymer_reactivities`
+    an open bonding descriptor from the growing polymer molecule is selected
+    according to the probabilities provided. Subsequently, a fragment is randomly
+    chosen that has a matching complementary bonding descriptor.
+
+    If in addition the `fragment_reactivities` are provided the algorithm will
+    select a fragment that features a bonding descriptor according to the
+    conditional probabilities provided. The `fragment_reactivities` keyword
+    accepts a two level dict. The first key is the bonding descriptor found on
+    the polymer molecule (i.e. the one that will be used to extend the polymer).
+    The second level contains a dict specifying a probability for the bonding
+    descriptors found in the fragments (i.e. their conditional probability given
+    the polymer descriptors).
+
+    Basic Examples
+    --------------
+    Random-copolymer of PMMA and PS with equal probabilities.
+
+    >>> cgsmiles_str = "{#PMMA=[>]C(C)C[<]C(=O)OC,#PS=[>]CC[<]c1cccc1}"
+    >>> sampler = MoleculeSampler.from_string(cgsmiles_str)
+    >>> polymer_graph = sampler.sample(target_weight=100000)
+
+    One can also make a blocky copolymer but steer the probability of having
+    head-to-head tail-to-tail vs head-to-tail addition. This is done by labeling
+    the bonding descriptors A-D and providing the probability that a certain
+    bonding descriptor is used to extend the polymer.
+
+    >>> cgsmiles_str = "{#PMMA=[>A]C(C)C[<B]C(=O)OC,#PS=[>C]CC[<D]c1cccc1}"
+    >>> polymer_reactivites = {">A":0.4, "<B":0.1, ">C": 0.4, "<D": 0.1}
+    >>> sampler = MoleculeSampler.from_string(cgsmiles_str)
+    >>> polymer_graph = sampler.sample(target_weight=100000)
+
+    One can also make a blocky copolymer by providing the conditional
+    probabilities. To distinguish the descriptors on PMMA vs PS we can
+    label them with a alphanumeric string.
+
+    >>> cgsmiles_str = "{#PMMA=[$A]C(C)C[$B]C(=O)OC,#PS=[$C]CC[$D]c1cccc1}"
+    >>> polymer_reactivites = {">A":0.5, "<A":0, ">B": 0.5, "<B": 0.0}
+    >>> fragment_reactivies = {'$A': {'$A': 0.,   '$C': 0.,   '$B': 0.7, '$D': 0.3},
+                               '$B': {'$A': 0.7, '$C': 0.3, '$B': 0.0, '$D': 0.0 },
+                               '$C': {'$A': 0.,   '$C': 0.,   '$B': 0.3, '$D': 0.7},
+                               '$D': {'$A': 0.3, '$C': 0.7, '$B': 0.0, '$D': 0.0 }},
+    >>> sampler = MoleculeSampler.from_string(cgsmiles_str,
+                                              polymer_reactivies=polymer_reactivies,
+                                              fragment_reactivies=fragment_reactivies)
+    >>> polymer_graph = sampler.sample(target_weight=100000)
+
+    Advanced API Examples
+    ---------------------
+    Of course the sampler is not limited to linear co-polymers. Also randomly
+    branched molecules such as bottle-brush copolymers can be generated. To
+    steer the branching ratio and branch extension as well as terminal end
+    groups the `branch_term_probs`, `terminal_fragments`, and `terminal_reactivities`
+    can be provided.
+
+    For example, To generate a bottle brush polymer that has PMA in the backbone
+    and PEG as side-chain terminated with an OH group the following CGSmiles string
+    in combination with the above mentioned probabilities can be provided.
+
+    >>> cgsmiles_str="{#PMA=[>]CC[<]C(=O)OC[>A],#PEG=[<A]COC[>A],#OH=[<A]O}"
+    >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
+                                                       branch_term_probs={"PEG": 0.3, "PMA":0.0},
+                                                       terminal_fragments=['OH'],
+                                                       bonding_probabilities={'<': 0.01, '>': 0.01, '>A': 0.99, '<A':0.99},
+                                                       bond_term_probs={'<A': 1., '>A':1., '>': 0, '<': 0},
+                                                       all_atom=True)
+    >>> molecule = sampler.sample(target_weight=5008)
+
+    This combination results into a dense brush where very PMA molecule has a PEG
+    branch whose length is determined by a 1 in 3 probability to terminate.
+
+    In contrast one can also generate spares branched molecules. For instance,
+    Dextran at low molecular weights is mainly a linear alpha 1-6 polyglucose
+    polymer. Occasionally, a 1-4 branch extends from it which has lengths of 2-4.
+    At the Martini coarse-grained level Dextran is described by three particles
+    A, B, and C. The alpha 1-6 bonds are between A and C whereas the 1-4 bonds
+    are between A and B.
+
+    >>> cgsmiles_str="{#GLC=[$A][#A]1[#B][$B][#C]1[$C]}"
+    >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
+                                                       fragment_masses={'GLC': 165},
+                                                       bonding_probabilities={'$A': 0.8, '$C': 0.2, '$B': 0.2},
+                                                       compl_bonding_probabilities={'$A': {'$A': 0.0, '$C': 1.0, '$B': 0.0},
+                                                                                    '$B': {'$A': 1.0, '$C': 0.0, '$B': 0.0},
+                                                                                    '$C': {'$A':1.0, '$C':0.0, '$B':0.0}},
+                                                       all_atom=False)
+    >>> molecule = sampler.sample(target_weight=5008)
     """
     def __init__(self,
                  fragment_dict,
@@ -74,7 +172,7 @@ class MoleculeSampler:
         seed: int
             set random seed for all processes; default is None
         """
-        # first initalize the random number generator
+        # first initialize the random number generator
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
         # we need to set some defaults and attributes
@@ -100,7 +198,7 @@ class MoleculeSampler:
             guess_mass_from_PTE = True
         else:
             msg = ("No fragment masses were provided but the resolution"
-                   "is not all_atom. We cannot guess masses for abitrary"
+                   "is not all_atom. We cannot guess masses for arbitrary"
                    "CG molecules.")
             raise IOError(msg)
 
@@ -126,7 +224,7 @@ class MoleculeSampler:
                      fragment_reactivities):
         """
         Pick an open bonding descriptor according to `polymer_reactivities`
-        and then pick a fragment that has the complementory bonding descriptor.
+        and then pick a fragment that has the complementary bonding descriptor.
         For the second step conditional probabilities can be given using
         `fragment_reactivites`.
 
@@ -154,7 +252,7 @@ class MoleculeSampler:
         str
             the fragment name of the added fragment
         """
-        # 1. get the probabilties of any bonding descriptor on the chain to
+        # 1. get the probabilities of any bonding descriptor on the chain to
         #    form the new bond and pick one at random from the available ones
         bonding = _select_bonding_operator(list(open_bonds.keys()), polymer_reactivities)
         # 2. get a corresponding node; it may be that one descriptor is found on
@@ -191,7 +289,7 @@ class MoleculeSampler:
         """
         target_nodes = [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
         open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
-        # if terminal fragment bonding probabilties are given; add them here
+        # if terminal fragment bonding probabilities are given; add them here
         if self.terminal_reactivities:
             self.add_fragment(molecule,
                               open_bonds,
@@ -259,7 +357,7 @@ class MoleculeSampler:
         if start_fragment:
             fragment = self.fragment_dict[start_fragment]
         else:
-            # intialize the molecule; all fragements have the same probability
+            # initialize the molecule; all fragments have the same probability
             fragname = random.choice(list(self.fragment_dict.keys()))
             fragment = self.fragment_dict[fragname]
 
