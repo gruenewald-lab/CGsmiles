@@ -10,6 +10,24 @@ from .graph_utils import (merge_graphs,
 from .pysmiles_utils import rebuild_h_atoms, compute_mass
 from .cgsmiles_utils import find_open_bonds, find_complementary_bonding_descriptor
 
+def _select_bonding_operator(bonds, probabilities=None):
+    if probabilities:
+        probs = np.array([probabilities[bond_type] for bond_type in bonds])
+        probs = probs / sum(probs)
+        bonding = random.choices(bonds, weights=probs)[0]
+    else:
+        bonding  = random.choice(bonds)
+    return bonding
+
+def _set_bond_order_defaults(bonding_dict):
+    default_dict = {}
+    for bond_operator, prob in bonding_dict.items():
+        # we need to patch the bond order space
+        if not bond_operator[-1].isdigit():
+            bond_operator += '1'
+        default_dict[bond_operator] = prob
+    return default_dict
+
 class MoleculeSampler:
     """
     Given a fragment string in CGSmiles format and probabilities for residues
@@ -18,9 +36,10 @@ class MoleculeSampler:
     def __init__(self,
                  fragment_dict,
                  bonding_probabilities,
-                 branch_term_probs=None,
+                 compl_bonding_probabilities={},
+                 branch_term_probs={},
+                 bond_term_probs={},
                  terminal_fragments=[],
-                 bond_term_probs=None,
                  fragment_masses=None,
                  all_atom=True,
                  seed=None):
@@ -32,22 +51,25 @@ class MoleculeSampler:
             a dict of fragment graphs at one resolution. Each graph must have
             the same attributes as returned by the `cgsmiles.read_fragments`
             function.
-        target_weight: int
-            the target molecular weight in unit of number of monomers
         bonding_probabilities: dict[str, float]
+        site_reactivity
             probability that two bonding descriptors will connect
+        compl_bonding_probabilities: dict[str, dict[str, float]]
+        reactivity_matrix
+            probability of given a certain bonding descriptor what
+            should be the next bonding descriptor. For example:
+            {'&A': {'&A': 0.2, '&B': 0.8}, '&B': {'&B': 0.2, '&A': 0.8}}
+        branch_term_probs: dict[str, float]
+            probability that a branched fragment is a chain terminal;
+        bond_term_probs: dict[str, float]
+            probability that a certain bonding descriptor connection
+            is present at the terminal
+        terminal_fragments: list[str]
+            a list of fragments that only occur at termini
         fragment_masses: dict[str, float]
             masses of the molecule fragments; if all_atom is True
             these can be left out and are automatically computed from
             the element masses
-        branch_term_probs: dict[str, float]
-            probability that a branched fragment is a chain terminal;
-            if terminal_probabilities are given
-        bond_term_probs: dict[str, float]
-            probability that a certain bonding descriptor connection
-            is present at the terminal
-        start: str
-            fragment name of the fragment to start with
         all_atom: bool
             if the fragments are all-atom resolution
         seed: int
@@ -56,9 +78,15 @@ class MoleculeSampler:
         # first initalize the random number generator
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
-        self.bonding_probabilities = bonding_probabilities
+        # we need to set some defaults and attributes
+        self.bonding_probabilities = _set_bond_order_defaults(bonding_probabilities)
+        self.compl_bonding_probabilities = {}
+        for key, probs in compl_bonding_probabilities.items():
+            if not key[-1].isdigit():
+                key += '1'
+            self.compl_bonding_probabilities[key] = _set_bond_order_defaults(probs)
+        self.bond_term_probs = _set_bond_order_defaults(bond_term_probs)
         self.branch_term_probs = branch_term_probs
-        self.bond_term_probs = bond_term_probs
         self.all_atom = all_atom
 
         # we need to make sure that we have the molecular
@@ -91,7 +119,12 @@ class MoleculeSampler:
                     else:
                         self.fragments_by_bonding[bonding].append((fragname, node))
 
-    def add_fragment(self, molecule, open_bonds, fragments, bonding_probabilities):
+    def add_fragment(self,
+                     molecule,
+                     open_bonds,
+                     fragments,
+                     bonding_probabilities,
+                     compl_bonding_probabilities):
         """
         Pick an open bonding descriptor according to `bonding_probabilities`
         and then pick a fragment that has the complementory bonding descriptor.
@@ -107,6 +140,9 @@ class MoleculeSampler:
             a dict of fragment names indexed by their bonding descriptors
         bonding_probabilities:
             the porbabilities that bonding connector forms a bond
+        compl_bonding_probabilities:
+            probability that a certain bonding descriptor is followed
+            by another bonding descriptor
 
         Returns
         -------
@@ -116,19 +152,17 @@ class MoleculeSampler:
             the fragment name of the added fragment
         """
         # 1. get the probabilties of any bonding descriptor on the chain to
-        #    form the new bond
-        probs = np.array([bonding_probabilities[bond_type[:-1]] for bond_type in open_bonds])
-        probs = probs / sum(probs)
-        # 2. pick a random bonding descriptor according to these probs
-        bonding = random.choices(list(open_bonds.keys()), weights=probs)[0]
-        # 3. get a corresponding node; it may be that one descriptor is found on
+        #    form the new bond and pick one at random from the available ones
+        bonding = _select_bonding_operator(list(open_bonds.keys()), bonding_probabilities)
+        # 2. get a corresponding node; it may be that one descriptor is found on
         #    several nodes
         source_node = random.choice(open_bonds[bonding])
-        # 4. get the complementary matching bonding descriptor
-        compl_bonding = find_complementary_bonding_descriptor(bonding)
-        # 5. pick a new fragment that has such bonding descriptor
+        # 3. get the complementary matching bonding descriptor
+        compl_bonds = find_complementary_bonding_descriptor(bonding, list(fragments.keys()))
+        compl_bonding = _select_bonding_operator(compl_bonds, compl_bonding_probabilities.get(bonding, None))
+        # 4. pick a new fragment that has such bonding descriptor
         fragname, target_node = random.choice(fragments[compl_bonding])
-        # 6. add the new fragment and do some book-keeping
+        # 5. add the new fragment and do some book-keeping
         correspondence = merge_graphs(molecule, self.fragment_dict[fragname])
         molecule.add_edge(source_node,
                           correspondence[target_node],
@@ -159,8 +193,10 @@ class MoleculeSampler:
             self.add_fragment(molecule,
                               open_bonds,
                               self.terminals_by_bonding,
-                              self.bond_term_probs)
+                              self.bond_term_probs,
+                              self.compl_bonding_probabilities)
             fragid += 1
+            target_nodes += [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
 
         for node in target_nodes:
             if 'bonding' in molecule.nodes[node]:
@@ -227,7 +263,6 @@ class MoleculeSampler:
         open_bonds = find_open_bonds(molecule)
 
         current_weight = 0
-
         # next we add monomers one after the other
         fragid = 1
         while current_weight < target_weight:
@@ -235,7 +270,8 @@ class MoleculeSampler:
             molecule, fragname = self.add_fragment(molecule,
                                                    open_bonds,
                                                    self.fragments_by_bonding,
-                                                   self.bonding_probabilities)
+                                                   self.bonding_probabilities,
+                                                   self.compl_bonding_probabilities)
             molecule, fragid = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
             fragid += 1

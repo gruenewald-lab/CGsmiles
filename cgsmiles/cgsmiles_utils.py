@@ -1,20 +1,33 @@
 from collections import defaultdict
 import networkx as nx
 
-def find_complementary_bonding_descriptor(bonding_descriptor):
+def find_complementary_bonding_descriptor(bonding_descriptor, ellegible_descriptors=None):
     """
     Given a bonding desciptor find the complementary match.
     In the case of '$' prefixed descriptors this is just
     the same and '>' or '<' get flipped to the other
     symbol.
     """
+    compl = []
+    if bonding_descriptor[0] == '$' and ellegible_descriptors:
+        for descriptor in ellegible_descriptors:
+            if descriptor[0] == '$' and descriptor[-1] == bonding_descriptor[-1]:
+                compl.append(descriptor)
+        return compl
+
     if bonding_descriptor[0] == '<':
         compl = '>' + bonding_descriptor[1:]
     elif bonding_descriptor[0] == '>':
         compl = '<' + bonding_descriptor[1:]
     else:
         compl = bonding_descriptor
-    return compl
+
+    if compl not in ellegible_descriptors:
+        msg = ("Bonding descriptor {compl} was not found in list of potential"
+               "matching descriptors.")
+        raise IOError(msg.format(compl=compl))
+
+    return [compl]
 
 def find_open_bonds(molecule, target_nodes=None):
     """

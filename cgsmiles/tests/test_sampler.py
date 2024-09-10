@@ -27,7 +27,7 @@ def test_terminate_branch(graph_str, ter_probs, status, seed):
     nx.set_node_attributes(molecule, {0: [0], 1: [1], 2: [2]}, 'fragid')
 
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities=None,
+                              bonding_probabilities={},
                               fragment_masses={"test": 1},
                               branch_term_probs=ter_probs,
                               seed=seed)
@@ -36,11 +36,11 @@ def test_terminate_branch(graph_str, ter_probs, status, seed):
 
 @pytest.mark.parametrize('graph_str, ter_probs, seed, ter',(
                         # case 1: adds t1 fragment because matching descriptor
-                        ("{#test=[#A][#B][#C][>],#t1=[#D][<],#t2=[#E][>]}", {">": 1.0, "<": 0.0}, 42, 'D'),
+                        ("{#test=[#A][#B][#C][>],#tA=[#D][<],#tB=[#E][>]}", {">": 1.0, "<": 0.0}, 42, 'D'),
                         # case 2: adds t1 because of probability
-                        ("{#test=[#A][#B][#C][>t1][>t2],#t1=[#D][<t1],#t2=[#E][<t2]}", {">t1": 0.9, ">t2": 0.1}, 42, 'D'),
+                        ("{#test=[#A][#B][#C][>A][>B],#tA=[#D][<A],#t2=[#E][<B]}", {">A": 0.9, ">B": 0.1}, 42, 'D'),
                         # case 3: adds t2 because of probability
-                        ("{#test=[#A][#B][#C][>t1][>t2],#t1=[#D][<t1],#t2=[#E][<t2]}", {">t1": 0.1, ">t2": 0.9}, 42, 'E'),
+                        ("{#test=[#A][#B][#C][>A][>B],#tA=[#D][<A],#tB=[#E][<B]}", {">A": 0.1, ">B": 0.9}, 42, 'E'),
 ))
 def test_terminate_fragment(graph_str, ter_probs, seed, ter):
     fragment_dict = read_fragments(graph_str, all_atom=False)
@@ -50,9 +50,9 @@ def test_terminate_fragment(graph_str, ter_probs, seed, ter):
     nx.set_node_attributes(molecule, atomnames, 'fragname')
     nx.set_node_attributes(molecule, {0: [0], 1: [1], 2: [2]}, 'fragid')
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities=None,
+                              bonding_probabilities={},
                               fragment_masses={"test": 1},
-                              terminal_fragments=["t1", "t2"],
+                              terminal_fragments=["tA", "tB"],
                               bond_term_probs=ter_probs,
                               seed=seed)
     sampler.terminate_fragment(molecule, 2)
@@ -65,7 +65,7 @@ def test_terminate_fragment(graph_str, ter_probs, seed, ter):
 @pytest.mark.parametrize('graph_str, bond_probs, seed, ref_mol, bonding, fragid, edges',(
                         # case 1: selects the ">" and finds correct compl. bonding
                         ("{#test=[<][#A][#B][$][#C][>]}",
-                         {">": 0.8, "<": 0.1, "$": 0.1},
+                         {">1": 0.8, "<1": 0.1, "$1": 0.1},
                          42,
                          "{[#A][#B][#C][#A][#B][#C]}",
                          {0: ['<1'], 1: ['$1'], 2: [], 3: [], 4:['$1'], 5: ['>1']},
@@ -73,7 +73,7 @@ def test_terminate_fragment(graph_str, ter_probs, seed, ter):
                          {(2, 3): ('>1', '<1')}),
                         # case 2: selects the ">" and finds correct compl. bonding
                         ("{#test=[<][#A][#B][$][#C][>]}",
-                         {">": 0.1, "<": 0.8, "$": 0.1},
+                         {">1": 0.1, "<1": 0.8, "$1": 0.1},
                          42,
                          "{[#C][#B][#A][#C][#B][#A]}",
                          {0: ['>1'], 1: ['$1'], 2: [], 3: [], 4:['$1'], 5: ['<1']},
@@ -81,7 +81,7 @@ def test_terminate_fragment(graph_str, ter_probs, seed, ter):
                          {(2, 3): ('<1', '>1')}),
                         # case 3: selects the "$" and finds correct compl. bonding
                         ("{#test=[<][#A][#B][$][#C][>]}",
-                         {">": 0.1, "<": 0.1, "$": 0.8},
+                         {">1": 0.1, "<1": 0.1, "$1": 0.8},
                          42,
                          "{[#A][#B]([#B]([#A])[#C])[#C]}",
                          {0: ['<1'], 1: [], 2: [], 3: ['<1'], 4:['>1'], 5: ['>1']},
@@ -93,7 +93,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     molecule = nx.Graph()
     _ = merge_graphs(molecule, fragment_dict['test'])
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities=None,
+                              bonding_probabilities={},
                               fragment_masses={"test": 1},
                               seed=seed)
 
@@ -101,7 +101,8 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     sampler.add_fragment(molecule,
                          open_bonds,
                          fragments=sampler.fragments_by_bonding,
-                         bonding_probabilities=bond_probs)
+                         bonding_probabilities=bond_probs,
+                         compl_bonding_probabilities={})
     ref_graph = read_cgsmiles(ref_mol)
     nx.set_node_attributes(ref_graph, bonding, 'bonding')
     nx.set_node_attributes(ref_graph, fragid, 'fragid')
@@ -116,7 +117,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                         ("{#test=[<][#A][#B][$][#C][>]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
                          [],
-                         None,
+                         {},
                          {'test': 42},
                          False,
                          {'test': 42},
@@ -125,7 +126,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                         ("{#PEO=[<]COC[>]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
                          [],
-                         None,
+                         {},
                          None,
                          True,
                          {'PEO': 46.012},
@@ -134,7 +135,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                          ("{#test=[<][#A][#B][$][#C][>],#frag2=[$][#P][#D][<]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
                          [],
-                         None,
+                         {},
                          {'test': 42, 'frag2': 10},
                          False,
                          {'test': 42, 'frag2': 10},
@@ -143,7 +144,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                         ("{#test=[<][#A][#B][$][#C][>],#frag2=[$]=[#P][#D][<]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
                          [],
-                         None,
+                         {},
                          {'test': 42},
                          False,
                          {'test': 42},
@@ -152,7 +153,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                         ("{#test=[<][#A][#B][$][#C][>],#frag2=[$]=[#P][#D][<]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
                          ['frag2'],
-                         None,
+                         {},
                          {'#test': 42, 'frag2': 10},
                          False,
                          {'#test': 42, 'frag2': 10},
@@ -171,7 +172,7 @@ def test_init_mol_sampler(graph_str,
 
     sampler = MoleculeSampler.from_fragment_string(graph_str,
                                                    bonding_probabilities=bonding_probablities,
-                                                   branch_term_probs=None,
+                                                   branch_term_probs={},
                                                    terminal_fragments=terminal_fragments,
                                                    bond_term_probs=bond_term_probs,
                                                    fragment_masses=fragment_masses,
@@ -180,6 +181,3 @@ def test_init_mol_sampler(graph_str,
         pytest.approx(masses_out[mol], mass)
     assert sampler.fragments_by_bonding == frags_out
     assert sampler.terminals_by_bonding == ters_out
-
-
-

@@ -16,7 +16,6 @@ def compute_mass(input_molecule):
         the atomic mass
     """
     molecule = input_molecule.copy()
-    print(molecule.nodes(data=True))
     # we need to add the hydrogen atoms
     # for computing the mass
     rebuild_h_atoms(molecule)
