@@ -27,7 +27,7 @@ def test_terminate_branch(graph_str, ter_probs, status, seed):
     nx.set_node_attributes(molecule, {0: [0], 1: [1], 2: [2]}, 'fragid')
 
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities={},
+                              polymer_reactivities={},
                               fragment_masses={"test": 1},
                               branch_term_probs=ter_probs,
                               seed=seed)
@@ -50,10 +50,10 @@ def test_terminate_fragment(graph_str, ter_probs, seed, ter):
     nx.set_node_attributes(molecule, atomnames, 'fragname')
     nx.set_node_attributes(molecule, {0: [0], 1: [1], 2: [2]}, 'fragid')
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities={},
+                              polymer_reactivities={},
                               fragment_masses={"test": 1},
                               terminal_fragments=["tA", "tB"],
-                              bond_term_probs=ter_probs,
+                              terminal_reactivities=ter_probs,
                               seed=seed)
     sampler.terminate_fragment(molecule, 2)
     # assert that the last residue is the one planned
@@ -93,7 +93,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     molecule = nx.Graph()
     _ = merge_graphs(molecule, fragment_dict['test'])
     sampler = MoleculeSampler(fragment_dict,
-                              bonding_probabilities={},
+                              polymer_reactivities={},
                               fragment_masses={"test": 1},
                               seed=seed)
 
@@ -101,8 +101,8 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     sampler.add_fragment(molecule,
                          open_bonds,
                          fragments=sampler.fragments_by_bonding,
-                         bonding_probabilities=bond_probs,
-                         compl_bonding_probabilities={})
+                         polymer_reactivities=bond_probs,
+                         fragment_reactivities={})
     ref_graph = read_cgsmiles(ref_mol)
     nx.set_node_attributes(ref_graph, bonding, 'bonding')
     nx.set_node_attributes(ref_graph, fragid, 'fragid')
@@ -112,7 +112,7 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
     nx.set_edge_attributes(ref_graph, edges, 'bonding')
     assertEqualGraphs(ref_graph, molecule)
 
-@pytest.mark.parametrize('graph_str, bonding_probablities, terminal_fragments, bond_term_probs, fragment_masses, all_atom, masses_out, frags_out, ters_out',
+@pytest.mark.parametrize('graph_str, polymer_reactivities, terminal_fragments, terminal_reactivities, fragment_masses, all_atom, masses_out, frags_out, ters_out',
                         [
                         ("{#test=[<][#A][#B][$][#C][>]}",
                          {">": 0.8, "<": 0.1, "$": 0.1},
@@ -161,9 +161,9 @@ def test_add_fragment(graph_str, bond_probs, seed, ref_mol, bonding, fragid, edg
                          {'$2':[('frag2', 0)], '<1': [('frag2', 1)]})
 ])
 def test_init_mol_sampler(graph_str,
-                          bonding_probablities,
+                          polymer_reactivities,
                           terminal_fragments,
-                          bond_term_probs,
+                          terminal_reactivities,
                           fragment_masses,
                           all_atom,
                           masses_out,
@@ -171,10 +171,10 @@ def test_init_mol_sampler(graph_str,
                           ters_out):
 
     sampler = MoleculeSampler.from_fragment_string(graph_str,
-                                                   bonding_probabilities=bonding_probablities,
+                                                   polymer_reactivities=polymer_reactivities,
                                                    branch_term_probs={},
                                                    terminal_fragments=terminal_fragments,
-                                                   bond_term_probs=bond_term_probs,
+                                                   terminal_reactivities=terminal_reactivities,
                                                    fragment_masses=fragment_masses,
                                                    all_atom=all_atom)
     for mol, mass in sampler.fragment_masses.items():

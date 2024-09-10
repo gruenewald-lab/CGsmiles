@@ -35,11 +35,11 @@ class MoleculeSampler:
     """
     def __init__(self,
                  fragment_dict,
-                 bonding_probabilities,
-                 compl_bonding_probabilities={},
+                 polymer_reactivities,
+                 fragment_reactivities={},
                  branch_term_probs={},
-                 bond_term_probs={},
                  terminal_fragments=[],
+                 terminal_reactivities={},
                  fragment_masses=None,
                  all_atom=True,
                  seed=None):
@@ -51,21 +51,20 @@ class MoleculeSampler:
             a dict of fragment graphs at one resolution. Each graph must have
             the same attributes as returned by the `cgsmiles.read_fragments`
             function.
-        bonding_probabilities: dict[str, float]
-        site_reactivity
-            probability that two bonding descriptors will connect
-        compl_bonding_probabilities: dict[str, dict[str, float]]
-        reactivity_matrix
+        polymer_reactivities: dict[str, float]
+            a dict that lists all bonding descriptors in the fragments
+            and assign a probability to them (i.e. that they will react).
+        fragment_reactivities
             probability of given a certain bonding descriptor what
             should be the next bonding descriptor. For example:
             {'&A': {'&A': 0.2, '&B': 0.8}, '&B': {'&B': 0.2, '&A': 0.8}}
         branch_term_probs: dict[str, float]
             probability that a branched fragment is a chain terminal;
-        bond_term_probs: dict[str, float]
-            probability that a certain bonding descriptor connection
-            is present at the terminal
         terminal_fragments: list[str]
             a list of fragments that only occur at termini
+        terminal_reactivities: dict[str, float]
+            probability that a certain bonding descriptor connection
+            is present at the terminal
         fragment_masses: dict[str, float]
             masses of the molecule fragments; if all_atom is True
             these can be left out and are automatically computed from
@@ -79,13 +78,13 @@ class MoleculeSampler:
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
         # we need to set some defaults and attributes
-        self.bonding_probabilities = _set_bond_order_defaults(bonding_probabilities)
-        self.compl_bonding_probabilities = {}
-        for key, probs in compl_bonding_probabilities.items():
+        self.polymer_reactivities = _set_bond_order_defaults(polymer_reactivities)
+        self.fragment_reactivities = {}
+        for key, probs in fragment_reactivities.items():
             if not key[-1].isdigit():
                 key += '1'
-            self.compl_bonding_probabilities[key] = _set_bond_order_defaults(probs)
-        self.bond_term_probs = _set_bond_order_defaults(bond_term_probs)
+            self.fragment_reactivities[key] = _set_bond_order_defaults(probs)
+        self.terminal_reactivities = _set_bond_order_defaults(terminal_reactivities)
         self.branch_term_probs = branch_term_probs
         self.all_atom = all_atom
 
@@ -123,11 +122,13 @@ class MoleculeSampler:
                      molecule,
                      open_bonds,
                      fragments,
-                     bonding_probabilities,
-                     compl_bonding_probabilities):
+                     polymer_reactivities,
+                     fragment_reactivities):
         """
-        Pick an open bonding descriptor according to `bonding_probabilities`
+        Pick an open bonding descriptor according to `polymer_reactivities`
         and then pick a fragment that has the complementory bonding descriptor.
+        For the second step conditional probabilities can be given using
+        `fragment_reactivites`.
 
         Parameters
         ----------
@@ -138,11 +139,13 @@ class MoleculeSampler:
             in molecule as value
         fragments: dict[list[str]]
             a dict of fragment names indexed by their bonding descriptors
-        bonding_probabilities:
-            the porbabilities that bonding connector forms a bond
-        compl_bonding_probabilities:
-            probability that a certain bonding descriptor is followed
-            by another bonding descriptor
+        polymer_reactivities:
+            the porbabilities that a bonding connector in the polymer
+            forms a bond with the next fragment
+        fragment_reactivities:
+            conditional probabilties that given a bonding connector in
+            the polymer a specific bonding connector in the fragments
+            will be selected
 
         Returns
         -------
@@ -153,13 +156,13 @@ class MoleculeSampler:
         """
         # 1. get the probabilties of any bonding descriptor on the chain to
         #    form the new bond and pick one at random from the available ones
-        bonding = _select_bonding_operator(list(open_bonds.keys()), bonding_probabilities)
+        bonding = _select_bonding_operator(list(open_bonds.keys()), polymer_reactivities)
         # 2. get a corresponding node; it may be that one descriptor is found on
         #    several nodes
         source_node = random.choice(open_bonds[bonding])
         # 3. get the complementary matching bonding descriptor
         compl_bonds = find_complementary_bonding_descriptor(bonding, list(fragments.keys()))
-        compl_bonding = _select_bonding_operator(compl_bonds, compl_bonding_probabilities.get(bonding, None))
+        compl_bonding = _select_bonding_operator(compl_bonds, fragment_reactivities.get(bonding, None))
         # 4. pick a new fragment that has such bonding descriptor
         fragname, target_node = random.choice(fragments[compl_bonding])
         # 5. add the new fragment and do some book-keeping
@@ -189,12 +192,12 @@ class MoleculeSampler:
         target_nodes = [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
         open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
         # if terminal fragment bonding probabilties are given; add them here
-        if self.bond_term_probs:
+        if self.terminal_reactivities:
             self.add_fragment(molecule,
                               open_bonds,
                               self.terminals_by_bonding,
-                              self.bond_term_probs,
-                              self.compl_bonding_probabilities)
+                              self.terminal_reactivities,
+                              self.fragment_reactivities)
             fragid += 1
             target_nodes += [node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']]
 
@@ -207,7 +210,8 @@ class MoleculeSampler:
     def terminate_branch(self, molecule, fragname, fragid):
         """
         Probabilistically terminate a branch by removing all
-        bonding descriptors from the last fragment.
+        bonding descriptors from the last fragment and/or
+        adding a terminal fragment.
 
         Parameters
         ----------
@@ -237,7 +241,7 @@ class MoleculeSampler:
     def sample(self, target_weight, start_fragment=None):
         """
         From a list of cgsmiles fragment graphs generate a new random molecule
-        according by stitching them together.
+        by stitching them together until a target_weight is reached.
 
         Parameters
         ----------
@@ -270,8 +274,8 @@ class MoleculeSampler:
             molecule, fragname = self.add_fragment(molecule,
                                                    open_bonds,
                                                    self.fragments_by_bonding,
-                                                   self.bonding_probabilities,
-                                                   self.compl_bonding_probabilities)
+                                                   self.polymer_reactivities,
+                                                   self.fragment_reactivities)
             molecule, fragid = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
             fragid += 1
