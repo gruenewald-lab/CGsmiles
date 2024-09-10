@@ -9,7 +9,7 @@ from .graph_utils import (merge_graphs,
                           set_atom_names_atomistic)
 from .pysmiles_utils import rebuild_h_atoms
 
-def compatible(left, right, old=True):
+def compatible(left, right, legacy=False):
     """
     Check bonding descriptor compatibility according
     to the BigSmiles syntax conventions.
@@ -23,9 +23,7 @@ def compatible(left, right, old=True):
     -------
     bool
     """
-    old=True
-    if old:
-        print('go jere')
+    if legacy:
         if left == right and left[0] not in '> <':
             return True
         l, r = left[0], right[0]
@@ -33,14 +31,15 @@ def compatible(left, right, old=True):
             return left[1:] == right[1:]
         return False
     else:
-        if left[0] == right[0] == '$':
+        if left[0] == right[0] == '$' or left[0] == right[0] == '!':
             return True
+
         l, r = left[0], right[0]
         if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
             return True
         return False
 
-def match_bonding_descriptors(source, target, bond_attribute="bonding", old=False):
+def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=False):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -75,7 +74,7 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", old=Fals
             bond_targets = target_nodes[target_node]
             for bond_source in bond_sources:
                 for bond_target in bond_targets:
-                    if compatible(bond_source, bond_target, old):
+                    if compatible(bond_source, bond_target, legacy=legacy):
                         return ((source_node, target_node), (bond_source, bond_target))
     raise LookupError
 
@@ -152,7 +151,7 @@ class MoleculeResolver:
                  molecule_graph,
                  fragment_dicts,
                  last_all_atom=True,
-                 old=False):
+                 legacy=False):
 
         """
         Parameters
@@ -178,7 +177,7 @@ class MoleculeResolver:
         self.resolutions = len(self.fragment_dicts)
         new_names = nx.get_node_attributes(self.molecule, "fragname")
         nx.set_node_attributes(self.meta_graph, new_names, "atomname")
-        self.old = old
+        self.legacy = legacy
 
     @staticmethod
     def read_fragment_strings(fragment_strings, last_all_atom=True):
@@ -269,7 +268,7 @@ class MoleculeResolver:
                 try:
                     edge, bonding = match_bonding_descriptors(prev_graph,
                                                               node_graph,
-                                                              self.old)
+                                                              legacy=self.legacy)
                 except LookupError:
                     continue
                 # remove used bonding descriptors
@@ -374,7 +373,7 @@ class MoleculeResolver:
         return meta_graph, graph
 
     @classmethod
-    def from_string(cls, cgsmiles_str, last_all_atom=True, old=True):
+    def from_string(cls, cgsmiles_str, last_all_atom=True, legacy=False):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string.
 
@@ -398,7 +397,7 @@ class MoleculeResolver:
         resolver_obj = cls(molecule_graph=molecule,
                            fragment_dicts=fragment_dicts,
                            last_all_atom=last_all_atom,
-                           old=old)
+                           legacy=legacy)
         return resolver_obj
 
     @classmethod
