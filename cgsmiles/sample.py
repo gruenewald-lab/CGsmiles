@@ -348,6 +348,8 @@ class MoleculeSampler:
         ----------
         target_weight: int
             the weight of the polymer to generate
+            the weight is the minimum weight and can
+            differ by one additional fragment plus terminal
         start_fragment: str
             the fragment name to start with
 
