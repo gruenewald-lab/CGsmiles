@@ -236,14 +236,14 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
     meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()
 
     # loop and compare fragments first
-    counter=0
+    counter = 0
     for node, ref in zip(meta_mol.nodes, ref_frags):
         assert meta_mol.nodes[node]['fragname'] ==  ref[0]
         block_graph = meta_mol.nodes[node]['graph']
         target_elements = nx.get_node_attributes(block_graph, 'element')
         sorted_elements =  [target_elements[key] for key in sorted(target_elements)]
         print("-->", sorted_elements)
-        print("-->",ref[1].split())
+        print("-->", ref[1].split())
         assert sorted_elements == ref[1].split()
         print(counter)
         counter += 1

@@ -63,7 +63,7 @@ def annotate_ez_isomers(molecule):
     Parameters
     ----------
     molecule: nx.Graph
-        The molecule of intrest, which must of ez_isomer_pairs
+        The molecule of interest, which must of ez_isomer_pairs
         and ez_isomer_class set as node attributes
     """
     ez_isomer_atoms = nx.get_node_attributes(molecule, 'ez_isomer_atoms')

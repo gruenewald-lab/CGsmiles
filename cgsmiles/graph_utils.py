@@ -91,10 +91,16 @@ def sort_nodes_by_attr(graph,
         attr_dict = nx.get_node_attributes(new_graph, attr)
         new_dict = {}
         for key, values in attr_dict.items():
+            try:
+                iter(values)
+            except TypeError:
+                is_list = False
+            else:
+                is_list = not isinstance(values, str)
             if is_list:
                 new_values = [mapping[value] for value in values]
             else:
-               new_values = mapping[values]
+                new_values = mapping[values]
             new_dict[key] = new_values
         if new_dict:
             nx.set_node_attributes(new_graph, new_dict, attr)
