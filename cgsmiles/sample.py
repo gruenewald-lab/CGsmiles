@@ -43,11 +43,16 @@ class MoleculeSampler:
     that was provided.
 
     In addition to just randomly creating a molecule reactivities and termination
-    probabilities can be provided to steer the outcome. The sampler features a
-    two level connectivity determination. First using the `polymer_reactivities`
-    an open bonding descriptor from the growing polymer molecule is selected
-    according to the probabilities provided. Subsequently, a fragment is randomly
-    chosen that has a matching complementary bonding descriptor.
+    probabilities can be provided to steer the outcome. We use the term and variable
+    name `reactivity` whenever referring to a probability that a certain bonding
+    descriptor is used to highlight the fact that the probabilistic behviour is driven
+    by the bonding descriptors.
+
+     The sampler features a two level connectivity determination. First using the
+    `polymer_reactivities` an open bonding descriptor from the growing polymer
+    molecule is selected according to the probabilities provided. Subsequently,
+    a fragment is randomly chosen that has a matching complementary bonding
+    descriptor.
 
     If in addition the `fragment_reactivities` are provided the algorithm will
     select a fragment that features a bonding descriptor according to the
@@ -63,33 +68,41 @@ class MoleculeSampler:
     Random-copolymer of PMMA and PS with equal probabilities.
 
     >>> cgsmiles_str = "{#PMMA=[>]C(C)C[<]C(=O)OC,#PS=[>]CC[<]c1cccc1}"
-    >>> sampler = MoleculeSampler.from_string(cgsmiles_str)
-    >>> polymer_graph = sampler.sample(target_weight=100000)
-
-    One can also make a blocky copolymer but steer the probability of having
-    head-to-head tail-to-tail vs head-to-tail addition. This is done by labeling
-    the bonding descriptors A-D and providing the probability that a certain
-    bonding descriptor is used to extend the polymer.
-
-    >>> cgsmiles_str = "{#PMMA=[>A]C(C)C[<B]C(=O)OC,#PS=[>C]CC[<D]c1cccc1}"
-    >>> polymer_reactivites = {">A":0.4, "<B":0.1, ">C": 0.4, "<D": 0.1}
-    >>> sampler = MoleculeSampler.from_string(cgsmiles_str)
-    >>> polymer_graph = sampler.sample(target_weight=100000)
+    >>> polymer_reactivities = {'>':0.5, '<':0.5}
+    >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
+                                                       polymer_reactivities=polymer_reactivities)
+    >>> polymer_graph = sampler.sample(target_weight=10000)
 
     One can also make a blocky copolymer by providing the conditional
-    probabilities. To distinguish the descriptors on PMMA vs PS we can
+    reactivities. To distinguish the descriptors on PMMA vs PS we can
     label them with a alphanumeric string.
 
     >>> cgsmiles_str = "{#PMMA=[$A]C(C)C[$B]C(=O)OC,#PS=[$C]CC[$D]c1cccc1}"
-    >>> polymer_reactivites = {">A":0.5, "<A":0, ">B": 0.5, "<B": 0.0}
-    >>> fragment_reactivies = {'$A': {'$A': 0.,   '$C': 0.,   '$B': 0.7, '$D': 0.3},
-                               '$B': {'$A': 0.7, '$C': 0.3, '$B': 0.0, '$D': 0.0 },
-                               '$C': {'$A': 0.,   '$C': 0.,   '$B': 0.3, '$D': 0.7},
-                               '$D': {'$A': 0.3, '$C': 0.7, '$B': 0.0, '$D': 0.0 }},
-    >>> sampler = MoleculeSampler.from_string(cgsmiles_str,
-                                              polymer_reactivies=polymer_reactivies,
-                                              fragment_reactivies=fragment_reactivies)
-    >>> polymer_graph = sampler.sample(target_weight=100000)
+    >>> polymer_reactivites = {'$A':0.5, '$B':0, '$C': 0.5, '$D': 0.0}
+    >>> fragment_reactivities = {'$A': {'$A': 0.,   '$C': 0.,   '$B': 0.7, '$D': 0.3},
+                                 '$B': {'$A': 0.7, '$C': 0.3, '$B': 0.0, '$D': 0.0 },
+                                 '$C': {'$A': 0.,   '$C': 0.,   '$B': 0.3, '$D': 0.7},
+                                 '$D': {'$A': 0.3, '$C': 0.7, '$B': 0.0, '$D': 0.0 }}
+    >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
+                                                       polymer_reactiviyies=polymer_reactivities,
+                                                       fragment_reactivities=fragment_reactivities)
+    >>> polymer_graph = sampler.sample(target_weight=10000)
+
+    One can also make a blocky copolymer but steer the probability of having
+    head-to-head tail-to-tail vs head-to-tail addition. This is done by labeling
+    the bonding descriptors A-D as before but this time allowing head-head
+    and tail-tail additions (i.e. (A,A) & (A,C)) but with lower reactivities.
+
+    >>> cgsmiles_str = "{#PMMA=[$A]C(C)C[$B]C(=O)OC,#PS=[$C]CC[$D]c1cccc1}"
+    >>> polymer_reactivities = {'$A':0.25, '$B':0.25, '$C': 0.25, '$D': 0.25}
+    >>> fragment_reactivities = {'$A': {'$A': 0.1, '$C': 0.1, '$B': 0.4, '$D': 0.4},
+                                '$B': {'$A': 0.4, '$C': 0.4, '$B': 0.1, '$D': 0.1},
+                                '$C': {'$A': 0.1, '$C': 0.1, '$B': 0.4, '$D': 0.4},
+                                '$D': {'$A': 0.4, '$C': 0.4, '$B': 0.1, '$D': 0.1 }}
+    >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
+                                                       polymer_reactivities=polymer_reactivities,
+                                                       fragment_reactivities=fragment_reactivities)
+    >>> polymer_graph = sampler.sample(target_weight=10000)
 
     Advanced API Examples
     ---------------------
@@ -107,15 +120,15 @@ class MoleculeSampler:
     >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
                                                        branch_term_probs={"PEG": 0.3, "PMA":0.0},
                                                        terminal_fragments=['OH'],
-                                                       bonding_probabilities={'<': 0.01, '>': 0.01, '>A': 0.99, '<A':0.99},
-                                                       bond_term_probs={'<A': 1., '>A':1., '>': 0, '<': 0},
+                                                       polymer_reactivities={'<': 0.01, '>': 0.01, '>A': 0.99, '<A':0.99},
+                                                       terminal_reactivities={'<A': 1., '>A':1., '>': 0, '<': 0},
                                                        all_atom=True)
     >>> molecule = sampler.sample(target_weight=5008)
 
     This combination results into a dense brush where very PMA molecule has a PEG
     branch whose length is determined by a 1 in 3 probability to terminate.
 
-    In contrast one can also generate spares branched molecules. For instance,
+    In contrast one can also generate sparse branched molecules. For instance,
     Dextran at low molecular weights is mainly a linear alpha 1-6 polyglucose
     polymer. Occasionally, a 1-4 branch extends from it which has lengths of 2-4.
     At the Martini coarse-grained level Dextran is described by three particles
@@ -125,8 +138,8 @@ class MoleculeSampler:
     >>> cgsmiles_str="{#GLC=[$A][#A]1[#B][$B][#C]1[$C]}"
     >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
                                                        fragment_masses={'GLC': 165},
-                                                       bonding_probabilities={'$A': 0.8, '$C': 0.2, '$B': 0.2},
-                                                       compl_bonding_probabilities={'$A': {'$A': 0.0, '$C': 1.0, '$B': 0.0},
+                                                       polymer_reactivities={'$A': 0.8, '$C': 0.1, '$B': 0.1},
+                                                       fragment_reactivities={'$A': {'$A': 0.0, '$C': 1.0, '$B': 0.0},
                                                                                     '$B': {'$A': 1.0, '$C': 0.0, '$B': 0.0},
                                                                                     '$C': {'$A':1.0, '$C':0.0, '$B':0.0}},
                                                        all_atom=False)
@@ -300,7 +313,7 @@ class MoleculeSampler:
                               self.terminal_reactivities,
                               self.fragment_reactivities)
             fragid += 1
-            target_nodes.update({node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']})
+            target_nodes.update((node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']))
 
         for node in target_nodes:
             if 'bonding' in molecule.nodes[node]:
