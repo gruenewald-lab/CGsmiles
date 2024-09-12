@@ -1,5 +1,8 @@
+import logging
 import networkx as nx
 import pysmiles
+from pysmiles.smiles_helper import _annotate_ez_isomers
+LOGGER = logging.getLogger(__name__)
 
 def rebuild_h_atoms(mol_graph, keep_bonding=False):
     """
@@ -52,3 +55,27 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             ref_node = next(mol_graph.neighbors(node))
             mol_graph.nodes[node]["fragid"] = mol_graph.nodes[ref_node]["fragid"]
             mol_graph.nodes[node]["fragname"] = mol_graph.nodes[ref_node]["fragname"]
+
+def annotate_ez_isomers(molecule):
+    """
+    Small wrapper dealing with ez_isomer annotation.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        The molecule of intrest, which must of ez_isomer_pairs
+        and ez_isomer_class set as node attributes
+    """
+    ez_isomer_atoms = nx.get_node_attributes(molecule, 'ez_isomer_atoms')
+    ez_isomer_class = nx.get_node_attributes(molecule, 'ez_isomer_class')
+    ez_isomer_atoms_list = [atoms + [_class] for atoms, _class in zip(ez_isomer_atoms.values(), ez_isomer_class.values())]
+    ez_isomer_pairs = list(zip(ez_isomer_atoms_list[:-1], ez_isomer_atoms_list[1:]))
+    if len(ez_isomer_atoms)%2 != 0:
+        msg = ("You have an uneven amount of atoms marked as CIS/TRANS isomers."
+               "We will drop the last atom from assigning the iosmers.")
+        LOGGER.warning(msg)
+    _annotate_ez_isomers(molecule, ez_isomer_pairs)
+    # clean up
+    for node in ez_isomer_atoms:
+        del  molecule.nodes[node]['ez_isomer_atoms']
+        del  molecule.nodes[node]['ez_isomer_class']

@@ -60,6 +60,8 @@ def strip_bonding_descriptors(fragment_string):
     bond_to_order = {'-': 1, '=': 2, '#': 3, '$': 4, ':': 1.5, '.': 0}
     smile_iter = PeekIter(fragment_string)
     bonding_descrpt = defaultdict(list)
+    ez_isomer_atoms = {}
+    rs_isomers = {}
     smile = ""
     node_count = 0
     prev_node = 0
@@ -84,7 +86,14 @@ def strip_bonding_descriptors(fragment_string):
             else:
                 atom = token
                 while peek != ']':
-                    atom += peek
+                    # deal with rs chirality
+                    if peek == '@':
+                        chiral_token = peek
+                        if smile_iter.peek() == '@':
+                            chiral_token = '@' + next(smile_iter)
+                        rs_isomers[node_count] = (chiral_token, [])
+                    else:
+                        atom += peek
                     peek = next(smile_iter)
                 smile = smile + atom + "]"
                 prev_node = node_count
@@ -99,8 +108,15 @@ def strip_bonding_descriptors(fragment_string):
         elif token in bond_to_order:
             current_order = bond_to_order[token]
             smile += token
-        elif token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
+        elif token in '] H . - = # $ : + - %' or token.isdigit():
             smile += token
+        # deal with ez isomers
+        elif token in '/ \\':
+            # we have a branch
+            if node_count == 0:
+                ez_isomer_atoms[node_count] = (node_count, 1, token)
+            else:
+                ez_isomer_atoms[node_count] = (node_count, prev_node, token)
         else:
             if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
                 smile += (token + next(smile_iter))
@@ -110,7 +126,7 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = node_count
             node_count += 1
 
-    return smile, bonding_descrpt
+    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -140,7 +156,7 @@ def fragment_iter(fragment_str, all_atom=True):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
-        smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
+        smile, bonding_descrpt, rs_isomers, ez_isomers = strip_bonding_descriptors(big_smile)
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
@@ -148,6 +164,12 @@ def fragment_iter(fragment_str, all_atom=True):
         elif all_atom:
             mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False, strict=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
+            nx.set_node_attributes(mol_graph, rs_isomers, 'rs_isomer')
+            # we need to split countable node keys and the associated value
+            ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
+            ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
+            nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
+            nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)

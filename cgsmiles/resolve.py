@@ -1,13 +1,14 @@
 import re
 import copy
 import networkx as nx
+from pysmiles.smiles_helper import _mark_chiral_atoms
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
 from .graph_utils import (merge_graphs,
                           sort_nodes_by_attr,
                           annotate_fragments,
                           set_atom_names_atomistic)
-from .pysmiles_utils import rebuild_h_atoms
+from .pysmiles_utils import rebuild_h_atoms, annotate_ez_isomers
 
 def compatible(left, right):
     """
@@ -330,14 +331,18 @@ class MoleculeResolver:
         # sort the atoms
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
+        if all_atom:
+            # assign chirality
+            _mark_chiral_atoms(self.molecule)
+            # assign rs isomerism
+            annotate_ez_isomers(self.molecule)
+            # in all-atom MD there are common naming conventions
+            # that might be expected and hence we set them here
+            set_atom_names_atomistic(self.meta_graph, self.molecule)
+
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
                                              self.molecule)
-
-        # in all-atom MD there are common naming conventions
-        # that might be expected and hence we set them here
-        if all_atom:
-            set_atom_names_atomistic(self.meta_graph, self.molecule)
 
         # increment the resolution counter
         self.resolution_counter += 1
