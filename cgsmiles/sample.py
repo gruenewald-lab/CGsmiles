@@ -1,4 +1,5 @@
 import re
+import logging
 import random
 import time
 from collections import defaultdict
@@ -10,6 +11,8 @@ from .graph_utils import (merge_graphs,
                           set_atom_names_atomistic)
 from .pysmiles_utils import rebuild_h_atoms, compute_mass
 from .cgsmiles_utils import find_open_bonds, find_complementary_bonding_descriptor
+
+logger = logging.getLogger(__name__)
 
 def _select_bonding_operator(bonds, probabilities=None):
     if probabilities:
@@ -189,6 +192,7 @@ class MoleculeSampler:
         # first initialize the random number generator
         if seed is None:
             seed = time.time_ns()
+            logger.info("Your random seed is %i", seed)
         random.seed(a=seed)
         self.fragment_dict = fragment_dict
         # we need to set some defaults and attributes

@@ -456,7 +456,7 @@ class MoleculeResolver:
         resolver_obj = cls(molecule_graph=meta_graph,
                            fragment_dicts=fragment_dicts,
                            last_all_atom=last_all_atom,
-                           lagecy=lagecy)
+                           legacy=legacy)
 
         return resolver_obj
 
@@ -496,5 +496,5 @@ class MoleculeResolver:
         resolver_obj = cls(molecule_graph=molecule,
                            fragment_dicts=fragment_dicts,
                            last_all_atom=last_all_atom,
-                           lagecy=lagecy)
+                           legacy=legacy)
         return resolver_obj
