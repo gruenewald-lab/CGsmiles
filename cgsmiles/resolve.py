@@ -401,7 +401,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the __init__ method.
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------
@@ -438,7 +438,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the __init__ method.
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------
@@ -479,7 +479,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the __init__ method.
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------

@@ -48,7 +48,7 @@ class MoleculeSampler:
     In addition to just randomly creating a molecule reactivities and termination
     probabilities can be provided to steer the outcome. We use the term and variable
     name `reactivity` whenever referring to a probability that a certain bonding
-    descriptor is used to highlight the fact that the probabilistic behviour is driven
+    descriptor is used to highlight the fact that the probabilistic behaviour is driven
     by the bonding descriptors.
 
      The sampler features a two level connectivity determination. First using the
@@ -425,7 +425,7 @@ class MoleculeSampler:
         ----------
         cgsmiles_str: str
         **kwargs:
-            same as MoleculeSampler.__init__
+            same as :func:`~sampler.MoleculeSampler.__init__`
 
         Returns
         -------
