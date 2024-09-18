@@ -3,6 +3,7 @@ Convert (simple) BigSmiles to CGSmiles.
 """
 import re
 import logging
+from .cgsmiles_utils import find_complementary_bonding_descriptor
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,10 @@ def _get_all_terminal_bonding(st_objs):
     bond_terms = []
     for st_obj in st_objs:
         lbond, rbond = get_bond_id_st_obj(st_obj)
-        lbond, rbond = lbond[1:-1], rbond[1:-1]
+        if len(lbond) > 2:
+            lbond = find_complementary_bonding_descriptor(lbond[1:-1], ['>', '<', '$'])[0]
+        if len(rbond) > 2:
+            rbond = find_complementary_bonding_descriptor(rbond[1:-1], ['>', '<', '$'])[0]
         bond_terms.append((lbond, rbond))
     return bond_terms
 
@@ -76,7 +80,7 @@ def convert_bigsmiles_to_cgsmiles(bigsmiles_str, fragnames=[]):
         raise IOError(msg)
 
     # first we need to replace any fragments
-    if "{#=" in bigsmiles_str:
+    if "{#" in bigsmiles_str:
         bigsmiles_str = replace_hashtags(bigsmiles_str)
 
     # extract the stochastic objects
