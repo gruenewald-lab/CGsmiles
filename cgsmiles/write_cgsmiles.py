@@ -11,25 +11,19 @@ def format_node(molecule, current):
 
 def write_cgsmiles_graph(molecule):
     """
-    Creates a SMILES string describing `molecule` according to the OpenSMILES
-    standard. `molecule` should be a single connected component.
+    Creates a CGsmiles string describing `molecule`.
+    `molecule` should be a single connected component.
 
     Parameters
     ----------
     molecule : nx.Graph
-        The molecule for which a SMILES string should be generated.
-    default_element : str
-        The element to write if the attribute is missing for a node.
-    start : Hashable
-        The atom at which the depth first traversal of the molecule should
-        start. A sensible one is chosen: preferably a terminal heteroatom.
+        The molecule for which a CGsmiles string should be generated.
 
     Returns
     -------
     str
-        The SMILES string describing `molecule`.
+        The CGSmiles string describing `molecule`.
     """
-    molecule = molecule.copy()
     # should be any node with order 1
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
@@ -117,10 +111,19 @@ def _find_min_node(molecule, node):
 
 def _find_nodes_bonding(molecule, fragname):
     """
-    For nodes in `graph` check if they participate
+    For nodes in `molecule` check if they participate
     in any edges that have the `bonding` attribute.
     If yes store the node and the bonding operator
     belonging to that node.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+    fragname: str
+
+    Returns
+    -------
+    dict
     """
     edges = nx.get_edge_attributes(molecule, "bonding")
     node_to_bonding = defaultdict(list)
@@ -136,8 +139,22 @@ def _find_nodes_bonding(molecule, fragname):
     return node_to_bonding
 
 def _smiles_node_iter(smiles_str):
+    """
+    Given a SMILES/CGSmiles string yield the indices
+    of the atoms.
+
+    Parameters
+    ----------
+    smiles_str: str
+
+    Yields
+    ------
+    tuple(int, int)
+        indices smiles_str[start:stop] that define
+        where the atom/node is located
+    """
     organic_subset = 'B C N O P S F Cl Br I * b c n o s p'.split()
-    batom=False
+    batom = False
     for idx, node in enumerate(smiles_str):
         if node == '[':
             batom = True
@@ -151,9 +168,28 @@ def _smiles_node_iter(smiles_str):
         if node in organic_subset and not batom:
             yield idx, idx + 1
 
-def add_bond_descrp(smiles_str, molecule, fragname):
+def add_bond_descriptors(smiles_str, molecule, fragname):
     """
     Add bonding descriptors to SMILES or CGSmiles string.
+
+    The smiles_str describes a fragment that has at least
+    one occurance in molecule. Lookup the bonding node
+    attribute and annotate the correct atoms/nodes in
+    smiles_str with the bonding descriptors.
+
+    Parameters
+    ----------
+    smiles_str: str
+    molecule: nx.Graph
+        must have fragname, and bonding attributes
+    fragname: str
+        name of the fragment by which it is identified
+        in molecule
+
+    Returns
+    -------
+    str:
+        the annotated string
     """
     nodes_in_string = {idx: (start, stop) for idx, (start, stop) in enumerate(_smiles_node_iter(smiles_str))}
     nodes_to_bonding = nx.get_node_attributes(molecule, 'bonding')
@@ -216,8 +252,8 @@ def write_cgsmiles_fragments(fragment_dict, all_atom=True):
             smiles_str = write_cgsmiles_res_graph(frag_graph)
 
         # annotate bonding descriptors and done
-        fragment_str += "#" + fragname + "=" + add_bond_descrp(smiles_str,
-                                                               frag_graph,
-                                                               fragname) + ","
+        fragment_str += "#" + fragname + "=" + add_bond_descriptors(smiles_str,
+                                                                    frag_graph,
+                                                                    fragname) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
