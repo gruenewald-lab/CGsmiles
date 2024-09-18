@@ -16,21 +16,29 @@ logger = logging.getLogger(__name__)
 
 def _select_bonding_operator(bonds, probabilities=None):
     if probabilities:
-        probs = np.array([probabilities[bond_type] for bond_type in bonds])
+        probs = np.array([probabilities.get(bond_type, 0) for bond_type in bonds])
         probs = probs / sum(probs)
         bonding = random.choices(bonds, weights=probs)[0]
     else:
         bonding  = random.choice(bonds)
     return bonding
 
-def _set_bond_order_defaults(bonding_dict):
-    default_dict = {}
-    for bond_operator, prob in bonding_dict.items():
-        # we need to patch the bond order space
-        if not bond_operator[-1].isdigit():
-            bond_operator += '1'
-        default_dict[bond_operator] = prob
-    return default_dict
+def _set_bond_order_defaults(bonding):
+    if type(bonding) == dict:
+        default_dict = {}
+        for bond_operator, prob in bonding.items():
+            # we need to patch the bond order space
+            if not bond_operator[-1].isdigit():
+                bond_operator += '1'
+            default_dict[bond_operator] = prob
+        return default_dict
+    else:
+        default_list = []
+        for bond_operator in bonding:
+            if not bond_operator[-1].isdigit():
+                bond_operator += '1'
+            default_list.append(bond_operator)
+        return default_list
 
 class MoleculeSampler:
     """
@@ -119,12 +127,21 @@ class MoleculeSampler:
     and PEG as side-chain terminated with an OH group the following CGSmiles string
     in combination with the above mentioned probabilities can be provided.
 
-    >>> cgsmiles_str="{#PMA=[>]CC[<]C(=O)OC[>A],#PEG=[<A]COC[>A],#OH=[<A]O}"
+    Note that in this case we declare '$A' and '$B' to be terminal bonding
+    descriptors. That means if they are selected all other bonding descriptors
+    are automatically removed from the previous residue. So if PEG connects
+    to OH '>A' is removed from PEG to avoid a trivalent PEG. Likewise, if
+    the terminal bonding selector is not chosen (i.e. if PEG connects to PEG)
+    it is removed from the source residue. Finally, we need to specify that
+    '$A' has 0 chance of connecting to itself.
+
+    >>> cgsmiles_str="{#PMA=[>]CC[<]C(=O)OC[>A],#PEG=[<A]COC[>A][$A],#OH=[$B]O}"
     >>> sampler = MoleculeSampler.from_fragment_string(cgsmiles_str,
-                                                       branch_term_probs={"PEG": 0.3, "PMA":0.0},
-                                                       terminal_fragments=['OH'],
-                                                       polymer_reactivities={'<': 0.01, '>': 0.01, '>A': 0.99, '<A':0.99},
-                                                       terminal_reactivities={'<A': 1., '>A':1., '>': 0, '<': 0},
+                                                       terminal_bonds=['$A', '$B],
+                                                       polymer_reactivities={'<': 0.1, '>': 0.1,
+                                                                             '>A': 0.8, '<A':0.8,
+                                                                             '$A':0.3, '$B':0.0},
+                                                       fragment_reactivities={'$A': {'$A':0, '$B': 1.0},},
                                                        all_atom=True)
     >>> molecule = sampler.sample(target_weight=5008)
 
@@ -143,8 +160,8 @@ class MoleculeSampler:
                                                        fragment_masses={'GLC': 165},
                                                        polymer_reactivities={'$A': 0.8, '$C': 0.1, '$B': 0.1},
                                                        fragment_reactivities={'$A': {'$A': 0.0, '$C': 1.0, '$B': 0.0},
-                                                                                    '$B': {'$A': 1.0, '$C': 0.0, '$B': 0.0},
-                                                                                    '$C': {'$A':1.0, '$C':0.0, '$B':0.0}},
+                                                                              '$B': {'$A': 1.0, '$C': 0.0, '$B': 0.0},
+                                                                              '$C': {'$A':1.0, '$C':0.0, '$B':0.0}},
                                                        all_atom=False)
     >>> molecule = sampler.sample(target_weight=5008)
     """
@@ -152,9 +169,7 @@ class MoleculeSampler:
                  fragment_dict,
                  polymer_reactivities,
                  fragment_reactivities={},
-                 branch_term_probs={},
-                 terminal_fragments=[],
-                 terminal_reactivities={},
+                 terminal_bonds=[],
                  fragment_masses=None,
                  all_atom=True,
                  seed=None):
@@ -173,13 +188,8 @@ class MoleculeSampler:
             probability of given a certain bonding descriptor what
             should be the next bonding descriptor. For example:
             {'&A': {'&A': 0.2, '&B': 0.8}, '&B': {'&B': 0.2, '&A': 0.8}}
-        branch_term_probs: dict[str, float]
-            probability that a branched fragment is a chain terminal;
-        terminal_fragments: list[str]
-            a list of fragments that only occur at termini
-        terminal_reactivities: dict[str, float]
-            probability that a certain bonding descriptor connection
-            is present at the terminal
+        terminal_bonds: list[str]
+            a list of bonding descriptors for termini
         fragment_masses: dict[str, float]
             masses of the molecule fragments; if all_atom is True
             these can be left out and are automatically computed from
@@ -202,9 +212,10 @@ class MoleculeSampler:
             if not key[-1].isdigit():
                 key += '1'
             self.fragment_reactivities[key] = _set_bond_order_defaults(probs)
-        self.terminal_reactivities = _set_bond_order_defaults(terminal_reactivities)
-        self.branch_term_probs = branch_term_probs
+
         self.all_atom = all_atom
+        # make sure to get bond order defaults
+        self.terminal_bonds = _set_bond_order_defaults(terminal_bonds)
 
         # we need to make sure that we have the molecular
         # masses so we can compute the target weight
@@ -231,10 +242,7 @@ class MoleculeSampler:
             bondings = nx.get_node_attributes(fraggraph, "bonding")
             for node, bondings in bondings.items():
                 for bonding in bondings:
-                    if fragname in terminal_fragments:
-                        self.terminals_by_bonding[bonding].append((fragname, node))
-                    else:
-                        self.fragments_by_bonding[bonding].append((fragname, node))
+                    self.fragments_by_bonding[bonding].append((fragname, node))
 
     def add_fragment(self,
                      molecule,
@@ -291,70 +299,23 @@ class MoleculeSampler:
                           order = int(bonding[-1]))
         molecule.nodes[source_node]['bonding'].remove(bonding)
         molecule.nodes[correspondence[target_node]]['bonding'].remove(compl_bonding)
+
+        # here we deal with stochastic termination of branches
+        # we added a terminal fragments so we remove all other
+        # bonding descriptors form the source_node
+        if compl_bonding in self.terminal_bonds:
+            del molecule.nodes[source_node]['bonding']
+        # we did not add a terminal fragment but now we need to
+        # remove all terminal bonding descriptors from source node
+        else:
+            other_bonds = molecule.nodes[source_node].get('bonding', [])
+            clean_bonds = []
+            for bond in other_bonds:
+                if bond not in self.terminal_bonds:
+                    clean_bonds.append(bond)
+            molecule.nodes[source_node]['bonding'] = clean_bonds
+
         return molecule, fragname
-
-    def terminate_fragment(self, molecule, fragid):
-        """
-        If bonding probabilities for terminal residues are given
-        select one terminal to add to the given fragment. If no
-        terminal bonding probabilities are defined the active bonding
-        descriptors of all nodes will be removed.
-
-        Parameters
-        ----------
-        molecule: nx.Graph
-            the molecule graph
-        fragid: int
-            the id of the fragment
-        """
-        target_nodes = {node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']}
-        open_bonds =  find_open_bonds(molecule, target_nodes=target_nodes)
-        # if terminal fragment bonding probabilities are given; add them here
-        if self.terminal_reactivities:
-            self.add_fragment(molecule,
-                              open_bonds,
-                              self.terminals_by_bonding,
-                              self.terminal_reactivities,
-                              self.fragment_reactivities)
-            fragid += 1
-            target_nodes.update((node for node in molecule.nodes if fragid in molecule.nodes[node]['fragid']))
-
-        for node in target_nodes:
-            if 'bonding' in molecule.nodes[node]:
-                del molecule.nodes[node]['bonding']
-
-        return fragid
-
-    def terminate_branch(self, molecule, fragname, fragid):
-        """
-        Probabilistically terminate a branch by removing all
-        bonding descriptors from the last fragment and/or
-        adding a terminal fragment.
-
-        Parameters
-        ----------
-        molecule: nx.Graph
-            the molecule graph
-        fragname: str
-            the fragment by name to consider
-        fragid: int
-            the id of the fragment
-
-        Returns
-        -------
-        nx.Graph
-        """
-        term_prob = self.branch_term_probs.get(fragname, -1)
-        # probability check for termination
-        if random.random() <= term_prob:
-            # check if there are more open bonding descriptors
-            # if the number is the same as would get removed
-            # then we are not on a branch
-            active_bonds = nx.get_node_attributes(molecule, 'bonding')
-            target_nodes = [node for node in active_bonds if fragid in molecule.nodes[node]['fragid']]
-            if len(target_nodes) < len(active_bonds):
-                fragid  = self.terminate_fragment(molecule, fragid)
-        return molecule, fragid
 
     def sample(self, target_weight, start_fragment=None):
         """
@@ -396,7 +357,6 @@ class MoleculeSampler:
                                                    self.fragments_by_bonding,
                                                    self.polymer_reactivities,
                                                    self.fragment_reactivities)
-            molecule, fragid = self.terminate_branch(molecule, fragname, fragid)
             current_weight += self.fragment_masses[fragname]
             fragid += 1
 

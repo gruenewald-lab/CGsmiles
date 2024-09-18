@@ -51,7 +51,7 @@ from cgsmiles.cgsmiles_utils import find_open_bonds
                          {0: [0], 1: [0], 2: [0], 3: [1]},
                          {(2, 3): ('$A1', '$B1')},
                         ['$A', '$B']),
-                        # case 4: selects the "$" terminal connector
+                        # case 5: does not select the "$" terminal connector
                         ("{#test=[<][#A][#B][#C][>][$A],#ter=[$B][#D]}",
                          {">1": 0.8, "<1": 0.001, "$A1": 0.001, "$B1": 0.001},
                          {},
@@ -59,6 +59,18 @@ from cgsmiles.cgsmiles_utils import find_open_bonds
                          "{[#A][#B][#C][#A][#B][#C]}",
                          {0: 'test', 1: 'test', 2: 'test', 3: 'test', 4: 'test', 5: 'test'},
                          {0: ['<1'], 2: [], 3: [], 5:['>1', '$A1']},
+                         {0: [0], 1: [0], 2: [0], 3: [1], 4: [1], 5: [1]},
+                         {(2, 3): ('>1', '<1')},
+                        ['$A', '$B']),
+                        # case 6: does not select the "$" terminal connector
+                        # and keep connector on C
+                        ("{#test=[<][#A][#B][#C][>][>][$A],#ter=[$B][#D]}",
+                         {">1": 0.8, "<1": 0.001, "$A1": 0.001, "$B1": 0.001},
+                         {},
+                         42,
+                         "{[#A][#B][#C][#A][#B][#C]}",
+                         {0: 'test', 1: 'test', 2: 'test', 3: 'test', 4: 'test', 5: 'test'},
+                         {0: ['<1'], 2: ['>1'], 3: [], 5:['>1', '>1', '$A1']},
                          {0: [0], 1: [0], 2: [0], 3: [1], 4: [1], 5: [1]},
                          {(2, 3): ('>1', '<1')},
                         ['$A', '$B']),
