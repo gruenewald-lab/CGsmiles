@@ -146,12 +146,11 @@ def fragment_iter(fragment_str, all_atom=True):
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False)
+            mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False, strict=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
-            nx.set_node_attributes(mol_graph, 1, 'fragid')
             fragnames = nx.get_node_attributes(mol_graph, 'fragname')
             nx.set_node_attributes(mol_graph, fragnames, 'atomname')
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
@@ -161,6 +160,7 @@ def fragment_iter(fragment_str, all_atom=True):
             nx.set_node_attributes(mol_graph, atomnames, 'atomname')
 
         nx.set_node_attributes(mol_graph, fragname, 'fragname')
+        nx.set_node_attributes(mol_graph, 0, 'fragid')
         yield fragname, mol_graph
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):
