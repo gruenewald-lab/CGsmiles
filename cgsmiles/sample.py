@@ -24,7 +24,7 @@ def _select_bonding_operator(bonds, probabilities=None):
     return bonding
 
 def _set_bond_order_defaults(bonding):
-    if type(bonding) == dict:
+    if isinstance(bonding, dict):
         default_dict = {}
         for bond_operator, prob in bonding.items():
             # we need to patch the bond order space
