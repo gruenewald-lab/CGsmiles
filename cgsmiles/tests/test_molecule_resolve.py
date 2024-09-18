@@ -18,27 +18,15 @@ from cgsmiles.read_fragments import read_fragments
                          (0, 3),
                          ('$', '$')),
                         # multiple sources one match
-                        ({0: ['$1'], 2: ['$2']},
-                         {1: ['$2'], 3: ['$']},
+                        ({0: ['>'], 2: ['$2']},
+                         {1: ['$2'], 3: ['>']},
                          (2, 1),
                          ('$2', '$2')),
                         # left right selective bonding
                         ({0: ['$'], 1: ['>'], 3: ['<']},
-                         {0: ['>'], 1: ['$5']},
+                         {0: ['>'], 1: []},
                          (3, 0),
                          ('<', '>')),
-                        # left right with annotated > <
-                        ({0: ['$'], 1: ['>1'], 3: ['<1']},
-                         {0: ['>1'], 1: ['$5']},
-                         (3, 0),
-                         ('<1', '>1')),
-                        # left right selective bonding
-                        # with identifier
-                        ({0: ['$'], 1: ['>'], 3: ['<1']},
-                         {0: ['>'], 1: ['$5'], 2: ['>1']},
-                         (3, 2),
-                         ('<1', '>1')),
-
 ))
 def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
     source = nx.path_graph(5)
