@@ -2,6 +2,9 @@
 Convert (simple) BigSmiles to CGSmiles.
 """
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_bond_id_st_obj(string, terminal=True):
     pattern='\[\$[a-zA-Z0-9]*\]|\[>[a-zA-Z0-9]*\]|\[<[a-zA-Z0-9]*\]|\[\]'
@@ -12,12 +15,11 @@ def get_bond_id_st_obj(string, terminal=True):
         return bonds[1], bonds[-2]
 
 def _get_all_terminal_bonding(st_objs):
-    bond_terms=set()
+    bond_terms = []
     for st_obj in st_objs:
         lbond, rbond = get_bond_id_st_obj(st_obj)
         lbond, rbond = lbond[1:-1], rbond[1:-1]
-        bond_terms.update(lbond)
-        bond_terms.update(rbond)
+        bond_terms.append((lbond, rbond))
     return bond_terms
 
 def patch_bridges(st_objs):
@@ -120,9 +122,7 @@ def convert_bigsmiles_to_cgsmiles(bigsmiles_str, fragnames=[]):
 
     # formatting string for ther terminal
     # bonding descriptors
-    format_str = ""
-    for idx in range(0, len(bond_terms)):
-        format_str += "[{}]"
+    format_str = "[{}]"
 
     # now we stitch together the fragments
     # in all_fragments we collect their
@@ -132,7 +132,7 @@ def convert_bigsmiles_to_cgsmiles(bigsmiles_str, fragnames=[]):
     fragment_str = "{"
     if termini[0]:
         all_fragnames = ['TLeft']
-        fragment_str += '#TLeft=' + termini[0] + format_str.format(*bond_terms)
+        fragment_str += '#TLeft=' + termini[0] + format_str.format(bond_terms[0][0])
         fragment_str += ','
 
     for fragname, string in zip(fragnames, fragments):
@@ -147,7 +147,7 @@ def convert_bigsmiles_to_cgsmiles(bigsmiles_str, fragnames=[]):
 
     if termini[1]:
         all_fragnames.append('TRight')
-        fragment_str += '#TRight=' + format_str.format(*bond_terms) + termini[1]
+        fragment_str += '#TRight=' + format_str.format(bond_terms[-1][1]) + termini[1]
         fragment_str += ','
 
     fragment_str = fragment_str[:-1] + "}"
