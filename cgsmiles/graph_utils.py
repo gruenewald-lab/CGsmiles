@@ -42,7 +42,7 @@ def merge_graphs(source_graph, target_graph, max_node=None):
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
         correspondence[node] = idx
-        new_atom = copy.copy(target_graph.nodes[node])
+        new_atom = copy.deepcopy(target_graph.nodes[node])
         new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
         # make sure to propagate the ez isomers
         if 'ez_isomer_atoms' in new_atom:
@@ -147,15 +147,32 @@ def annotate_fragments(meta_graph, molecule):
     return meta_graph
 
 
-def set_atom_names_atomistic(meta_graph, molecule):
+def set_atom_names_atomistic(molecule, meta_graph=None):
     """
     Set atomnames according to commonly used convention
     in molecular dynamics (MD) forcefields. This convention
     is defined as element plus counter for atom in residue.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        the molecule for which to adjust the atomnames
+    meta_graph: nx.Graph
+        optional; get the fragments from the meta_graph
+        attributes which is faster in some cases
     """
-    for meta_node in meta_graph.nodes:
-        fraggraph = meta_graph.nodes[meta_node]['graph']
-        for idx, node in enumerate(fraggraph.nodes):
-            atomname = fraggraph.nodes[node]['element'] + str(idx)
-            fraggraph.nodes[node]['atomname'] = atomname
+    fraglist = defaultdict(list)
+    if meta_graph:
+        for meta_node in meta_graph.nodes:
+            fraggraph = meta_graph.nodes[meta_node]['graph']
+            fraglist[meta_node] += list(fraggraph.nodes)
+    else:
+        node_to_fragid = nx.get_node_attributes(molecule, 'fragid')
+        for node, fragids in node_to_fragid.items():
+            assert len(fragids) == 1
+            fraglist[fragids[0]].append(node)
+
+    for fragnodes in fraglist.values():
+        for idx, node in enumerate(fragnodes):
+            atomname = molecule.nodes[node]['element'] + str(idx)
             molecule.nodes[node]['atomname'] = atomname
