@@ -35,6 +35,28 @@ class PeekIter(object):
     def __iter__(self):
         return self
 
+def deal_with_chiral_rings(smile_iter, token, node_count, rings):
+    """
+    """
+    multi_ring = False
+    ring_token = token
+    partial_str = token
+    while True:
+        if multi_ring and token == '%':
+            rings[ring_token].append(node_count)
+        elif multi_ring and token.isdigit():
+            ring_token += token
+        elif token == '%':
+            ring_token += token
+            multi_ring = True
+        elif token.isdigit():
+            rings[token] = node_count
+        else:
+            break
+        token = next(smile_iter)
+        partial_str += token
+
+    return smile_iter, token, partial_str, rings
 
 def strip_bonding_descriptors(fragment_string):
     """
@@ -60,6 +82,7 @@ def strip_bonding_descriptors(fragment_string):
     bond_to_order = {'-': 1, '=': 2, '#': 3, '$': 4, ':': 1.5, '.': 0}
     smile_iter = PeekIter(fragment_string)
     bonding_descrpt = defaultdict(list)
+    rings = defaultdict(list)
     ez_isomer_atoms = {}
     rs_isomers = {}
     smile = ""
@@ -92,13 +115,11 @@ def strip_bonding_descriptors(fragment_string):
                         if smile_iter.peek() == '@':
                             chiral_token = '@' + next(smile_iter)
                         rs_isomers[node_count] = (chiral_token, [])
-                    else:
-                        atom += peek
                     peek = next(smile_iter)
+
                 smile = smile + atom + "]"
                 prev_node = node_count
                 node_count += 1
-
         elif token == '(':
             anchor = prev_node
             smile += token
@@ -108,7 +129,13 @@ def strip_bonding_descriptors(fragment_string):
         elif token in bond_to_order:
             current_order = bond_to_order[token]
             smile += token
-        elif token in '] H . - = # $ : + - %' or token.isdigit():
+        # for chirality assignment we need to collect rings
+        elif token == '%' or token.isdigit():
+            smile_iter, part_str, rings = deal_with_chiral_rings(smile_iter,
+                                                                 node_count,
+                                                                 rings)
+            smile += part_str
+        elif token in '] H . - = # $ : + -':
             smile += token
         # deal with ez isomers
         elif token in '/ \\':
