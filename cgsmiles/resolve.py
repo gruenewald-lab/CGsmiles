@@ -366,7 +366,7 @@ class MoleculeResolver:
             annotate_ez_isomers(self.molecule)
             # in all-atom MD there are common naming conventions
             # that might be expected and hence we set them here
-            set_atom_names_atomistic(self.meta_graph, self.molecule)
+            set_atom_names_atomistic(self.molecule, self.meta_graph)
 
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
