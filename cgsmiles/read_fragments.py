@@ -35,12 +35,20 @@ class PeekIter(object):
     def __iter__(self):
         return self
 
+def _find_bonded_ring_node(ring_nodes, node):
+    current = ring_nodes.index(node)
+    if current%2 == 0:
+        other = ring_nodes[current+1]
+    else:
+        other = ring_nodes[current-1]
+    return other
+
 def deal_with_chiral_rings(smile_iter, token, node_count, rings):
     """
     """
     multi_ring = False
     ring_token = token
-    partial_str = token
+    partial_str = ""
     while True:
         if multi_ring and token == '%':
             rings[ring_token].append(node_count)
@@ -49,12 +57,21 @@ def deal_with_chiral_rings(smile_iter, token, node_count, rings):
         elif token == '%':
             ring_token += token
             multi_ring = True
+        elif multi_ring:
+            rings[ring_token].append(node_count)
+            ring_token = ""
         elif token.isdigit():
-            rings[token] = node_count
-        else:
-            break
-        token = next(smile_iter)
+            rings[token].append(node_count)
+
         partial_str += token
+        token = smile_iter.peek()
+        if token and not token.isdigit() and not token == '%':
+            break
+
+        try:
+            token = next(smile_iter)
+        except StopIteration:
+            break
 
     return smile_iter, token, partial_str, rings
 
@@ -115,6 +132,8 @@ def strip_bonding_descriptors(fragment_string):
                         if smile_iter.peek() == '@':
                             chiral_token = '@' + next(smile_iter)
                         rs_isomers[node_count] = (chiral_token, [])
+                    else:
+                        atom += peek
                     peek = next(smile_iter)
 
                 smile = smile + atom + "]"
@@ -131,9 +150,10 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
         # for chirality assignment we need to collect rings
         elif token == '%' or token.isdigit():
-            smile_iter, part_str, rings = deal_with_chiral_rings(smile_iter,
-                                                                 node_count,
-                                                                 rings)
+            smile_iter, token, part_str, rings = deal_with_chiral_rings(smile_iter,
+                                                                        token,
+                                                                        prev_node,
+                                                                        rings)
             smile += part_str
         elif token in '] H . - = # $ : + -':
             smile += token
@@ -153,6 +173,12 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = node_count
             node_count += 1
 
+    # we need to annotate rings to the chiral isomers
+    for node in rs_isomers:
+        for ring_idx, ring_nodes in rings.items():
+            if node in ring_nodes:
+                bonded_node = _find_bonded_ring_node(ring_nodes, node)
+                rs_isomers[node][1].append(bonded_node)
     return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
 
 def fragment_iter(fragment_str, all_atom=True):
@@ -197,6 +223,7 @@ def fragment_iter(fragment_str, all_atom=True):
             ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
             nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
             nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
+            print("hcount", mol_graph.nodes(data='hcount'))
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
