@@ -78,6 +78,8 @@ def strip_bonding_descriptors(fragment_string):
                 elif current_order:
                     order = current_order
                     current_order = None
+                    # we need to remove the symbol from the clean string
+                    smile = smile[:-1]
                 else:
                     order = 1
                 bonding_descrpt[prev_node].append(bond_descrp + str(order))
@@ -141,6 +143,7 @@ def fragment_iter(fragment_str, all_atom=True):
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
         smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
+        print(smile)
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
