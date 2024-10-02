@@ -1,6 +1,5 @@
-from collections import defaultdict, Counter
+from collections import defaultdict
 import networkx as nx
-import pysmiles
 from pysmiles.smiles_helper import format_atom
 from pysmiles.write_smiles import _get_ring_marker,_write_edge_symbol
 
@@ -167,6 +166,22 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     return smiles
 
 def write_cgsmiles_graph(molecule):
+    """
+    Write a CGSmiles graph sans fragments at
+    different resolution.
+
+    Parameters
+    ----------
+    molecule: nx.Graph
+        a molecule where each node as a fragname attribute
+        that is used as name in the CGSmiles string.
+
+    Returns
+    -------
+    str
+        the CGSmiles string
+    """
+
     cgsmiles_str = write_graph(molecule)
     return "{" + cgsmiles_str + "}"
 
@@ -196,3 +211,30 @@ def write_cgsmiles_fragments(fragment_dict, all_atom=True):
         fragment_str += write_graph(frag_graph, smiles_format=all_atom) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
+
+def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
+    """
+    Write a CGSmiles string given a low resolution molecule graph
+    and any number of higher resolutions provided as fragment dicts.
+
+    Parameters
+    ----------
+    molecule_graph: nx.Graph
+    fragments: list[dict[nx.Graph]]
+        a list of fragment dicts
+    last_all_atom: bool
+        if the last set of fragments is at the all_atom level
+
+    Returns
+    -------
+    str
+        CGSmiles string
+    """
+    final_str = write_cgsmiles_graph(molecule)
+    for layer, fragment in enumerate(fragments):
+        if layer == len(fragments)-1 and last_all_atom:
+            fragment_str = write_cgsmiles_fragments(fragment, smiles_format=True)
+        else:
+            fragment_str = write_cgsmiles_fragments(fragment, smiles_format=False)
+        final_str += "." + fragment_str
+    return final_str
