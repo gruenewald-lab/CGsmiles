@@ -69,7 +69,7 @@ def sort_nodes_by_attr(graph, sort_attr="fragid"):
     nx.Graph
         graph with nodes sorted in correct order
     """
-    fragids = nx.get_node_attributes(graph, "fragid")
+    fragids = nx.get_node_attributes(graph, sort_attr)
     sorted_ids = sorted(fragids.items(), key=lambda item: (item[1], item[0]))
     mapping = {old[0]: new for new, old in enumerate(sorted_ids)}
     new_graph = nx.relabel_nodes(graph, mapping, copy=True)
