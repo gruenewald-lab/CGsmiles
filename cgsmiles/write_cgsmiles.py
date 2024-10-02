@@ -44,6 +44,10 @@ def format_bonding(bonding):
     """
     bond_str = ""
     for bonding_descrpt in bonding:
+        bond_order = bonding_descrpt[-1]
+        order_symb = order_to_symbol[int(bond_order)]
+        if order_symb != '-':
+            bond_str = order_symb
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
@@ -82,7 +86,9 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     total_edges = set(map(frozenset, molecule.edges))
     ring_edges = total_edges - edges
 
-    # we need to patch on top to make rings
+    # in cgsmiles bond orders represent rings
+    # beteween consecutive nodes so we need to
+    # add them to the ring list
     if not smiles_format:
         for edge in molecule.edges:
             if molecule.edges[edge]['order'] == 2:
@@ -158,7 +164,11 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
             branch_depth -= 1
 
     smiles += ')' * branch_depth
-    return "{" + smiles + "}"
+    return smiles
+
+def write_cgsmiles_graph(molecule):
+    cgsmiles_str = write_graph(molecule)
+    return "{" + cgsmiles_str + "}"
 
 def write_cgsmiles_fragments(fragment_dict, all_atom=True):
     """
