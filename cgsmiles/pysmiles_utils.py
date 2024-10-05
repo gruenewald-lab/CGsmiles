@@ -133,7 +133,7 @@ def mark_chiral_atoms(molecule):
         # other neighboring atoms in order
         bonded_neighbours = sorted(molecule[node])
         neighbours = list(rings)
-        hstash = None
+        hstash = []
         for neighbour in bonded_neighbours:
             if neighbour not in neighbours:
                 # all hydrogen atoms are explicit in cgsmiles
@@ -143,9 +143,13 @@ def mark_chiral_atoms(molecule):
                 if molecule.nodes[neighbour]['element'] != 'H':
                     neighbours.append(neighbour)
                 else:
-                    hstash = neighbour
-        if hstash:
-            neighbours.insert(1, hstash)
+                    hstash.append(neighbour)
+        if hstash and len(hstash) == 1:
+            neighbours.insert(1, hstash[0])
+        elif len(hstash) > 1:
+            msg = (f"Chiral node {node} as more than 1 hydrogen neighbor."
+                    "Therefore it is not chiral.")
+            raise ValueError(msg)
 
         if len(neighbours) != 4:
             # FIXME Tetrahedral Allene-like Systems such as `NC(Br)=[C@]=C(O)C`
