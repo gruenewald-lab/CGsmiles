@@ -43,8 +43,28 @@ def _find_bonded_ring_node(ring_nodes, node):
         other = ring_nodes[current-1]
     return other
 
-def deal_with_chiral_rings(smile_iter, token, node_count, rings):
+def collect_ring_number(smile_iter, token, node_count, rings):
     """
+    When a ring identifier is found, this function will add
+    the current node to the rings dict.
+
+    Parameters
+    ----------
+    smile_iter: :class:PeekIter
+    token: str
+    node_count: int
+    rings: dict[list]
+
+    Returns
+    -------
+    PeekIter
+        the advanced smiles_iter
+    str
+        the current token being processed
+    str
+        the ring id
+    dict[list]
+        the updated rings dict
     """
     multi_ring = False
     ring_token = token
@@ -150,10 +170,10 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
         # for chirality assignment we need to collect rings
         elif token == '%' or token.isdigit():
-            smile_iter, token, part_str, rings = deal_with_chiral_rings(smile_iter,
-                                                                        token,
-                                                                        prev_node,
-                                                                        rings)
+            smile_iter, token, part_str, rings = collect_ring_number(smile_iter,
+                                                                     token,
+                                                                     prev_node,
+                                                                     rings)
             smile += part_str
         elif token in '] H . - = # $ : + -':
             smile += token
