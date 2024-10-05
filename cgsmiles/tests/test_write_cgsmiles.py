@@ -20,6 +20,7 @@ def test_write_fragments(input_string):
     frag_dict = read_fragments(input_string)
     out_string = write_cgsmiles_fragments(frag_dict, all_atom=True)
     frag_dict_out = read_fragments(out_string)
+    assert set(frag_dict_out) == set(frag_dict)
     for fragname in frag_dict:
         assertEqualGraphs(frag_dict_out[fragname], frag_dict[fragname])
 

@@ -1,7 +1,10 @@
+import logging
 from collections import defaultdict
 import networkx as nx
 from pysmiles.smiles_helper import format_atom
 from pysmiles.write_smiles import _get_ring_marker,_write_edge_symbol
+
+logger = logging.getLogger(__name__)
 
 order_to_symbol = {0: '.', 1: '-', 1.5: ':', 2: '=', 3: '#', 4: '$'}
 
@@ -67,7 +70,6 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     str
         The CGSmiles string describing `molecule`.
     """
-    # should be any node with order 1
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
@@ -85,13 +87,17 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     total_edges = set(map(frozenset, molecule.edges))
     ring_edges = total_edges - edges
 
-    # in cgsmiles bond orders represent rings
-    # beteween consecutive nodes so we need to
+    # in cgsmiles graphs only bonds of order 1 and 2
+    # exists; order 2 means we have a ring at the
+    # higher resolution. These orders are therefore
+    # represented as rings and that requires to
     # add them to the ring list
     if not smiles_format:
         for edge in molecule.edges:
             if molecule.edges[edge]['order'] == 2:
                 ring_edges.add(frozenset(edge))
+            elif molecule.edges[edge]['order'] != 1:
+                logger.warning("Bond orders other than 1 are not permitted and ignored.")
 
     atom_to_ring_idx = defaultdict(list)
     ring_idx_to_bond = {}
@@ -232,9 +238,7 @@ def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
     """
     final_str = write_cgsmiles_graph(molecule)
     for layer, fragment in enumerate(fragments):
-        if layer == len(fragments)-1 and last_all_atom:
-            fragment_str = write_cgsmiles_fragments(fragment, smiles_format=True)
-        else:
-            fragment_str = write_cgsmiles_fragments(fragment, smiles_format=False)
+        all_atom = (layer == len(fragments)-1) and last_all_atom
+        fragment_str = write_cgsmiles_fragments(fragment, smiles_format=all_atom)
         final_str += "." + fragment_str
     return final_str
