@@ -18,7 +18,7 @@ from cgsmiles.write_cgsmiles import write_cgsmiles_fragments, write_cgsmiles_gra
 ))
 def test_write_fragments(input_string):
     frag_dict = read_fragments(input_string)
-    out_string = write_cgsmiles_fragments(frag_dict, all_atom=True)
+    out_string = write_cgsmiles_fragments(frag_dict, smiles_format=True)
     frag_dict_out = read_fragments(out_string)
     assert set(frag_dict_out) == set(frag_dict)
     for fragname in frag_dict:
@@ -35,9 +35,12 @@ def test_write_fragments(input_string):
                         "{[#PE][#PMA]([#PEO][#PEO]([#OMA][#OMA]1[#OMA][#OMA]1))[#PE]}",
                         # special cycle
                         "{[#PE]1[#PMA]1}",
+                        # special triple cycle
+                        "{[#A]12[#B]12}",
 ))
 def test_write_mol_graphs(input_string):
     mol_graph = read_cgsmiles(input_string)
     out_string = write_cgsmiles_graph(mol_graph)
     out_graph = read_cgsmiles(out_string)
+    print(out_string)
     assertEqualGraphs(mol_graph, out_graph)

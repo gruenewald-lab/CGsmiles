@@ -85,8 +85,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
         for n_jdx in n_jdxs:
             edges.add(frozenset((n_idx, n_jdx)))
     total_edges = set(map(frozenset, molecule.edges))
-    ring_edges = total_edges - edges
-
+    ring_edges = list(total_edges - edges)
     # in cgsmiles graphs only bonds of order 1 and 2
     # exists; order 2 means we have a ring at the
     # higher resolution. These orders are therefore
@@ -94,10 +93,9 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     # add them to the ring list
     if not smiles_format:
         for edge in molecule.edges:
-            if molecule.edges[edge]['order'] == 2:
-                ring_edges.add(frozenset(edge))
-            elif molecule.edges[edge]['order'] != 1:
-                logger.warning("Bond orders other than 1 are not permitted and ignored.")
+            if molecule.edges[edge]['order'] != 1:
+                for n in range(1, molecule.edges[edge]['order']):
+                    ring_edges.append(frozenset(edge))
 
     atom_to_ring_idx = defaultdict(list)
     ring_idx_to_bond = {}
@@ -191,7 +189,7 @@ def write_cgsmiles_graph(molecule):
     cgsmiles_str = write_graph(molecule)
     return "{" + cgsmiles_str + "}"
 
-def write_cgsmiles_fragments(fragment_dict, all_atom=True):
+def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
     """
     Write fragments of molecule graph. To identify the fragments
     all nodes with the same `fragname` and `fragid` attributes
@@ -202,7 +200,7 @@ def write_cgsmiles_fragments(fragment_dict, all_atom=True):
     ----------
     fragment_dict: dict[str, nx.Graph]
         a dict of fragment graphs
-    all_atom: bool
+    smiles_format: bool
         write all atom SMILES if True (default) otherwise
         write CGSmiles
 
@@ -214,7 +212,7 @@ def write_cgsmiles_fragments(fragment_dict, all_atom=True):
     for fragname, frag_graph in fragment_dict.items():
         fragment_str += f"#{fragname}="
         # format graph depending on resolution
-        fragment_str += write_graph(frag_graph, smiles_format=all_atom) + ","
+        fragment_str += write_graph(frag_graph, smiles_format=smiles_format) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
 
