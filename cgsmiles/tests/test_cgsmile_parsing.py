@@ -222,13 +222,13 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
                         None),
                         # \ fragment split
                         ("[>]CC(\F)=[<]",
-                        "CC(F)=",
+                        "CC(F)",
                         {0: [">1"], 1: ["<2"]},
                         None,
                         {2: (2, 1, '\\')}),
                         # / fragment split
                         ("[>]CC(/F)=[<]",
-                        "CC(F)=",
+                        "CC(F)",
                         {0: [">1"], 1: ["<2"]},
                         None,
                         {2: (2, 1, '/')}),
