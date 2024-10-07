@@ -35,6 +35,65 @@ class PeekIter(object):
     def __iter__(self):
         return self
 
+def _find_bonded_ring_node(ring_nodes, node):
+    current = ring_nodes.index(node)
+    if current%2 == 0:
+        other = ring_nodes[current+1]
+    else:
+        other = ring_nodes[current-1]
+    return other
+
+def collect_ring_number(smile_iter, token, node_count, rings):
+    """
+    When a ring identifier is found, this function will add
+    the current node to the rings dict.
+
+    Parameters
+    ----------
+    smile_iter: :class:PeekIter
+    token: str
+    node_count: int
+    rings: dict[list]
+
+    Returns
+    -------
+    PeekIter
+        the advanced smiles_iter
+    str
+        the current token being processed
+    str
+        the ring id
+    dict[list]
+        the updated rings dict
+    """
+    multi_ring = False
+    ring_token = token
+    partial_str = ""
+    while True:
+        if multi_ring and token == '%':
+            rings[ring_token].append(node_count)
+        elif multi_ring and token.isdigit():
+            ring_token += token
+        elif token == '%':
+            ring_token += token
+            multi_ring = True
+        elif multi_ring:
+            rings[ring_token].append(node_count)
+            ring_token = ""
+        elif token.isdigit():
+            rings[token].append(node_count)
+
+        partial_str += token
+        token = smile_iter.peek()
+        if token and not token.isdigit() and not token == '%':
+            break
+
+        try:
+            token = next(smile_iter)
+        except StopIteration:
+            break
+
+    return smile_iter, token, partial_str, rings
 
 def strip_bonding_descriptors(fragment_string):
     """
@@ -60,6 +119,9 @@ def strip_bonding_descriptors(fragment_string):
     bond_to_order = {'-': 1, '=': 2, '#': 3, '$': 4, ':': 1.5, '.': 0}
     smile_iter = PeekIter(fragment_string)
     bonding_descrpt = defaultdict(list)
+    rings = defaultdict(list)
+    ez_isomer_atoms = {}
+    rs_isomers = {}
     smile = ""
     node_count = 0
     prev_node = 0
@@ -84,12 +146,19 @@ def strip_bonding_descriptors(fragment_string):
             else:
                 atom = token
                 while peek != ']':
-                    atom += peek
+                    # deal with rs chirality
+                    if peek == '@':
+                        chiral_token = peek
+                        if smile_iter.peek() == '@':
+                            chiral_token = '@' + next(smile_iter)
+                        rs_isomers[node_count] = (chiral_token, [])
+                    else:
+                        atom += peek
                     peek = next(smile_iter)
+
                 smile = smile + atom + "]"
                 prev_node = node_count
                 node_count += 1
-
         elif token == '(':
             anchor = prev_node
             smile += token
@@ -99,8 +168,22 @@ def strip_bonding_descriptors(fragment_string):
         elif token in bond_to_order:
             current_order = bond_to_order[token]
             smile += token
-        elif token in '] H @ . - = # $ : / \\ + - %' or token.isdigit():
+        # for chirality assignment we need to collect rings
+        elif token == '%' or token.isdigit():
+            smile_iter, token, part_str, rings = collect_ring_number(smile_iter,
+                                                                     token,
+                                                                     prev_node,
+                                                                     rings)
+            smile += part_str
+        elif token in '] H . - = # $ : + -':
             smile += token
+        # deal with ez isomers
+        elif token in '/ \\':
+            # we have a branch
+            if node_count == 0:
+                ez_isomer_atoms[node_count] = (node_count, 1, token)
+            else:
+                ez_isomer_atoms[node_count] = (node_count, prev_node, token)
         else:
             if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
                 smile += (token + next(smile_iter))
@@ -110,7 +193,13 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = node_count
             node_count += 1
 
-    return smile, bonding_descrpt
+    # we need to annotate rings to the chiral isomers
+    for node in rs_isomers:
+        for ring_idx, ring_nodes in rings.items():
+            if node in ring_nodes:
+                bonded_node = _find_bonded_ring_node(ring_nodes, node)
+                rs_isomers[node][1].append(bonded_node)
+    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -140,7 +229,7 @@ def fragment_iter(fragment_str, all_atom=True):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
         big_smile = fragment[delim+1:]
-        smile, bonding_descrpt = strip_bonding_descriptors(big_smile)
+        smile, bonding_descrpt, rs_isomers, ez_isomers = strip_bonding_descriptors(big_smile)
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
@@ -148,6 +237,13 @@ def fragment_iter(fragment_str, all_atom=True):
         elif all_atom:
             mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False, strict=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
+            nx.set_node_attributes(mol_graph, rs_isomers, 'rs_isomer')
+            # we need to split countable node keys and the associated value
+            ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
+            ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
+            nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
+            nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
+            print("hcount", mol_graph.nodes(data='hcount'))
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
