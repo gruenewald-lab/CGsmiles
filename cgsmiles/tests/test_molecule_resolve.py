@@ -18,27 +18,15 @@ from cgsmiles.read_fragments import read_fragments
                          (0, 3),
                          ('$', '$')),
                         # multiple sources one match
-                        ({0: ['$1'], 2: ['$2']},
-                         {1: ['$2'], 3: ['$']},
+                        ({0: ['>'], 2: ['$2']},
+                         {1: ['$2'], 3: ['>']},
                          (2, 1),
                          ('$2', '$2')),
                         # left right selective bonding
                         ({0: ['$'], 1: ['>'], 3: ['<']},
-                         {0: ['>'], 1: ['$5']},
+                         {0: ['>'], 1: []},
                          (3, 0),
                          ('<', '>')),
-                        # left right with annotated > <
-                        ({0: ['$'], 1: ['>1'], 3: ['<1']},
-                         {0: ['>1'], 1: ['$5']},
-                         (3, 0),
-                         ('<1', '>1')),
-                        # left right selective bonding
-                        # with identifier
-                        ({0: ['$'], 1: ['>'], 3: ['<1']},
-                         {0: ['>'], 1: ['$5'], 2: ['>1']},
-                         (3, 2),
-                         ('<1', '>1')),
-
 ))
 def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
     source = nx.path_graph(5)
@@ -52,7 +40,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
     assert new_btypes == btypes
 
 
-@pytest.mark.parametrize('smile, ref_frags, elements, ref_edges',(
+@pytest.mark.parametrize('smile, ref_frags, elements, ref_edges, chiral, ez',(
                         # smiple linear seqeunce
                         ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]COC[$],#OHter=[$][O]}",
                         #           0 1             2 3 4 5 6 7 8
@@ -62,7 +50,8 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C O C H H H H C O C H H H H O H',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
-                         (11, 14), (11, 15), (11, 16), (16, 17)]),
+                         (11, 14), (11, 15), (11, 16), (16, 17)],
+                        {}, {}),
                         # smiple linear seqeunce with bond-order in link
                         ("{[#TC1][#TC4][#TC1]}.{#TC1=[$1]=CC=[$2],#TC4=[$1]=CC=[$2]}",
                         #         0 1 2 3 4 5            6 7 8 9
@@ -72,7 +61,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'C C H H H H C C H H C C H H H H',
                         [(0, 1), (0, 2), (1, 3), (1, 4), (1, 5), (0, 6), (6, 7),
                          (6, 8), (7, 9), (7, 11), (10, 11), (10, 12), (10, 13),
-                         (10, 14), (11, 15)]),
+                         (10, 14), (11, 15)], {}, {}),
                         # smiple linear seqeunce unconsumed bonding descrpt
                         ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]CO[>]C[$],#OHter=[$][O]}",
                         #           0 1             2 3 4 5 6 7 8
@@ -82,7 +71,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C O C H H H H C O C H H H H O H',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
-                         (11, 14), (11, 15), (11, 16), (16, 17)]),
+                         (11, 14), (11, 15), (11, 16), (16, 17)], {}, {}),
                         # smiple linear seqeunce with ionic bond
                         ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]COC[$],#OHter=[$][O-].[Na+]}",
                         #           0 1             2 3 4 5 6 7 8
@@ -92,7 +81,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O Na C O C H H H H C O C H H H H O Na',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
-                         (11, 14), (11, 15), (11, 16), (16, 17)]),
+                         (11, 14), (11, 15), (11, 16), (16, 17)], {}, {}),
                         # smiple linear seqeunce with ionic ending
                         ("{[#OH][#PEO]|2[#ON]}.{#PEO=[$]COC[$],#OH=[$]O,#ON=[$][O-]}",
                         #           0 1             2 3 4 5 6 7 8
@@ -102,7 +91,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C O C H H H H C O C H H H H O',
                         [(0, 1), (0, 2), (2, 3), (3, 4), (2, 5), (2, 6), (4, 7),
                          (4, 8), (4, 9), (9, 10), (10, 11), (9, 12), (9, 13),
-                         (11, 14), (11, 15), (11, 16)]),
+                         (11, 14), (11, 15), (11, 16)], {}, {}),
                         # uncomsumed bonding IDs; note that this is not the same
                         # molecule as previous test case. Here one of the OH branches
                         # and replaces an CH2 group with CH-OH
@@ -114,7 +103,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C O C H H H H C O C H H H H O H',
                         [(0, 1), (0, 2), (2, 3), (2, 5), (2, 11), (3, 4),
                          (4, 6), (4, 7), (4, 8), (9, 10), (9, 12), (9, 13),
-                         (10, 11), (11, 15), (11, 14), (9, 16), (16, 17)]),
+                         (10, 11), (11, 15), (11, 14), (9, 16), (16, 17)], {}, {}),
                         # simple branched sequence
                         ("{[#Hter][#PE]([#PEO][#Hter])[#PE]([#PEO][#Hter])[#Hter]}.{#Hter=[$]H,#PE=[$]CC[$][$],#PEO=[$]COC[$]}",
                         [('Hter', 'H'), ('PE', 'C C H H H'), ('PEO', 'C O C H H H H'), ('Hter', 'H'),
@@ -122,7 +111,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'H C C H H H C O C H H H H H C C H H H C O C H H H H H H',
                         [(0, 1), (1, 2), (1, 3), (1, 4), (2, 5), (2, 6), (2, 14), (6, 7), (6, 9), (6, 10), (7, 8),
                          (8, 11), (8, 12), (8, 13), (14, 15), (14, 16), (14, 17), (15, 18), (15, 19), (15, 27),
-                         (19, 20), (19, 22), (19, 23), (20, 21), (21, 24), (21, 25), (21, 26)]),
+                         (19, 20), (19, 22), (19, 23), (20, 21), (21, 24), (21, 25), (21, 26)], {}, {}),
                         # something with a ring
                         #            012 34567
                         #            890123456
@@ -135,7 +124,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (6, 14), (7, 8), (7, 15), (8, 16), (17, 18), (17, 25),
                          (17, 26), (18, 19), (18, 27), (18, 33), (19, 20), (19, 24),
                          (20, 21), (20, 28), (21, 22), (21, 29), (22, 23), (22, 30),
-                         (23, 24), (23, 31), (24, 32)]),
+                         (23, 24), (23, 31), (24, 32)], {}, {}),
                         # something more complicated branched
                         # here we have multiple bonding descriptors
 #                       # despite being the same residue we have 3 fragments after adding hydrgens
@@ -157,7 +146,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [('A', 'O H C H H'), ('B', 'C H H C H H H'),],
                         'O H C H H C H H H',
                         [(0, 1), (0, 2), (2, 3), (2, 4), (2, 5),
-                         (5, 6), (5, 7), (5, 8)]),
+                         (5, 6), (5, 7), (5, 8)], {}, {}),
                         # smiple squash operator; unconsumed operators
                         ("{[#A][#B]}.{#A=OC[!],#B=[$][!]CC}",
                         #       0 1 2 3 4           1 5 3 4 6 7 8
@@ -168,7 +157,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [('A', 'O H C H H'), ('B', 'C H H C H H H'),],
                         'O H C H H C H H H',
                         [(0, 1), (0, 2), (2, 3), (2, 4), (2, 5),
-                         (5, 6), (5, 7), (5, 8)]),
+                         (5, 6), (5, 7), (5, 8)], {}, {}),
                         # smiple squash operator; plus connect operator
                         ("{[#A][#B][#C]}.{#A=OC[!],#B=[$][!]CC,#C=[$]O}",
                         #       0 1 2 3 4           1 5 3 4 6 7 8
@@ -179,7 +168,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [('A', 'O H C H'), ('B', 'C H C H H H'), ('C', 'O H')],
                         'O H C H C H H H O H',
                         [(0, 1), (0, 2), (2, 3), (2, 4),
-                         (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)]),
+                         (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)], {}, {}),
                         # THF like test case with double edge and squash operator
                         ("{[#A]1[#B]1}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
                         [('A', 'O C C H H H H'),
@@ -187,7 +176,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O C C H H H H C C H H H H',
                         [(0, 2), (0, 3), (2, 4), (2, 5),
                          (3, 6), (3, 7), (2, 8), (3, 9),
-                         (8, 9), (9, 12), (9, 13), (8, 10), (8, 11)]),
+                         (8, 9), (9, 12), (9, 13), (8, 10), (8, 11)], {}, {}),
                         # Toluene like test case with squash operator and aromaticity
                         ("{[#SC3]1[#TC5][#TC5]1}.{#SC3=Cc(c[!])c[!],#TC5=[!]ccc[!]}",
                         [('SC3', 'C C H H H C H C H'),
@@ -195,19 +184,67 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'C C H H H C H C H C H C H C H',
                         [(0, 1), (0, 2), (0, 3), (0, 4), (1, 5),
                          (1, 7), (5, 9), (5, 6), (7, 13), (7, 8),
-                         (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)]),
+                         (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)], {}, {}),
+                        # simple chirality assigment between fragments
+                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@H][>]C(=O)OC}",
+                        # 0 1 2 3
+                        [('A', 'O H'), ('B', 'C C C O O C H H H H H H'),
+                         ('C', 'O H')],
+                        'O H C H H C H C O O C H H H O H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4),
+                         (2, 5), (5, 6), (5, 7), (7, 8), (7, 9), (9, 10), (10, 11), (10, 12),
+                         (10, 13), (5, 14), (14, 15)],
+                        {3: (2, 10, 4, 14)}, {}),
+                        # simple chirality assigment with rings
+                        ("{[#GLC]}.{#GLC=C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O)O)O)O)O}",
+                        # 0 1 2 3
+                        [('GLC', 'C C C C C C O O O O O O H H H H H H H H H H H H')],
+                        'C C C C C C O O O O O O H H H H H H H H H H H H',
+                        [(0, 1), (0, 11), (0, 12), (0, 13), (1, 2), (1, 6), (1, 14), (2, 3), (2, 10),
+                         (2, 15), (3, 4), (3, 9), (3, 16), (4, 5), (4, 8), (4, 17), (5, 6), (5, 7), (5, 18),
+                         (7, 19), (8, 20), (9, 21), (10, 22), (11, 23)],
+                        {1: (6, 14, 2, 0), 2: (1, 15, 3, 10), 3: (2, 16, 9, 4),
+                         4: (3, 17, 5, 8), 5: (4, 18, 6, 7)}, {}),
+                        # simple chirality assigment between fragments inv
+                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@@H][>]C(=O)OC}",
+                        # 0 1 2 3
+                        [('A', 'O H'), ('B', 'C C C O O C H H H H H H'),
+                         ('C', 'O H')],
+                        'O H C H H C H C O O C H H H O H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4),
+                         (2, 5), (5, 6), (5, 7), (7, 8), (7, 9), (9, 10), (10, 11), (10, 12),
+                         (10, 13), (5, 14), (14, 15)],
+                        {3: (2, 10, 14, 4)}, {}),
+                        # smiple ez isomerism assigment between fragments inv
+                        ("{[#A][#B]}.{#A=CC(/F)=[$],#B=[$]=C(\F)C}",
+                        [('A', 'C C F H H H'), ('B', 'C F C H H H')],
+                        'C C F H H H F C C H H H',
+                        [(0, 1), (1, 2), (0, 3), (0, 4),
+                         (0, 5), (1, 7), (7, 6), (7, 8), (8, 9), (8, 10), (8, 11)],
+                        {}, {2: (2, 1, 6, 7, 'trans'), 7: (7, 6, 1, 2, 'trans')}),
+                        # simple ez isomerism assigment between fragments inv
+                        ("{[#A][#B]}.{#A=CC(/F)=[$],#B=[$]=C(/F)C}",
+                        [('A', 'C C F H H H'), ('B', 'C F C H H H')],
+                        'C C F H H H F C C H H H',
+                        [(0, 1), (1, 2), (0, 3), (0, 4),
+                         (0, 5), (1, 7), (7, 6), (7, 8), (8, 9), (8, 10), (8, 11)],
+                        {}, {2: (2, 1, 6, 7, 'cis'), 7: (7, 6, 1, 2, 'cis')}),
 ))
-def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
+def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral, ez):
     meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()
 
     # loop and compare fragments first
+    counter = 0
     for node, ref in zip(meta_mol.nodes, ref_frags):
         assert meta_mol.nodes[node]['fragname'] ==  ref[0]
         block_graph = meta_mol.nodes[node]['graph']
         target_elements = nx.get_node_attributes(block_graph, 'element')
         sorted_elements =  [target_elements[key] for key in sorted(target_elements)]
+        print("-->", sorted_elements)
+        print("-->", ref[1].split())
         assert sorted_elements == ref[1].split()
-
+        print(counter)
+        counter += 1
     # make the full scale reference graph
     ref_graph = nx.Graph()
     ref_graph.add_edges_from(ref_edges)
@@ -222,6 +259,14 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges):
     # check that reference graph and molecule are isomorphic
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_ele_match)
 
+    # check chirality
+    if chiral:
+        chiral_assigned = nx.get_node_attributes(molecule, 'rs_isomer')
+        assert chiral == chiral_assigned
+    # check ez isomerism
+    if ez:
+        ez_assigned = nx.get_node_attributes(molecule, 'ez_isomer')
+        assert ez == ez_assigned
 
 @pytest.mark.parametrize('case, cgsmiles_str, ref_string',(
     # case 1: here only the meta-graph is described by the

@@ -7,30 +7,43 @@ from .graph_utils import (merge_graphs,
                           sort_nodes_by_attr,
                           annotate_fragments,
                           set_atom_names_atomistic)
-from .pysmiles_utils import rebuild_h_atoms
+from .pysmiles_utils import (rebuild_h_atoms,
+                             annotate_ez_isomers,
+                             mark_chiral_atoms)
 
-def compatible(left, right):
+def compatible(left, right, legacy=False):
     """
     Check bonding descriptor compatibility according
-    to the BigSmiles syntax conventions.
+    to the CGSmiles syntax conventions. With legacy
+    the BigSmiles convention can be used.
 
     Parameters
     ----------
     left: str
     right: str
+    legacy: bool
 
     Returns
     -------
     bool
     """
-    if left == right and left[0] not in '> <':
-        return True
-    l, r = left[0], right[0]
-    if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
-        return left[1:] == right[1:]
-    return False
+    if legacy:
+        if left == right and left[0] not in '> <':
+            return True
+        l, r = left[0], right[0]
+        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
+            return left[1:] == right[1:]
+        return False
+    else:
+        if left[0] == right[0] == '$' or left[0] == right[0] == '!':
+            return True
 
-def match_bonding_descriptors(source, target, bond_attribute="bonding"):
+        l, r = left[0], right[0]
+        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
+            return True
+        return False
+
+def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=False):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -46,6 +59,9 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding"):
     bond_attribute: `abc.hashable`
         under which attribute are the bonding descriptors
         stored.
+    legacy: bool
+        which syntax convention to use when matching bonding
+        descriptors (legacy=BigSmiles)
 
     Returns
     -------
@@ -65,7 +81,7 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding"):
             bond_targets = target_nodes[target_node]
             for bond_source in bond_sources:
                 for bond_target in bond_targets:
-                    if compatible(bond_source, bond_target):
+                    if compatible(bond_source, bond_target, legacy=legacy):
                         return ((source_node, target_node), (bond_source, bond_target))
     raise LookupError
 
@@ -141,7 +157,8 @@ class MoleculeResolver:
     def __init__(self,
                  molecule_graph,
                  fragment_dicts,
-                 last_all_atom=True):
+                 last_all_atom=True,
+                 legacy=False):
 
         """
         Parameters
@@ -158,6 +175,16 @@ class MoleculeResolver:
             if the last resolution is at the all atom level. If True the code
             will use pysmiles to parse the fragments and return the all-atom
             molecule. Default: True
+        legacy: bool
+            which syntax convention to use for matching the bonding descriptors.
+            Legacy syntax adheres to the BigSmiles convention. Default syntax
+            adheres to CGSmiles convention where bonding descriptors '$' match
+            with every '$' and every '<' matches every '>'. With the BigSmiles
+            convention a alphanumeric string may be provided that distinguishes
+            these connectors. For example, '$A' would not match '$B'. However,
+            such use cases should be rare and the CGSmiles convention facilitates
+            usage of bonding descriptors in the Sampler where the labels are used
+            to assign different probabilities.
         """
         self.meta_graph = nx.Graph()
         self.fragment_dicts = fragment_dicts
@@ -167,6 +194,7 @@ class MoleculeResolver:
         self.resolutions = len(self.fragment_dicts)
         new_names = nx.get_node_attributes(self.molecule, "fragname")
         nx.set_node_attributes(self.meta_graph, new_names, "atomname")
+        self.legacy = legacy
 
     @staticmethod
     def read_fragment_strings(fragment_strings, last_all_atom=True):
@@ -256,7 +284,8 @@ class MoleculeResolver:
                 node_graph = self.meta_graph.nodes[node]['graph']
                 try:
                     edge, bonding = match_bonding_descriptors(prev_graph,
-                                                              node_graph)
+                                                              node_graph,
+                                                              legacy=self.legacy)
                 except LookupError:
                     continue
                 # remove used bonding descriptors
@@ -330,6 +359,15 @@ class MoleculeResolver:
         # sort the atoms
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
+        if all_atom:
+            # assign chiral atoms
+            mark_chiral_atoms(self.molecule)
+            # assign rs isomerism
+            annotate_ez_isomers(self.molecule)
+            # in all-atom MD there are common naming conventions
+            # that might be expected and hence we set them here
+            set_atom_names_atomistic(self.molecule, self.meta_graph)
+
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
                                              self.molecule)
@@ -337,7 +375,7 @@ class MoleculeResolver:
         # in all-atom MD there are common naming conventions
         # that might be expected and hence we set them here
         if all_atom:
-            set_atom_names_atomistic(self.meta_graph, self.molecule)
+            set_atom_names_atomistic(self.molecule, self.meta_graph)
 
         # increment the resolution counter
         self.resolution_counter += 1
@@ -361,7 +399,7 @@ class MoleculeResolver:
         return meta_graph, graph
 
     @classmethod
-    def from_string(cls, cgsmiles_str, last_all_atom=True):
+    def from_string(cls, cgsmiles_str, last_all_atom=True, legacy=False):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string.
 
@@ -370,6 +408,11 @@ class MoleculeResolver:
         cgsmiles_str: str
         last_all_atom: bool
             if the last resolution is all-atom and is read using pysmiles
+        legacy: bool
+            which syntax convention to use for matching the bonding descriptors.
+            Legacy syntax adheres to the BigSmiles convention. Default syntax
+            adheres to CGSmiles convention. A more detailed explanation can be
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------
@@ -384,11 +427,12 @@ class MoleculeResolver:
                                                    last_all_atom=last_all_atom)
         resolver_obj = cls(molecule_graph=molecule,
                            fragment_dicts=fragment_dicts,
-                           last_all_atom=last_all_atom)
+                           last_all_atom=last_all_atom,
+                           legacy=legacy)
         return resolver_obj
 
     @classmethod
-    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True):
+    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True, legacy=False):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string
         and a `meta_graph` that describes the lowest resolution.
@@ -401,6 +445,11 @@ class MoleculeResolver:
             fragname attribute set.
         last_all_atom: bool
             if the last resolution is all-atom and is read using pysmiles
+        legacy: bool
+            which syntax convention to use for matching the bonding descriptors.
+            Legacy syntax adheres to the BigSmiles convention. Default syntax
+            adheres to CGSmiles convention. A more detailed explanation can be
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------
@@ -417,12 +466,13 @@ class MoleculeResolver:
 
         resolver_obj = cls(molecule_graph=meta_graph,
                            fragment_dicts=fragment_dicts,
-                           last_all_atom=last_all_atom)
+                           last_all_atom=last_all_atom,
+                           legacy=legacy)
 
         return resolver_obj
 
     @classmethod
-    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True):
+    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True, legacy=False):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string, describing
         one molecule and fragment_dicts containing fragments for each resolution.
@@ -436,6 +486,11 @@ class MoleculeResolver:
             function.
         last_all_atom: bool
             if the last resolution is all-atom and is read using pysmiles
+        legacy: bool
+            which syntax convention to use for matching the bonding descriptors.
+            Legacy syntax adheres to the BigSmiles convention. Default syntax
+            adheres to CGSmiles convention. A more detailed explanation can be
+            found in the :func:`~resolve.MoleculeResolver.__init__` method.
 
         Returns
         -------
@@ -451,5 +506,6 @@ class MoleculeResolver:
         molecule = read_cgsmiles(elements[0])
         resolver_obj = cls(molecule_graph=molecule,
                            fragment_dicts=fragment_dicts,
-                           last_all_atom=last_all_atom)
+                           last_all_atom=last_all_atom,
+                           legacy=legacy)
         return resolver_obj

@@ -153,48 +153,100 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
     fragnames = nx.get_node_attributes(meta_mol, 'fragname')
     assert nodes == list(fragnames.values())
 
-@pytest.mark.parametrize('big_smile, smile, bonding',(
+@pytest.mark.parametrize('big_smile, smile, bonding, rs, ez',(
                         # smiple symmetric bonding
                         ("[$]COC[$]",
                          "COC",
-                        {0: ["$1"], 2: ["$1"]}),
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
-                        {0: ["$1A1"], 2: ["$1A1"]}),
+                        {0: ["$1A1"], 2: ["$1A1"]},
+                        None,
+                        None),
                         # smiple bonding multiletter atom
                         ("Clc[$]c[$]",
                          "Clcc",
-                        {1: ["$1"], 2: ["$1"]}),
+                        {1: ["$1"], 2: ["$1"]},
+                        None,
+                        None),
                         # simple symmetric but with explicit hydrogen
                         ("[$][CH2]O[CH2][$]",
                          "[CH2]O[CH2]",
-                        {0: ["$1"], 2: ["$1"]}),
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None),
                         # smiple symmetric bonding; multiple descript
                         ("[$]COC[$][$1]",
                          "COC",
-                        {0: ["$1"], 2: ["$1", "$11"]}),
+                        {0: ["$1"], 2: ["$1", "$11"]},
+                        None,
+                        None),
                         # named different bonding descriptors
                         ("[$1]CCCC[$2]",
                          "CCCC",
-                        {0: ["$11"], 3: ["$21"]}),
+                        {0: ["$11"], 3: ["$21"]},
+                        None,
+                        None),
                         # ring and bonding descriptors
                         ("[$1]CC[$2]C1CCCCC1",
                          "CCC1CCCCC1",
-                        {0: ["$11"], 1: ["$21"]}),
+                        {0: ["$11"], 1: ["$21"]},
+                        None,
+                        None),
                         # bonding descript. after branch
                         ("C(COC[$1])[$2]CCC[$3]",
                          "C(COC)CCC",
-                        {0: ["$21"], 3: ["$11"], 6: ["$31"]}),
+                        {0: ["$21"], 3: ["$11"], 6: ["$31"]},
+                        None,
+                        None),
                         # left rigth bonding desciptors
                         ("[>]COC[<]",
                         "COC",
-                        {0: [">1"], 2: ["<1"]})
+                        {0: [">1"], 2: ["<1"]},
+                        None,
+                        None),
+                        # simple chirality in residue
+                        ("[>]C[C@](F)(B)N[<]",
+                        "C[C](F)(B)N",
+                        {0: [">1"], 4: ["<1"]},
+                        {1: ('@', [])},
+                        None),
+                        # simple chirality inverse in residue
+                        ("[>]C[C@@](F)(B)N[<]",
+                        "C[C](F)(B)N",
+                        {0: [">1"], 4: ["<1"]},
+                        {1: ('@@', [])},
+                        None),
+                        # \ fragment split
+                        ("[>]CC(\F)=[<]",
+                        "CC(F)",
+                        {0: [">1"], 1: ["<2"]},
+                        None,
+                        {2: (2, 1, '\\')}),
+                        # / fragment split
+                        ("[>]CC(/F)=[<]",
+                        "CC(F)",
+                        {0: [">1"], 1: ["<2"]},
+                        None,
+                        {2: (2, 1, '/')}),
+                        # both in one fragment
+                        ("[>]CC(/F)=C(\F)C[<]",
+                        "CC(F)=C(F)C",
+                        {0: [">1"], 5: ["<1"]},
+                        None,
+                        {2: (2, 1, '/'), 4: (4, 3, '\\')}),
 ))
-def test_strip_bonding_descriptors(big_smile, smile, bonding):
-    new_smile, new_bonding = strip_bonding_descriptors(big_smile)
+def test_strip_bonding_descriptors(big_smile, smile, bonding, rs, ez):
+    new_smile, new_bonding, rs_isomers, ez_isomers = strip_bonding_descriptors(big_smile)
     assert new_smile == smile
     assert new_bonding == bonding
+    if rs:
+        assert rs == rs_isomers
+    if ez:
+        assert ez == ez_isomers
 
 @pytest.mark.parametrize('fragment_str, nodes, edges',(
                         # single fragment
