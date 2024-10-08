@@ -234,7 +234,7 @@ def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
     str
         CGSmiles string
     """
-    final_str = write_cgsmiles_graph(molecule)
+    final_str = write_cgsmiles_graph(molecule_graph)
     for layer, fragment in enumerate(fragments):
         all_atom = (layer == len(fragments)-1) and last_all_atom
         fragment_str = write_cgsmiles_fragments(fragment, smiles_format=all_atom)
