@@ -83,9 +83,9 @@ def sort_nodes_by_attr(graph,
     nx.Graph
         graph with nodes sorted in correct order
     """
-    attr_values = nx.get_node_attributes(graph, sort_attr)
-    sorted_ids = sorted(attr_values, key=lambda item: (attr_values[item], item))
-    mapping = {old: new for new, old in enumerate(sorted_ids)}
+    fragids = nx.get_node_attributes(graph, sort_attr)
+    sorted_ids = sorted(fragids.items(), key=lambda item: (item[1], item[0]))
+    mapping = {old[0]: new for new, old in enumerate(sorted_ids)}
     new_graph = nx.relabel_nodes(graph, mapping, copy=True)
     for attr, is_list in relative_attr:
         attr_dict = nx.get_node_attributes(new_graph, attr)

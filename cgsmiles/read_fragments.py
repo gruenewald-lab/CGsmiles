@@ -140,6 +140,8 @@ def strip_bonding_descriptors(fragment_string):
                 elif current_order:
                     order = current_order
                     current_order = None
+                    # we need to remove the symbol from the clean string
+                    smile = smile[:-1]
                 else:
                     order = 1
                 bonding_descrpt[prev_node].append(bond_descrp + str(order))
@@ -243,7 +245,6 @@ def fragment_iter(fragment_str, all_atom=True):
             ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
             nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
             nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
-            print("hcount", mol_graph.nodes(data='hcount'))
         # we deal with a CG resolution graph
         else:
             mol_graph = read_cgsmiles(smile)
