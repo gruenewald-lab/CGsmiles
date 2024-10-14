@@ -83,6 +83,11 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             ref_node = next(mol_graph.neighbors(node))
             mol_graph.nodes[node]["fragid"] = mol_graph.nodes[ref_node]["fragid"]
             mol_graph.nodes[node]["fragname"] = mol_graph.nodes[ref_node]["fragname"]
+        if mol_graph.nodes[node].get("element", "*") == "H":
+            # make sure the weights are copied for implicit h-atoms
+            anchor = list(mol_graph.neighbors(node))[0]
+            weight = mol_graph.nodes[anchor].get("weight", 1)
+            mol_graph.nodes[node]["weight"] = weight
 
 def annotate_ez_isomers(molecule):
     """

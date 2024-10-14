@@ -95,6 +95,31 @@ def collect_ring_number(smile_iter, token, node_count, rings):
 
     return smile_iter, token, partial_str, rings
 
+def get_weight(smile_iter):
+    """
+    Extracts weights given to atoms/nodes in
+    fragments. The iter should be advanced
+    up to the weight marker ;.
+
+    Parameters
+    ----------
+    smile_iter: class.PeekIter
+
+    Returns
+    -------
+    float:
+        the weight
+    PeekIter
+        the advanced iter object
+    """
+    num = []
+    for digit in smile_iter:
+        num.append(digit)
+        if smile_iter.peek() in [']', '@', 'H']:
+            break
+    out = float("".join(num))
+    return out, smile_iter
+
 def strip_bonding_descriptors(fragment_string):
     """
     Processes a CGSmiles fragment string by
@@ -122,6 +147,7 @@ def strip_bonding_descriptors(fragment_string):
     rings = defaultdict(list)
     ez_isomer_atoms = {}
     rs_isomers = {}
+    weights = {}
     smile = ""
     node_count = 0
     prev_node = 0
@@ -147,6 +173,8 @@ def strip_bonding_descriptors(fragment_string):
                 bonding_descrpt[prev_node].append(bond_descrp + str(order))
             else:
                 atom = token
+                # set the default weight
+                weights[node_count] = 1
                 while peek != ']':
                     # deal with rs chirality
                     if peek == '@':
@@ -154,6 +182,10 @@ def strip_bonding_descriptors(fragment_string):
                         if smile_iter.peek() == '@':
                             chiral_token = '@' + next(smile_iter)
                         rs_isomers[node_count] = (chiral_token, [])
+                    # we have weights
+                    elif peek == ';':
+                        weight, smile_iter = get_weight(smile_iter)
+                        weights[node_count] = weight
                     else:
                         atom += peek
                     peek = next(smile_iter)
@@ -193,6 +225,8 @@ def strip_bonding_descriptors(fragment_string):
                 smile += token
             current_order = None
             prev_node = node_count
+            # set default weight
+            weights[node_count] = 1
             node_count += 1
 
     # we need to annotate rings to the chiral isomers
@@ -201,7 +235,8 @@ def strip_bonding_descriptors(fragment_string):
             if node in ring_nodes:
                 bonded_node = _find_bonded_ring_node(ring_nodes, node)
                 rs_isomers[node][1].append(bonded_node)
-    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
+
+    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms, weights
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -230,8 +265,8 @@ def fragment_iter(fragment_str, all_atom=True):
     for fragment in fragment_str[1:-1].split(','):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
-        big_smile = fragment[delim+1:]
-        smile, bonding_descrpt, rs_isomers, ez_isomers = strip_bonding_descriptors(big_smile)
+        frag_smile = fragment[delim+1:]
+        smile, bonding_descrpt, rs_isomers, ez_isomers, weights = strip_bonding_descriptors(frag_smile)
         if smile == "H":
             mol_graph = nx.Graph()
             mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
@@ -258,6 +293,7 @@ def fragment_iter(fragment_str, all_atom=True):
 
         nx.set_node_attributes(mol_graph, fragname, 'fragname')
         nx.set_node_attributes(mol_graph, 0, 'fragid')
+        nx.set_node_attributes(mol_graph, weights, 'weight')
         yield fragname, mol_graph
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):
