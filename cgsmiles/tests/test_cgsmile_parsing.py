@@ -191,6 +191,21 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
                         None,
                         None,
                         None),
+                        # smiple symmetric bonding with weigth
+                        ("[$]C[O;0.5]C[$]",
+                         "C[O]C",
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None,
+                        {1: 0.5}),
+                        # smiple symmetric bonding with weigth
+                        # using cgsmiles string
+                        ("[$][#TC4][#OT1;0.5][#CD1][$]",
+                         "[#TC4][#OT1][#CD1]",
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None,
+                        {1: 0.5}),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
@@ -284,13 +299,19 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
                         None),
 ))
 def test_strip_bonding_descriptors(big_smile, smile, bonding, rs, ez, weights):
-    new_smile, new_bonding, rs_isomers, ez_isomers, weights = strip_bonding_descriptors(big_smile)
+    new_smile, new_bonding, rs_isomers, ez_isomers, weights_out = strip_bonding_descriptors(big_smile)
     assert new_smile == smile
     assert new_bonding == bonding
     if rs:
         assert rs == rs_isomers
     if ez:
         assert ez == ez_isomers
+    # here we check that the weights are correctly
+    # set for nodes with weights; the default is
+    # checked in another test
+    if weights:
+        for node, weight in weights.items():
+            assert weights_out[node] == weight
 
 @pytest.mark.parametrize('fragment_str, nodes, edges',(
                         # single fragment
