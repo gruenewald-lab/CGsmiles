@@ -238,6 +238,12 @@ class MoleculeResolver:
             a dict of fragment graphs
         """
         for meta_node in self.meta_graph.nodes:
+            neighbors = self.meta_graph.neighbors(meta_node)
+            edge_orders = [self.meta_graph.edges[(meta_node, ndx)]['order'] for ndx in neighbors]
+            # we are dealing with a virtual node that has no projection to the
+            # next resolution level
+            if edge_orders and all([order == 0 for order in edge_orders]):
+                continue
             fragname = self.meta_graph.nodes[meta_node]['fragname']
             fragment = fragment_dict[fragname]
             correspondence = merge_graphs(self.molecule, fragment)
@@ -278,7 +284,10 @@ class MoleculeResolver:
             if the high resolution level graph has all-atom resolution
             default: False
         """
-        for prev_node, node in self.meta_graph.edges:
+        import random
+        edges = list(self.meta_graph.edges)
+        #random.shuffle(edges)
+        for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
                 node_graph = self.meta_graph.nodes[node]['graph']

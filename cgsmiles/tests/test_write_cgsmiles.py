@@ -38,9 +38,9 @@ def test_write_fragments(input_string):
                         # branched nested
                         "{[#PE][#PMA]([#PEO][#PEO]([#OMA][#OMA]1[#OMA][#OMA]1))[#PE]}",
                         # special cycle
-                        "{[#PE]1[#PMA]1}",
+                        "{[#PE]=[#PMA]}",
                         # special triple cycle
-                        "{[#A]12[#B]12}",
+                        "{[#A]#[#B]}",
 ))
 def test_write_mol_graphs(input_string):
     mol_graph = read_cgsmiles(input_string)

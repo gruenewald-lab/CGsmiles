@@ -17,7 +17,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         [(0, 1), (1, 2)],
                         [1, 1]),
                         # smiple linear sequenece with multi-edge
-                        ("{[#PMA]1[#PEO]1}",
+                        ("{[#PMA]=[#PEO]}",
                         ["PMA", "PEO"],
                         None,
                         [(0, 1)],
@@ -46,6 +46,36 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 1]),
+                        # smiple cycle sequence bond order to next
+                        ("{[#PMA]1=[#PEO][#PMA]1}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [2, 1, 1]),
+                        # smiple cycle sequence bond order in cycle
+                        ("{[#PMA]=1[#PEO][#PMA]1}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 2]),
+                        # smiple cycle sequence two bond orders
+                        ("{[#PMA].1=[#PEO][#PMA]1}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [2, 1, 0]),
+                        # smiple cycle sequence with % bond order
+                        ("{[#PMA]=%123[#PEO][#PMA]%123}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 2]),
+                        # smiple cycle sequence with % bond order next
+                        ("{[#PMA]%123=[#PEO][#PMA]%123}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [2, 1, 1]),
+                        # smiple cycle sequence with % two bond orders
+                        ("{[#PMA]=%123.[#PEO][#PMA]%123}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [0, 1, 2]),
                         # smiple cycle sequence with %
                         ("{[#PMA]%123[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
@@ -72,7 +102,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                      #  [1, 1, 1, 1, 1, 1, 1, 1]),
                         # smiple linear sequenece with multi-edge
                         # in cycle
-                        ("{[#PMA]12[#PMA][#PMA][#PEO]12}",
+                        ("{[#PMA]=1[#PMA][#PMA][#PEO]1}",
                         ["PMA", "PMA", "PMA", "PEO"],
                         None,
                         [(0, 1), (1, 2), (2, 3), (0, 3)],
