@@ -151,6 +151,7 @@ def read_cgsmiles(pattern):
         ring_bond_order = default_bond_order
         for rdx, token in enumerate(pattern[stop:]):
             if multi_ring and not token.isdigit():
+                ring_marker = int(ring_marker[1:])
                 if ring_marker in cycle:
                     cycle_edges.append((current,
                                         cycle[ring_marker][0],
@@ -170,6 +171,7 @@ def read_cgsmiles(pattern):
             elif token.isdigit():
                 ring_marker += token
                 if not multi_ring:
+                    ring_marker = int(ring_marker)
                     # we have a single digit marker and it is in
                     # cycle so we close it
                     if ring_marker in cycle:

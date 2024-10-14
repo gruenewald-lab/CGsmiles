@@ -66,6 +66,11 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ["PMA", "PEO", "PMA"],
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 2]),
+                        # smiple cycle mixed % and digit marker
+                        ("{[#PMA]=1[#PEO][#PMA]%01}",
+                        ["PMA", "PEO", "PMA"],
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 2]),
                         # smiple cycle sequence with % bond order next
                         ("{[#PMA]%123=[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
