@@ -17,13 +17,32 @@ Table of Contents
 
    syntax/basic_graph_description
    syntax/representing_resolutions
+   syntax/chirality
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Machine Learning
+
+   ml/fingerprints
+   ml/gnn
+
+.. toctree::
+   :maxdepth: 2
+   :caption: MD Simulations
+
+   md/martini
+   md/polyply
 
 .. toctree::
    :maxdepth: 2
    :caption: API
 
+   api/overview.rst
+   api/cgsmiles.read_cgsmiles
    api/cgsmiles.read_fragments
    api/cgsmiles.resolve
+   api/cgsmiles.sample
+   api/cgsmiles.write_cgsmiles
    api/cgsmiles.graph_utils
    api/cgsmiles.pysmiles_utils
 
