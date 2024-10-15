@@ -269,7 +269,8 @@ def read_cgsmiles(pattern):
             eon_a = _find_next_character(pattern, [')'], stop)
             # Then we check if the expansion character
             # is next.
-            if eon_a+1 < len(pattern) and (pattern[eon_a+1] == "|" or pattern[eon_a+2] == "|"):
+            if (eon_a+1 < len(pattern) and pattern[eon_a+1] == "|") or\
+               (eon_a+2 < len(pattern) and pattern[eon_a+2] == "|"):
                 if pattern[eon_a+2] == "|":
                     anchor_order = symbol_to_order[pattern[eon_a+1]]
                     recipe = recipes[prev_node][0]
@@ -320,7 +321,7 @@ def read_cgsmiles(pattern):
             #================================================
                 if pattern[eon_b] in symbol_to_order:
                     prev_bond_order = symbol_to_order[pattern[eon_b]]
-            elif pattern[eon_a+1] in symbol_to_order:
+            elif eon_a+1 < len(pattern) and pattern[eon_a+1] in symbol_to_order:
                 prev_bond_order = symbol_to_order[pattern[eon_a+1]]
             # if all branches are done we need to reset the lists
             # when all nested branches are completed
