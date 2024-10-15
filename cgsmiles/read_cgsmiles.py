@@ -31,21 +31,22 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     anchor: abc.hashable
         anchor to which to connect current node
 
-    recipie: list[(str, int)]
+    recipie: list[(str, int, int)]
         list storing tuples of node names and
         the number of times the node has to be added
+        and their bond order
 
     Returns
     -------
     nx.Graph
     """
     prev_node = anchor
-    for bdx, (fragname, n_mon) in enumerate(recipe):
+    for bdx, (fragname, n_mon, order) in enumerate(recipe):
         if bdx == 0:
             anchor = current
         for _ in range(0, n_mon):
             mol_graph.add_node(current, fragname=fragname)
-            mol_graph.add_edge(prev_node, current, order=1)
+            mol_graph.add_edge(prev_node, current, order=order)
 
             prev_node = current
             current += 1
@@ -142,7 +143,8 @@ def read_cgsmiles(pattern):
             branch_anchor.append(prev_node)
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
-            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1)]
+            # at this point the bond order is still 1 unless we have an expansion
+            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1, 1)]
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
@@ -227,7 +229,7 @@ def read_cgsmiles(pattern):
         # the recipe dict together with the anchor residue
         # and expansion number
         if branching:
-            recipes[branch_anchor[-1]].append((fragname, n_mon))
+            recipes[branch_anchor[-1]].append((fragname, n_mon, prev_bond_order))
 
         # new we add new residue as often as required
         connection = []
@@ -277,12 +279,18 @@ def read_cgsmiles(pattern):
             eon_a = _find_next_character(pattern, [')'], stop)
             # Then we check if the expansion character
             # is next.
-            if eon_a+1 < len(pattern) and pattern[eon_a+1] == "|":
+            if eon_a+1 < len(pattern) and (pattern[eon_a+1] == "|" or pattern[eon_a+2] == "|"):
+                if pattern[eon_a+2] == "|":
+                    anchor_order = symbol_to_order[pattern[eon_a+1]]
+                    recipe = recipes[prev_node][0]
+                    recipes[prev_node][0] = (recipe[0], recipe[1], anchor_order)
+                    eon_a += 1
                 # If there is one we find the beginning
                 # of the next branch, residue or end of the string
                 # As before all characters inbetween are a number that
                 # is how often the branch is expanded.
-                eon_b = _find_next_character(pattern, ['[', ')', '(', '}'], eon_a+1)
+                next_characters = ['[', ')', '(', '}'] + list(symbol_to_order.keys())
+                eon_b = _find_next_character(pattern, next_characters, eon_a+1)
                 # the outermost loop goes over how often a the branch has to be
                 # added to the existing sequence
                 for idx in range(0,int(pattern[eon_a+2:eon_b])-1):
@@ -317,6 +325,13 @@ def read_cgsmiles(pattern):
                         prev_anchor = ref_anchor
                 # all branches added; then go back to the base anchor
                 prev_node = base_anchor
+            #================================================
+            #     bond orders for after branches            #
+            #================================================
+                if pattern[eon_b] in symbol_to_order:
+                    prev_bond_order = symbol_to_order[pattern[eon_b]]
+            elif pattern[eon_a+1] in symbol_to_order:
+                prev_bond_order = symbol_to_order[pattern[eon_a+1]]
             # if all branches are done we need to reset the lists
             # when all nested branches are completed
             if len(branch_anchor) == 0:
