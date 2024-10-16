@@ -1,5 +1,6 @@
 import re
 import copy
+import numpy as np
 import networkx as nx
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
@@ -242,6 +243,10 @@ class MoleculeResolver:
 
             # we have a virtual node and skip it
             if fragname not in fragment_dict:
+                neighbors = self.meta_graph.neighbors(meta_node)
+                orders = [self.meta_graph.edges[(meta_node, neigh)]["order"] for neigh in neighbors]
+                if not all(np.array(orders) == 0):
+                    raise SyntaxError(f"Found node #{fragname} but no corresponding fragment.")
                 continue
 
             fragment = fragment_dict[fragname]
