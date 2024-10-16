@@ -31,31 +31,28 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     anchor: abc.hashable
         anchor to which to connect current node
 
-    recipie: list[(str, int)]
+    recipe: list[(str, int, int)]
         list storing tuples of node names and
         the number of times the node has to be added
+        and their bond order
 
     Returns
     -------
     nx.Graph
     """
     prev_node = anchor
-    for bdx, (fragname, n_mon) in enumerate(recipe):
+    for bdx, (fragname, n_mon, order) in enumerate(recipe):
         if bdx == 0:
             anchor = current
         for _ in range(0, n_mon):
             mol_graph.add_node(current, fragname=fragname)
-            mol_graph.add_edge(prev_node, current, order=1)
+            mol_graph.add_edge(prev_node, current, order=order)
 
             prev_node = current
             current += 1
 
     prev_node = anchor
     return mol_graph, current, prev_node
-
-def _get_percent(pattern, stop):
-    end_num = _find_next_character(pattern, ['[', ')', '(', '}'], stop)
-    return pattern[stop+1:end_num]
 
 def read_cgsmiles(pattern):
     """
@@ -133,6 +130,10 @@ def read_cgsmiles(pattern):
     cycle_edges = []
     # each element in the for loop matches a pattern
     # '[' + '#' + some alphanumeric name + ']'
+    symbol_to_order = {".": 0, "=": 2, "-": 1, "#": 3, "$": 4}
+    default_bond_order = 1
+    bond_order = None
+    prev_bond_order = None
     for match in re.finditer(PATTERNS['place_holder'], pattern):
         start, stop = match.span()
         # we start a new branch when the residue is preceded by '('
@@ -142,31 +143,60 @@ def read_cgsmiles(pattern):
             branch_anchor.append(prev_node)
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
-            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1)]
+            # at this point the bond order is still 1 unless we have an expansion
+            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1, 1)]
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
-        for token in pattern[stop:]:
-            # we close a cycle
-            if token.isdigit() and token in cycle:
-                cycle_edges.append((current, cycle[token]))
-                del cycle[token]
-            # we open a cycle
-            elif token.isdigit():
-                cycle[token] = current
-            # we found a ring indicator
-            elif token == "%":
-                ring_marker = _get_percent(pattern, stop)
-                # we close the ring
+        ring_marker = ""
+        multi_ring = False
+        ring_bond_order = default_bond_order
+        for rdx, token in enumerate(pattern[stop:]):
+            if multi_ring and not token.isdigit():
+                ring_marker = int(ring_marker[1:])
                 if ring_marker in cycle:
-                    cycle_edges.append((current, cycle[ring_marker]))
+                    cycle_edges.append((current,
+                                        cycle[ring_marker][0],
+                                        cycle[ring_marker][1]))
                     del cycle[ring_marker]
-                    break
-                # we open a new ring
-                cycle[_get_percent(pattern, stop)] = current
-                break
+                else:
+                    cycle[ring_marker] = [current, ring_bond_order]
+                multi_ring = False
+                ring_marker = ""
+                ring_bond_order = default_bond_order
+
+            # we open a new multi ring
+            if token == "%":
+                multi_ring = True
+                ring_marker = '%'
+            # we open a ring or close
+            elif token.isdigit():
+                ring_marker += token
+                if not multi_ring:
+                    ring_marker = int(ring_marker)
+                    # we have a single digit marker and it is in
+                    # cycle so we close it
+                    if ring_marker in cycle:
+                        cycle_edges.append((current,
+                                            cycle[ring_marker][0],
+                                            cycle[ring_marker][1]))
+                        del cycle[ring_marker]
+                    # the marker is not in cycle so we update cycles
+                    else:
+                        cycle[ring_marker] = [current, ring_bond_order]
+                    ring_marker = ""
+                    ring_bond_order = default_bond_order
+            # we found bond_order
+            elif token in symbol_to_order:
+                ring_bond_order = symbol_to_order[token]
             else:
                 break
+
+        # check if there is a bond-order following the node
+        if stop < len(pattern) and pattern[stop+rdx-1] in '- + . = # $':
+            bond_order = symbol_to_order[pattern[stop+rdx-1]]
+        else:
+            bond_order = default_bond_order
 
         # here we check if the atom is followed by a expansion character '|'
         # as in ... [#PEO]|
@@ -199,7 +229,7 @@ def read_cgsmiles(pattern):
         # the recipe dict together with the anchor residue
         # and expansion number
         if branching:
-            recipes[branch_anchor[-1]].append((fragname, n_mon))
+            recipes[branch_anchor[-1]].append((fragname, n_mon, prev_bond_order))
 
         # new we add new residue as often as required
         connection = []
@@ -207,16 +237,19 @@ def read_cgsmiles(pattern):
             mol_graph.add_node(current, fragname=fragname, charge=charge)
 
             if prev_node is not None:
-                mol_graph.add_edge(prev_node, current, order=1)
+                mol_graph.add_edge(prev_node, current, order=prev_bond_order)
+
+            prev_bond_order = bond_order
 
             # here we have a double edge
             for cycle_edge in cycle_edges:
                 if cycle_edge in mol_graph.edges:
-                    mol_graph.edges[cycle_edge]["order"] += 1
-                else:
-                    mol_graph.add_edge(cycle_edge[0],
-                                       cycle_edge[1],
-                                       order=1)
+                    msg=("You define two edges between the same node."
+                         "Use bond order symbols instead.")
+                    raise SyntaxError(msg)
+                mol_graph.add_edge(cycle_edge[0],
+                                   cycle_edge[1],
+                                   order=cycle_edge[2])
 
             prev_node = current
             current += 1
@@ -246,12 +279,19 @@ def read_cgsmiles(pattern):
             eon_a = _find_next_character(pattern, [')'], stop)
             # Then we check if the expansion character
             # is next.
-            if eon_a+1 < len(pattern) and pattern[eon_a+1] == "|":
+            if (eon_a+1 < len(pattern) and pattern[eon_a+1] == "|") or\
+               (eon_a+2 < len(pattern) and pattern[eon_a+2] == "|"):
+                if pattern[eon_a+2] == "|":
+                    anchor_order = symbol_to_order[pattern[eon_a+1]]
+                    recipe = recipes[prev_node][0]
+                    recipes[prev_node][0] = (recipe[0], recipe[1], anchor_order)
+                    eon_a += 1
                 # If there is one we find the beginning
                 # of the next branch, residue or end of the string
                 # As before all characters inbetween are a number that
                 # is how often the branch is expanded.
-                eon_b = _find_next_character(pattern, ['[', ')', '(', '}'], eon_a+1)
+                next_characters = ['[', ')', '(', '}'] + list(symbol_to_order.keys())
+                eon_b = _find_next_character(pattern, next_characters, eon_a+1)
                 # the outermost loop goes over how often a the branch has to be
                 # added to the existing sequence
                 for idx in range(0,int(pattern[eon_a+2:eon_b])-1):
@@ -286,6 +326,13 @@ def read_cgsmiles(pattern):
                         prev_anchor = ref_anchor
                 # all branches added; then go back to the base anchor
                 prev_node = base_anchor
+            #================================================
+            #     bond orders for after branches            #
+            #================================================
+                if pattern[eon_b] in symbol_to_order:
+                    prev_bond_order = symbol_to_order[pattern[eon_b]]
+            elif eon_a+1 < len(pattern) and pattern[eon_a+1] in symbol_to_order:
+                prev_bond_order = symbol_to_order[pattern[eon_a+1]]
             # if all branches are done we need to reset the lists
             # when all nested branches are completed
             if len(branch_anchor) == 0:
