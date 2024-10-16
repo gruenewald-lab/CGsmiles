@@ -170,7 +170,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)], {}, {}),
                         # THF like test case with double edge and squash operator
-                        ("{[#A]=[#B]}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
+                        ("{[#A]1[#B]1}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
                         [('A', 'O C C H H H H'),
                          ('B', 'C C H H H H C C H H H H')],
                         'O C C H H H H C C H H H H',
@@ -185,16 +185,6 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (0, 3), (0, 4), (1, 5),
                          (1, 7), (5, 9), (5, 6), (7, 13), (7, 8),
                          (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)], {}, {}),
-                         # simple chirality assigment with rings
-                         ("{[#GLC]}.{#GLC=C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O)O)O)O)O}",
-                         # 0 1 2 3
-                         [('GLC', 'C C C C C C O O O O O O H H H H H H H H H H H H')],
-                         'C C C C C C O O O O O O H H H H H H H H H H H H',
-                         [(0, 1), (0, 11), (0, 12), (0, 13), (1, 2), (1, 6), (1, 14), (2, 3), (2, 10),
-                          (2, 15), (3, 4), (3, 9), (3, 16), (4, 5), (4, 8), (4, 17), (5, 6), (5, 7), (5, 18),
-                          (7, 19), (8, 20), (9, 21), (10, 22), (11, 23)],
-                         {1: (6, 14, 2, 0), 2: (1, 15, 3, 10), 3: (2, 16, 9, 4),
-                          4: (3, 17, 5, 8), 5: (4, 18, 6, 7)}, {}),
                         # simple chirality assigment between fragments
                         ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@H][>]C(=O)OC}",
                         # 0 1 2 3
@@ -205,6 +195,16 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (2, 5), (5, 6), (5, 7), (7, 8), (7, 9), (9, 10), (10, 11), (10, 12),
                          (10, 13), (5, 14), (14, 15)],
                         {3: (2, 10, 4, 14)}, {}),
+                        # simple chirality assigment with rings
+                        ("{[#GLC]}.{#GLC=C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O)O)O)O)O}",
+                        # 0 1 2 3
+                        [('GLC', 'C C C C C C O O O O O O H H H H H H H H H H H H')],
+                        'C C C C C C O O O O O O H H H H H H H H H H H H',
+                        [(0, 1), (0, 11), (0, 12), (0, 13), (1, 2), (1, 6), (1, 14), (2, 3), (2, 10),
+                         (2, 15), (3, 4), (3, 9), (3, 16), (4, 5), (4, 8), (4, 17), (5, 6), (5, 7), (5, 18),
+                         (7, 19), (8, 20), (9, 21), (10, 22), (11, 23)],
+                        {1: (6, 14, 2, 0), 2: (1, 15, 3, 10), 3: (2, 16, 9, 4),
+                         4: (3, 17, 5, 8), 5: (4, 18, 6, 7)}, {}),
                         # simple chirality assigment between fragments inv
                         ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@@H][>]C(=O)OC}",
                         # 0 1 2 3
@@ -229,16 +229,6 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (1, 2), (0, 3), (0, 4),
                          (0, 5), (1, 7), (7, 6), (7, 8), (8, 9), (8, 10), (8, 11)],
                         {}, {2: (2, 1, 6, 7, 'cis'), 7: (7, 6, 1, 2, 'cis')}),
-                        # test skip virtual nodes
-                        ("{[#SP4]1.2[#SP4].3[#SP1r]1.[#TC4]23}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
-                        [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
-                         ('SP1r', 'O C C O H H H H')],
-                        'O C C O H H H H O C C O H H H H O C C O H H H H',
-                        [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
-                         (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
-                         (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
-                         (18, 21), (18, 22), (19, 23)],
-                        {},{}),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral, ez):
     meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()
@@ -250,7 +240,6 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
         block_graph = meta_mol.nodes[node]['graph']
         target_elements = nx.get_node_attributes(block_graph, 'element')
         sorted_elements =  [target_elements[key] for key in sorted(target_elements)]
-        print(target_elements)
         print("-->", sorted_elements)
         print("-->", ref[1].split())
         assert sorted_elements == ref[1].split()
@@ -306,13 +295,3 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
         return n1["fragname"] == n2["atomname"]
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_atomname_match)
 
-@pytest.mark.parametrize('cgsmiles_str, error_message',(
-(("{[#A][#B]}.{#A=CC[$]}", "Found node #B but no corresponding fragment."),
- ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index."),
- ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead."),
-)))
-def test_syntax_errors(cgsmiles_str, error_message):
-    with pytest.raises(SyntaxError) as e_message:
-        resolver = MoleculeResolver.from_string(cgsmiles_str)
-        cg_mol, aa_mol = resolver.resolve()
-        assert e_message == error_message

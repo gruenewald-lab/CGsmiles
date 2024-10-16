@@ -59,7 +59,7 @@ class MoleculeSampler:
     descriptor is used to highlight the fact that the probabilistic behaviour is driven
     by the bonding descriptors.
 
-    The sampler features a two level connectivity determination. First using the
+     The sampler features a two level connectivity determination. First using the
     `polymer_reactivities` an open bonding descriptor from the growing polymer
     molecule is selected according to the probabilities provided. Subsequently,
     a fragment is randomly chosen that has a matching complementary bonding

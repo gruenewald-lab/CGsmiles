@@ -86,6 +86,16 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
             edges.add(frozenset((n_idx, n_jdx)))
     total_edges = set(map(frozenset, molecule.edges))
     ring_edges = list(total_edges - edges)
+    # in cgsmiles graphs only bonds of order 1 and 2
+    # exists; order 2 means we have a ring at the
+    # higher resolution. These orders are therefore
+    # represented as rings and that requires to
+    # add them to the ring list
+    if not smiles_format:
+        for edge in molecule.edges:
+            if molecule.edges[edge]['order'] != 1:
+                for n in range(1, molecule.edges[edge]['order']):
+                    ring_edges.append(frozenset(edge))
 
     atom_to_ring_idx = defaultdict(list)
     ring_idx_to_bond = {}
@@ -113,7 +123,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
             previous = predecessors[current]
             assert len(previous) == 1
             previous = previous[0]
-            if _write_edge_symbol(molecule, previous, current):
+            if smiles_format and _write_edge_symbol(molecule, previous, current):
                 order = molecule.edges[previous, current].get('order', 1)
                 smiles += order_to_symbol[order]
 

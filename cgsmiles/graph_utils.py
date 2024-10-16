@@ -164,11 +164,8 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
     fraglist = defaultdict(list)
     if meta_graph:
         for meta_node in meta_graph.nodes:
-            # to catch virtual side nodes that do not have a representation
-            # in the atomsitic structure
-            fraggraph = meta_graph.nodes[meta_node].get('graph', None)
-            if fraggraph:
-                fraglist[meta_node] += list(fraggraph.nodes)
+            fraggraph = meta_graph.nodes[meta_node]['graph']
+            fraglist[meta_node] += list(fraggraph.nodes)
     else:
         node_to_fragid = nx.get_node_attributes(molecule, 'fragid')
         for node, fragids in node_to_fragid.items():

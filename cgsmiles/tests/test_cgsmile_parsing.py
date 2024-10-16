@@ -17,7 +17,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         [(0, 1), (1, 2)],
                         [1, 1]),
                         # smiple linear sequenece with multi-edge
-                        ("{[#PMA]=[#PEO]}",
+                        ("{[#PMA]1[#PEO]1}",
                         ["PMA", "PEO"],
                         None,
                         [(0, 1)],
@@ -46,41 +46,6 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 1]),
-                        # smiple cycle sequence bond order to next
-                        ("{[#PMA]1=[#PEO][#PMA]1}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [2, 1, 1]),
-                        # smiple cycle sequence bond order in cycle
-                        ("{[#PMA]=1[#PEO][#PMA]1}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [1, 1, 2]),
-                        # smiple cycle sequence two bond orders
-                        ("{[#PMA].1=[#PEO][#PMA]1}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [2, 1, 0]),
-                        # smiple cycle sequence with % bond order
-                        ("{[#PMA]=%123[#PEO][#PMA]%123}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [1, 1, 2]),
-                        # smiple cycle mixed % and digit marker
-                        ("{[#PMA]=1[#PEO][#PMA]%01}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [1, 1, 2]),
-                        # smiple cycle sequence with % bond order next
-                        ("{[#PMA]%123=[#PEO][#PMA]%123}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [2, 1, 1]),
-                        # smiple cycle sequence with % two bond orders
-                        ("{[#PMA]=%123.[#PEO][#PMA]%123}",
-                        ["PMA", "PEO", "PMA"],
-                        [(0, 1), (1, 2), (0, 2)],
-                        [0, 1, 2]),
                         # smiple cycle sequence with %
                         ("{[#PMA]%123[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
@@ -107,7 +72,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                      #  [1, 1, 1, 1, 1, 1, 1, 1]),
                         # smiple linear sequenece with multi-edge
                         # in cycle
-                        ("{[#PMA]=1[#PMA][#PMA][#PEO]1}",
+                        ("{[#PMA]12[#PMA][#PMA][#PEO]12}",
                         ["PMA", "PMA", "PMA", "PEO"],
                         None,
                         [(0, 1), (1, 2), (2, 3), (0, 3)],
@@ -122,42 +87,6 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          (0, 4), (4, 5), (5, 6), (6, 7),
                          (4, 8), (8, 9), (9, 10), (10, 11)],
                          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
-                        # simple branch expension with bond orders
-                        ("{[#PMA]([#PEO][#PEO]=[#OHter])|3}",
-                        ["PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter"],
-                        [(0, 1), (1, 2), (2, 3),
-                         (0, 4), (4, 5), (5, 6), (6, 7),
-                         (4, 8), (8, 9), (9, 10), (10, 11)],
-                         [1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2]),
-                        # simple branch expension with bond orders
-                        ("{[#PMA].([#PEO][#PEO]=[#OHter])|3}",
-                        ["PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter"],
-                        [(0, 1), (1, 2), (2, 3),
-                         (0, 4), (4, 5), (5, 6), (6, 7),
-                         (4, 8), (8, 9), (9, 10), (10, 11)],
-                         [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2]),
-                        # simple branch expension with bond orders
-                        ("{[#PMA]([#PEO][#PEO]=[#OHter])|3.[#E]}",
-                        ["PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter", "E"],
-                        [(0, 1), (1, 2), (2, 3),
-                         (0, 4), (4, 5), (5, 6), (6, 7),
-                         (4, 8), (8, 9), (9, 10), (10, 11), (8, 12)],
-                         [1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 0]),
-                        # not so simple branch expension with bond orders
-                        ("{[#PMA]([#PEO][#PEO]=[#OHter])$|3.[#E]}",
-                        ["PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter",
-                         "PMA", "PEO", "PEO", "OHter", "E"],
-                        [(0, 1), (1, 2), (2, 3),
-                         (0, 4), (4, 5), (5, 6), (6, 7),
-                         (4, 8), (8, 9), (9, 10), (10, 11), (8, 12)],
-                         [1, 1, 2, 4, 1, 1, 2, 4, 1, 1, 2, 0]),
                         # nested branched with expansion
                         ("{[#PMA]([#PEO]|3)|2}",
                         ["PMA", "PEO", "PEO", "PEO",
