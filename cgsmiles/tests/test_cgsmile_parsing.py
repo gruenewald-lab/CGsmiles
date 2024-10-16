@@ -3,80 +3,107 @@ import networkx as nx
 from cgsmiles import read_cgsmiles
 from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
 
-@pytest.mark.parametrize('smile, nodes, edges, orders',(
+@pytest.mark.parametrize('smile, nodes, charges, edges, orders',(
                         # smiple linear sequence
                         ("{[#PMA][#PEO][#PMA]}",
                         ["PMA", "PEO", "PMA"],
+                        None,
+                        [(0, 1), (1, 2)],
+                        [1, 1]),
+                        # smiple charges
+                        ("{[#PMA+][#PEO][#PMA-0.25]}",
+                        ["PMA", "PEO", "PMA"],
+                        {0: 1.0, 1: 0.0, 2:-0.25},
                         [(0, 1), (1, 2)],
                         [1, 1]),
                         # smiple linear sequenece with multi-edge
                         ("{[#PMA]=[#PEO]}",
                         ["PMA", "PEO"],
+                        None,
                         [(0, 1)],
                         [2]),
                         # simple branched sequence
                         ("{[#PMA][#PMA]([#PEO][#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (2, 3), (1, 4)],
                         [1, 1, 1, 1]),
                         # simple sequence two branches
                         ("{[#PMA][#PMA][#PMA]([#PEO][#PEO])([#CH3])[#PMA]}",
                         ["PMA", "PMA", "PMA", "PEO", "PEO", "CH3", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (2, 3), (3, 4), (2, 5), (2, 6)],
                         [1, 1, 1, 1, 1, 1]),
                         # simple linear sequence with expansion
                         ("{[#PMA]|3}",
                         ["PMA", "PMA", "PMA"],
+                        None,
                         [(0, 1), (1, 2)],
                         [1, 1]),
                         # smiple cycle sequence
                         ("{[#PMA]1[#PEO][#PMA]1}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 1]),
                         # smiple cycle sequence bond order to next
                         ("{[#PMA]1=[#PEO][#PMA]1}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [2, 1, 1]),
                         # smiple cycle sequence bond order in cycle
                         ("{[#PMA]=1[#PEO][#PMA]1}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 2]),
                         # smiple cycle sequence two bond orders
                         ("{[#PMA].1=[#PEO][#PMA]1}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [2, 1, 0]),
                         # smiple cycle sequence with % bond order
                         ("{[#PMA]=%123[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
+                        None,
+                        [(0, 1), (1, 2), (0, 2)],
+                        [1, 1, 2]),
+                        # smiple cycle mixed % and digit marker
+                        ("{[#PMA]=1[#PEO][#PMA]%01}",
+                        ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 2]),
                         # smiple cycle sequence with % bond order next
                         ("{[#PMA]%123=[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [2, 1, 1]),
                         # smiple cycle sequence with % two bond orders
                         ("{[#PMA]=%123.[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [0, 1, 2]),
                         # smiple cycle sequence with %
                         ("{[#PMA]%123[#PEO][#PMA]%123}",
                         ["PMA", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (0, 2)],
                         [1, 1, 1]),
                         # complex cycle
                         ("{[#PMA]1[#PEO]2[#PMA]1[#PEO]2}",
                         ["PMA", "PEO", "PMA", "PEO"],
+                        None,
                         [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)],
                         [1, 1, 1, 1, 1]),
                         # complex cycle with %
                         ("{[#PMA]%134[#PEO]%256[#PMA]%134[#PEO]%256}",
                         ["PMA", "PEO", "PMA", "PEO"],
+                        None,
                         [(0, 1), (1, 2), (0, 2), (1, 3), (2, 3)],
                         [1, 1, 1, 1, 1]),
                      #  # complex cycle with three times same ID
@@ -89,6 +116,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         # in cycle
                         ("{[#PMA]=1[#PMA][#PMA][#PEO]1}",
                         ["PMA", "PMA", "PMA", "PEO"],
+                        None,
                         [(0, 1), (1, 2), (2, 3), (0, 3)],
                         [1, 1, 1, 2]),
                         # simple branch expension
@@ -96,14 +124,56 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ["PMA", "PEO", "PEO", "OHter",
                          "PMA", "PEO", "PEO", "OHter",
                          "PMA", "PEO", "PEO", "OHter"],
+                        None,
                         [(0, 1), (1, 2), (2, 3),
                          (0, 4), (4, 5), (5, 6), (6, 7),
                          (4, 8), (8, 9), (9, 10), (10, 11)],
                          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+                        # simple branch expension with bond orders
+                        ("{[#PMA]([#PEO][#PEO]=[#OHter])|3}",
+                        ["PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter"],
+                        None,
+                        [(0, 1), (1, 2), (2, 3),
+                         (0, 4), (4, 5), (5, 6), (6, 7),
+                         (4, 8), (8, 9), (9, 10), (10, 11)],
+                         [1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2]),
+                        # simple branch expension with bond orders
+                        ("{[#PMA].([#PEO][#PEO]=[#OHter])|3}",
+                        ["PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter"],
+                        None,
+                        [(0, 1), (1, 2), (2, 3),
+                         (0, 4), (4, 5), (5, 6), (6, 7),
+                         (4, 8), (8, 9), (9, 10), (10, 11)],
+                         [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2]),
+                        # simple branch expension with bond orders
+                        ("{[#PMA]([#PEO][#PEO]=[#OHter])|3.[#E]}",
+                        ["PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter", "E"],
+                        None,
+                        [(0, 1), (1, 2), (2, 3),
+                         (0, 4), (4, 5), (5, 6), (6, 7),
+                         (4, 8), (8, 9), (9, 10), (10, 11), (8, 12)],
+                         [1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 0]),
+                        # not so simple branch expension with bond orders
+                        ("{[#PMA]([#PEO][#PEO]=[#OHter])$|3.[#E]}",
+                        ["PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter", "E"],
+                        None,
+                        [(0, 1), (1, 2), (2, 3),
+                         (0, 4), (4, 5), (5, 6), (6, 7),
+                         (4, 8), (8, 9), (9, 10), (10, 11), (8, 12)],
+                         [1, 1, 2, 4, 1, 1, 2, 4, 1, 1, 2, 0]),
                         # nested branched with expansion
                         ("{[#PMA]([#PEO]|3)|2}",
                         ["PMA", "PEO", "PEO", "PEO",
                          "PMA", "PEO", "PEO", "PEO"],
+                        None,
                         [(0, 1), (1, 2), (2, 3),
                          (0, 4), (4, 5), (5, 6), (6, 7)],
                         [1, 1, 1, 1, 1, 1, 1]),
@@ -112,6 +182,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA][#PMA]([#PEO][#PEO]([#OH])[#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "OH",
                          "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (2, 3),
                          (3, 4), (3, 5), (1, 6)],
                         [1, 1, 1, 1, 1, 1]),
@@ -120,6 +191,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA][#PMA]([#PEO][#PEO]([#OH]|2)[#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "OH", "OH",
                          "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (2, 3),
                          (3, 4), (4, 5), (3, 6), (1, 7)],
                         [1, 1, 1, 1, 1, 1, 1]),
@@ -129,6 +201,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA][#PMA]([#PEO][#PEO]([#OH])[#PEO])|2[#PMA]}",
                         ["PMA", "PMA", "PEO", "PEO", "OH", "PEO",
                          "PMA", "PEO", "PEO", "PEO", "OH", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (2, 3),
                          (3, 4), (3, 5), (1, 6), (6, 7), (7, 8),
                          (8, 9), (8, 10), (6, 11)],
@@ -145,6 +218,7 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA][#PMA]([#PEO][#PQ]([#OH])|3[#PEO])[#PMA]}",
                         ["PMA", "PMA", "PEO", "PQ", "OH",
                          "PQ", "OH", "PQ", "OH", "PEO", "PMA"],
+                        None,
                         [(0, 1), (1, 2), (1, 10),
                          (2, 3), (3, 4), (3, 5), (5, 6),
                          (5, 7), (7, 8), (7, 9)],
@@ -164,12 +238,13 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         ("{[#PMA][#PMA]([#PEO][#PQ]([#OH])|3[#PEO])[#PMA]([#CH3])|2}",
                         ["PMA", "PMA", "PEO", "PQ", "OH",
                          "PQ", "OH", "PQ", "OH", "PEO", "PMA", "CH3", "PMA", "CH3"],
+                        None,
                         [(0, 1), (1, 2), (1, 10),
                          (2, 3), (3, 4), (3, 5), (5, 6),
                          (5, 7), (7, 8), (7, 9), (10, 11), (10, 12), (12, 13)],
                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
 ))
-def test_read_cgsmiles(smile, nodes, edges, orders):
+def test_read_cgsmiles(smile, nodes, charges, edges, orders):
     """
     Test that the meta-molecule is correctly reproduced
     from the simplified smile string syntax.
@@ -183,8 +258,12 @@ def test_read_cgsmiles(smile, nodes, edges, orders):
     fragnames = nx.get_node_attributes(meta_mol, 'fragname')
     assert nodes == list(fragnames.values())
 
-@pytest.mark.parametrize('big_smile, smile, bonding, rs, ez, weights',(
-                        # smiple symmetric bonding
+    if charges:
+        set_charges = nx.get_node_attributes(meta_mol, 'charge')
+        assert set_charges == charges
+
+@pytest.mark.parametrize('big_smile, smile, bonding, rs, ez',(
+  # smiple symmetric bonding
                         ("[$]COC[$]",
                          "COC",
                         {0: ["$1"], 2: ["$1"]},

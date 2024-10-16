@@ -332,3 +332,13 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
         return n1["fragname"] == n2["atomname"]
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_atomname_match)
 
+@pytest.mark.parametrize('cgsmiles_str, error_message',(
+(("{[#A][#B]}.{#A=CC[$]}", "Found node #B but no corresponding fragment."),
+ ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index."),
+ ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead."),
+)))
+def test_syntax_errors(cgsmiles_str, error_message):
+    with pytest.raises(SyntaxError) as e_message:
+        resolver = MoleculeResolver.from_string(cgsmiles_str)
+        cg_mol, aa_mol = resolver.resolve()
+        assert e_message == error_message
