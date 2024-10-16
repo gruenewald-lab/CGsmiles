@@ -129,6 +129,17 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                          (0, 4), (4, 5), (5, 6), (6, 7),
                          (4, 8), (8, 9), (9, 10), (10, 11)],
                          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+                        # simple branch expension with charge
+                        ("{[#PMA]([#PEO][#PEO][#OHter-])|3}",
+                        ["PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter",
+                         "PMA", "PEO", "PEO", "OHter"],
+                        {0: 0, 1: 0, 2: 0, 3:-1, 4:0, 5:0, 6:0, 7:-1,
+                         8: 0, 9: 0, 10:0, 11:-1},
+                        [(0, 1), (1, 2), (2, 3),
+                         (0, 4), (4, 5), (5, 6), (6, 7),
+                         (4, 8), (8, 9), (9, 10), (10, 11)],
+                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
                         # simple branch expension with bond orders
                         ("{[#PMA]([#PEO][#PEO]=[#OHter])|3}",
                         ["PMA", "PEO", "PEO", "OHter",

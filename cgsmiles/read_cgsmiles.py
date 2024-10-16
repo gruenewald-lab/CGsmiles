@@ -41,11 +41,11 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     nx.Graph
     """
     prev_node = anchor
-    for bdx, (fragname, n_mon, order) in enumerate(recipe):
+    for bdx, (fragname, charge, n_mon, order) in enumerate(recipe):
         if bdx == 0:
             anchor = current
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, fragname=fragname)
+            mol_graph.add_node(current, fragname=fragname, charge=charge)
             mol_graph.add_edge(prev_node, current, order=order)
 
             prev_node = current
@@ -144,7 +144,7 @@ def read_cgsmiles(pattern):
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
             # at this point the bond order is still 1 unless we have an expansion
-            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1, 1)]
+            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], charge, 1, 1)]
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
@@ -229,7 +229,7 @@ def read_cgsmiles(pattern):
         # the recipe dict together with the anchor residue
         # and expansion number
         if branching:
-            recipes[branch_anchor[-1]].append((fragname, n_mon, prev_bond_order))
+            recipes[branch_anchor[-1]].append((fragname, charge, n_mon, prev_bond_order))
 
         # new we add new residue as often as required
         connection = []
@@ -284,7 +284,7 @@ def read_cgsmiles(pattern):
                 if pattern[eon_a+2] == "|":
                     anchor_order = symbol_to_order[pattern[eon_a+1]]
                     recipe = recipes[prev_node][0]
-                    recipes[prev_node][0] = (recipe[0], recipe[1], anchor_order)
+                    recipes[prev_node][0] = (recipe[0], recipe[1], recipe[2], anchor_order)
                     eon_a += 1
                 # If there is one we find the beginning
                 # of the next branch, residue or end of the string
