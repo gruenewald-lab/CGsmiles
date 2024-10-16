@@ -31,7 +31,7 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     anchor: abc.hashable
         anchor to which to connect current node
 
-    recipie: list[(str, int, int)]
+    recipe: list[(str, int, int)]
         list storing tuples of node names and
         the number of times the node has to be added
         and their bond order
