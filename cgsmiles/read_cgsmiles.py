@@ -185,6 +185,16 @@ def read_cgsmiles(pattern):
         # the fragname starts at the second character and ends
         # one before the last according to the above pattern
         fragname = match.group(0)[2:-1]
+        # check for charge
+        charge = 0.0
+        for sign in ["+", "-"]:
+            if sign in fragname:
+                fragname, charge = fragname.split(sign)
+                if len(charge) == 0:
+                    charge = float(sign+"1")
+                else:
+                    charge = float(sign+charge)
+
         # if this residue is part of a branch we store it in
         # the recipe dict together with the anchor residue
         # and expansion number
@@ -194,7 +204,7 @@ def read_cgsmiles(pattern):
         # new we add new residue as often as required
         connection = []
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, fragname=fragname)
+            mol_graph.add_node(current, fragname=fragname, charge=charge)
 
             if prev_node is not None:
                 mol_graph.add_edge(prev_node, current, order=1)
