@@ -135,20 +135,25 @@ def make_mapped_edges(graph, plain_edges):
             mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
     return mapped_edges
 
-def make_node_pies(graph, pos, cgmapping, colors, use_weights=False):
+def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, linewidth=0.2, use_weights=False):
     """
     Generate the slices for the matplotlip pies used to draw nodes.
     """
     for idx, node in enumerate(graph.nodes):
         position = pos[node]
         fragids = graph.nodes[node].get('fragid', None)
-        if fragids and len(fragids) > 1:
-
+        wedgeprops=None
+        if use_weights and fragids and len(fragids) > 1 and graph.nodes[node].get('weight', 1) == 0:
+            wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
+            slices = np.array([1])
+            pie_colors = ['white', 'white']
+        elif fragids and len(fragids) > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
             pie_colors = []
             edges = []
             angles = []
+            #print("--->", list(neighbors))
             for neigh in neighbors:
                 if graph.nodes[neigh]['fragid'][0] in fragids:
                     edge = pos[neigh] - pos[node]
@@ -158,7 +163,6 @@ def make_node_pies(graph, pos, cgmapping, colors, use_weights=False):
                         angle += 360
                     angles.append(angle)
                     pie_colors.append(colors(graph.nodes[neigh]['fragid'][0]))
-
             # compute the rotation to align the pie
             startangle = angle_of_interest(edges[0], edges[1])
             if startangle < 0:
@@ -170,7 +174,6 @@ def make_node_pies(graph, pos, cgmapping, colors, use_weights=False):
                 if angle < startangle: # and angle > startangle - (360/len(fragids)):
                     color = pre_pie_colors.pop()
                     pre_pie_colors = [color] + pre_pie_colors
-                    print(angle)
             pie_colors = pre_pie_colors[::-1]
             # here we set the weights that split the pies in equal slices
             # I guess in principle on could also use the weight attribute
@@ -178,16 +181,32 @@ def make_node_pies(graph, pos, cgmapping, colors, use_weights=False):
             slices = np.array([weight for n in range(0, len(fragids))])
         else:
             if use_weights:
-                slices = np.array([1])
+                weight = graph.nodes[node].get('weight', 1)
+                if weight == 0:
+                    wedgeprops = {'edgecolor': colors(fragids[0]), 'linewidth':linewidth}
+                    slices = np.array([1])
+                else:
+                    slices = np.array([weight, 1-weight])
+                    wedgeprops = {'edgecolor': colors(fragids[0]), 'linewidth':linewidth}
             else:
                 slices = np.array([1])
-            if cgmapping:
-                pie_colors = [colors(fragids[0]), 'white']
+
+            if cgmapping and use_weights and weight == 0:
+                pie_colors = ['white', 'white']
+            elif cgmapping:
+                pie_colors = [colors(fragids[0]), 'white', 'white']
             else:
                 pie_colors = [colors[node], 'white']
+                if outline:
+                   wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
+
             startangle = 0
+
         pie_kwargs = {'center': position,
-                      'radius': 0.20,
+                      'radius': radius,
                       'colors': pie_colors,
-                      'startangle': startangle}
+                      'startangle': startangle,}
+
+        if wedgeprops:
+            pie_kwargs['wedgeprops'] = wedgeprops
         yield slices, pie_kwargs

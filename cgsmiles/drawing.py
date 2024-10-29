@@ -13,12 +13,21 @@ def draw_molecule(graph,
                   cg_mapping=True,
                   colors=None,
                   labels=None,
-                  edge_widths=None,
-                  mapped_edge_width=20,
+                  edge_widths=10,
+                  mapped_edge_width=80,
                   pos=None,
                   ax=None,
+                  scale=4,
+                  fontsize=64,
+                  default_bond=None,
+                  default_angle=120,
                   layout_method='md_layout',
-                  layout_kwargs=None):
+                  circle=False,
+                  outline=False,
+                  layout_kwargs=None,
+                  use_weights=False,
+                  align_with='diag',
+                  text_color='black'):
     """
     Draw the graph of a molecule with a coarse-grained projection
     if `cg_mapping` is set to True. The membership of atoms to the
@@ -27,6 +36,12 @@ def draw_molecule(graph,
     # generate figure in case we don't get one
     if not ax:
         fig, ax = plt.subplots(1,1)
+
+    # scale edge widths and fontsize
+    if scale:
+        edge_widths = edge_widths / scale
+        mapped_edge_width = mapped_edge_width / scale
+        fontsize = fontsize / scale
 
     # default labels are the element names
     if labels is None:
@@ -45,13 +60,30 @@ def draw_molecule(graph,
 
     # assing color defaults
     if colors is None and cg_mapping:
-        colors = default_colormap(len(ids))
+        colors = default_colormap(len(id_set))
     elif colors is None:
         colors = {node: ele_to_color[ele] for node, ele in nx.get_node_attributes(graph, 'element').items() }
 
     # if no positions are given generate layout
+    bbox = ax.get_position(True)
+
+    # some axis magic
+    fig_width_inch, fig_height_inch = ax.figure.get_size_inches()
+    w = bbox.width*scale*fig_width_inch
+    h = bbox.height*scale*fig_height_inch
     if not pos:
-        pos = MoleculeLayouter2D(graph).md_layout()
+        if default_bond is None:
+            default_bond = bbox.width /4
+        print("-->", default_bond)
+        #print(pos)
+        pos = MoleculeLayouter2D(graph,
+                                 default_bond=default_bond,
+                                 default_angle=default_angle,
+                                 bounding_box=[w, h],
+                                 circle=circle,
+                                 align_with=align_with).md_layout()
+
+
 
     # generate starting and stop positions for edges
     edges, arom_edges, plain_edges = make_graph_edges(graph, pos)
@@ -78,23 +110,25 @@ def draw_molecule(graph,
                                              alpha=0.5))
 
     # now we draw nodes
-    for slices, pie_kwargs in make_node_pies(graph, pos, cg_mapping, colors):
+    for slices, pie_kwargs in make_node_pies(graph, pos, cg_mapping, colors, outline=outline, radius=default_bond/3., use_weights=use_weights, linewidth=edge_widths):
         p, t = ax.pie(slices,
                       **pie_kwargs)
-        p[0].set_zorder(3)
+        for pie in p:
+            pie.set_zorder(3)
 
     pos_arr = np.asarray([pos_val for pos_val in pos.values()])
 
     # add node texts
+    zorder=4
     for idx, label in labels.items():
         x, y = pos[idx]
         ax.text(x, y, label,
-                zorder=4,
-                fontsize='large',
+                zorder=zorder,
+                fontsize=fontsize,
                 verticalalignment='center_baseline',
                 horizontalalignment='center',
-                color='black')
-
+                color=text_color)
+        zorder+=1
 
     # compute initial view
     minx = np.amin(np.ravel(pos_arr[:, 0]))
@@ -102,17 +136,29 @@ def draw_molecule(graph,
     miny = np.amin(np.ravel(pos_arr[:, 1]))
     maxy = np.amax(np.ravel(pos_arr[:, 1]))
 
-    w = maxx - minx
-    h = maxy - miny
 
-    padx, pady = 0.18 * w, 0.18 * h + 0.2
+    w = bbox.width  #maxx - minx
+    h = bbox.height #maxy - miny
 
-    if minx-padx != maxx+pady - 0.2 and miny-pady - 0.2 != maxy+padx:
-        # set appropiate axis limits
-        ax.set_xlim(minx-padx, maxx+pady)
-        ax.set_ylim(miny-pady, maxy+padx)
-    else:
-        ax.set_xlim(minx-padx-2.5, maxx+pady+2.5)
-        ax.set_ylim(miny-pady-2.5, maxy+padx+2.5)
+    #padx, pady = 0.18 * w, 0.18 * h + 0.2
+
+  # if minx-padx != maxx+pady - 0.2 and miny-pady - 0.2 != maxy+padx:
+  #     # set appropiate axis limits
+  #     ax.set_xlim(minx-padx, maxx+pady)
+  #     ax.set_ylim(miny-pady, maxy+padx)
+  # else:a
+    #minx, maxx = ax.get_xlim()
+    #miny, maxy = ax.get_ylim()
+    #w = maxx-minx/2.
+    #h = maxy-miny/2.
+    #ax.set_xlim(-w, w)
+    #ax.set_ylim(-h, h)
+
+    fig_width_inch, fig_height_inch = ax.figure.get_size_inches()
+    w = bbox.width*scale*fig_width_inch
+    h = bbox.height*scale*fig_height_inch
+    print(w, h)
+    ax.set_xlim(-w, w)
+    ax.set_ylim(-h, h)
 
     return ax
