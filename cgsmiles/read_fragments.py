@@ -188,7 +188,9 @@ def strip_bonding_descriptors(fragment_string):
                         weight, smile_iter = get_weight(smile_iter)
                         # hydrogen atoms are implicit so we filter
                         # them out here
-                        if atom[1:] == 'H':
+                        if atom[1:] == 'H' and node_count == 0:
+                            hydrogen_weights[1].append(weight)
+                        elif atom[1:] == 'H':
                             hydrogen_weights[prev_node].append(weight)
                         else:
                             weights[node_count] = weight
