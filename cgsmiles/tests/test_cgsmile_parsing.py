@@ -262,33 +262,46 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
         set_charges = nx.get_node_attributes(meta_mol, 'charge')
         assert set_charges == charges
 
-@pytest.mark.parametrize('big_smile, smile, bonding, rs, ez',(
+@pytest.mark.parametrize('big_smile, smile, bonding, rs, ez, weights, hweights',(
   # smiple symmetric bonding
                         ("[$]COC[$]",
                          "COC",
                         {0: ["$1"], 2: ["$1"]},
                         None,
                         None,
+                        None,
                         None),
-                        # smiple symmetric bonding with weigth
+                        # smiple symmetric bonding with weight
                         ("[$]C[O;0.5]C[$]",
                          "C[O]C",
                         {0: ["$1"], 2: ["$1"]},
                         None,
                         None,
-                        {1: 0.5}),
-                        # smiple symmetric bonding with weigth
+                        {1: 0.5},
+                        None),
+                        # smiple symmetric bonding with weight
                         # using cgsmiles string
                         ("[$][#TC4][#OT1;0.5][#CD1][$]",
                          "[#TC4][#OT1][#CD1]",
                         {0: ["$1"], 2: ["$1"]},
                         None,
                         None,
-                        {1: 0.5}),
+                        {1: 0.5},
+                        None),
+                        # smiple symmetric bonding with weight
+                        # using open smiles and hweights
+                        ("[$]CO[C;0.5][$]([H;0.1])[H;0.2]",
+                         "CO[C]([H])[H]",
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None,
+                        {2: 0.5},
+                        {2: [0.1, 0.2]}),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
                         {0: ["$1A1"], 2: ["$1A1"]},
+                        None,
                         None,
                         None,
                         None),
@@ -298,11 +311,13 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {1: ["$1"], 2: ["$1"]},
                         None,
                         None,
+                        None,
                         None),
                         # simple symmetric but with explicit hydrogen
                         ("[$][CH2]O[CH2][$]",
                          "[CH2]O[CH2]",
                         {0: ["$1"], 2: ["$1"]},
+                        None,
                         None,
                         None,
                         None),
@@ -312,11 +327,13 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: ["$1"], 2: ["$1", "$11"]},
                         None,
                         None,
+                        None,
                         None),
                         # named different bonding descriptors
                         ("[$1]CCCC[$2]",
                          "CCCC",
                         {0: ["$11"], 3: ["$21"]},
+                        None,
                         None,
                         None,
                         None),
@@ -326,11 +343,13 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: ["$11"], 1: ["$21"]},
                         None,
                         None,
+                        None,
                         None),
                         # bonding descript. after branch
                         ("C(COC[$1])[$2]CCC[$3]",
                          "C(COC)CCC",
                         {0: ["$21"], 3: ["$11"], 6: ["$31"]},
+                        None,
                         None,
                         None,
                         None),
@@ -340,12 +359,14 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: [">1"], 2: ["<1"]},
                         None,
                         None,
+                        None,
                         None),
                         # simple chirality in residue
                         ("[>]C[C@](F)(B)N[<]",
                         "C[C](F)(B)N",
                         {0: [">1"], 4: ["<1"]},
                         {1: ('@', [])},
+                        None,
                         None,
                         None),
                         # simple chirality inverse in residue
@@ -354,6 +375,7 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: [">1"], 4: ["<1"]},
                         {1: ('@@', [])},
                         None,
+                        None,
                         None),
                         # \ fragment split
                         ("[>]CC(\F)=[<]",
@@ -361,6 +383,7 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: [">1"], 1: ["<2"]},
                         None,
                         {2: (2, 1, '\\')},
+                        None,
                         None),
                         # / fragment split
                         ("[>]CC(/F)=[<]",
@@ -368,6 +391,7 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: [">1"], 1: ["<2"]},
                         None,
                         {2: (2, 1, '/')},
+                        None,
                         None),
                         # both in one fragment
                         ("[>]CC(/F)=C(\F)C[<]",
@@ -375,10 +399,11 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: [">1"], 5: ["<1"]},
                         None,
                         {2: (2, 1, '/'), 4: (4, 3, '\\')},
+                        None,
                         None),
 ))
-def test_strip_bonding_descriptors(big_smile, smile, bonding, rs, ez, weights):
-    new_smile, new_bonding, rs_isomers, ez_isomers, weights_out = strip_bonding_descriptors(big_smile)
+def test_strip_bonding_descriptors(big_smile, smile, bonding, rs, ez, weights, hweights):
+    new_smile, new_bonding, rs_isomers, ez_isomers, weights_out, hweights_out = strip_bonding_descriptors(big_smile)
     assert new_smile == smile
     assert new_bonding == bonding
     if rs:
@@ -391,6 +416,9 @@ def test_strip_bonding_descriptors(big_smile, smile, bonding, rs, ez, weights):
     if weights:
         for node, weight in weights.items():
             assert weights_out[node] == weight
+    if hweights:
+        for node, weight in hweights.items():
+            assert hweights_out[node] == weight
 
 @pytest.mark.parametrize('fragment_str, nodes, edges',(
                         # single fragment
