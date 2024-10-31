@@ -74,8 +74,6 @@ def draw_molecule(graph,
     if not pos:
         if default_bond is None:
             default_bond = bbox.width /4
-        print("-->", default_bond)
-        #print(pos)
         pos = MoleculeLayouter2D(graph,
                                  default_bond=default_bond,
                                  default_angle=default_angle,
@@ -103,8 +101,9 @@ def draw_molecule(graph,
                                      linewidths=edge_widths, zorder=2))
     if cg_mapping:
         for fragid, frag_edges in mapped_edges.items():
+            color = colors(fragid)
             ax.add_collection(LineCollection(frag_edges,
-                                             color=colors(fragid),
+                                             color=color,
                                              linewidths=mapped_edge_width,
                                              zorder=1,
                                              alpha=0.5))
@@ -157,7 +156,6 @@ def draw_molecule(graph,
     fig_width_inch, fig_height_inch = ax.figure.get_size_inches()
     w = bbox.width*scale*fig_width_inch
     h = bbox.height*scale*fig_height_inch
-    print(w, h)
     ax.set_xlim(-w, w)
     ax.set_ylim(-h, h)
 

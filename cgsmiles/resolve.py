@@ -288,7 +288,10 @@ class MoleculeResolver:
             if the high resolution level graph has all-atom resolution
             default: False
         """
-        for prev_node, node in self.meta_graph.edges:
+        edges = list(self.meta_graph.edges)
+        #import random
+        #random.shuffle(edges)
+        for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
                 node_graph = self.meta_graph.nodes[node]['graph']

@@ -166,7 +166,6 @@ def bond_potential(atom_pos, ref):
     Compute energy associated to the bonds.
     """
     energy = 100000*(ref-np.linalg.norm(atom_pos[1]-atom_pos[0]))**2
-    #print(ref, np.linalg.norm(atom_pos[1]-atom_pos[0]))
     return energy
 
 def angle_potential(atom_pos, ref):
@@ -225,7 +224,6 @@ def optimize_geometry_2D(positions, atom_to_idx, interactions, inter_methods, ne
                                          method='L-BFGS-B',
                                          options={'epsilon': 0.2, 'ftol':0.01, 'maxiter':5000})
 
-    #print("---")
     positions = opt_result['x'].reshape((-1, 2))
     return positions, opt_result['fun']
 
@@ -260,7 +258,6 @@ class MoleculeLayouter2D:
         neighbors = neighbors.astype(bool)
         neighbors = neighbors[np.triu_indices_from(neighbors, k=1)].ravel()
         pos, energy = optimize_geometry_2D(pos, self.atom_to_idx, interactions, self.inter_methods, neighbors)
-        print(energy)
         return pos, energy
 
     def vsepr_layout(self):
@@ -301,7 +298,6 @@ class MoleculeLayouter2D:
         start = list(self.graph.nodes)[0]
         for idx, (node, next_node) in enumerate(nx.find_cycle(self.graph, source=start)):
             pos[node] = positions[idx]
-        print(pos)
         return pos
 
     def rotate_to_diagonal(self, positions):
@@ -319,7 +315,6 @@ class MoleculeLayouter2D:
         elif self.align_with == 'y':
             diagonal = np.array([0, 1])
 
-        #print(diagonal)
         angle = np.arctan2(diagonal[1], diagonal[0]) - np.arctan2(vector[1], vector[0])
         # rotate object onto diagonal
         rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],

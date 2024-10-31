@@ -51,7 +51,6 @@ def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
     """
     # Step 1: Make a horizontal line from sep to bond_length - sep, and figure
     #         out how far we'll need to rotate it. This line is (x0p, x1p)
-    #print(p0, p1)
     x0, y0 = p0
     x1, y1 = p1
     bond_length = math.sqrt((x0 - x1)**2 + (y0-y1)**2)
@@ -153,7 +152,6 @@ def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, lin
             pie_colors = []
             edges = []
             angles = []
-            #print("--->", list(neighbors))
             for neigh in neighbors:
                 if graph.nodes[neigh]['fragid'][0] in fragids:
                     edge = pos[neigh] - pos[node]
