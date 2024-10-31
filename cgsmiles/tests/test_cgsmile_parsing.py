@@ -297,6 +297,14 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         None,
                         {2: 0.5},
                         {2: [0.1, 0.2]}),
+                        # H atom with weight goes first
+                        ("[H;0.3]C[$]O[C;0.5][$]",
+                         "[H]CO[C]",
+                        {1: ["$1"], 3: ["$1"]},
+                        None,
+                        None,
+                        {3: 0.5},
+                        {1: [0.3]}),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
