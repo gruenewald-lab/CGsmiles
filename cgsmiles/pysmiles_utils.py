@@ -84,9 +84,14 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
             mol_graph.nodes[node]["fragid"] = mol_graph.nodes[ref_node]["fragid"]
             mol_graph.nodes[node]["fragname"] = mol_graph.nodes[ref_node]["fragname"]
         if mol_graph.nodes[node].get("element", "*") == "H":
-            # make sure the weights are copied for implicit h-atoms
             anchor = list(mol_graph.neighbors(node))[0]
-            weight = mol_graph.nodes[anchor].get("weight", 1)
+            # the weight for the hydrogen atom was explicitly set
+            hweights = mol_graph.nodes[anchor].get('hweight', [])
+            if hweights:
+                weight = hweights.pop()
+            # make sure the weights are copied for implicit h-atoms
+            else:
+                weight = mol_graph.nodes[anchor].get("weight", 1)
             mol_graph.nodes[node]["weight"] = weight
 
 def annotate_ez_isomers(molecule):

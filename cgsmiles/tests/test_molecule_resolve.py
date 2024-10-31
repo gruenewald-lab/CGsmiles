@@ -259,6 +259,16 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
                          (18, 21), (18, 22), (19, 23)],
                         {},{}, {0: 0.5, 1: 0.1, 5: 0.1, 4: 0.5, 8: 0.5, 9: 0.1, 12: 0.5, 13: 0.1}),
+                        # test 2 weights and hydrogen weights
+                        ("{[#SP4]1[#SP4][#SP1r]1}.{#SP4=[O;0.5]([H;0.2])[C;0.1][$]C[$]O,#SP1r=[$]OC[$]CO}",
+                        [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
+                         ('SP1r', 'O C C O H H H H')],
+                        'O C C O H H H H O C C O H H H H O C C O H H H H',
+                        [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
+                         (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
+                         (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
+                         (18, 21), (18, 22), (19, 23)],
+                        {},{}, {0: 0.5, 1: 0.1, 5: 0.1, 4: 0.2, 8: 0.5, 9: 0.1, 12: 0.2, 13: 0.1}),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral, ez, weights):
     meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()
