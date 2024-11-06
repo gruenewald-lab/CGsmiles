@@ -58,19 +58,12 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
         graph describing the full molecule without hydrogen atoms
     """
     for node in mol_graph.nodes:
-        if mol_graph.nodes[node].get('aromatic', False):
-            mol_graph.nodes[node]['hcount'] = 0
 
         if mol_graph.nodes[node].get('bonding', False) and  \
-        mol_graph.nodes[node].get('element', '*') == "H":
+            mol_graph.nodes[node].get('element', '*') == "H":
             mol_graph.nodes[node]['single_h_frag'] = True
 
-    for edge in mol_graph.edges:
-        if mol_graph.edges[edge]['order'] == 1.5:
-            mol_graph.edges[edge]['order'] = 1
-
-    pysmiles.smiles_helper.mark_aromatic_atoms(mol_graph, strict=False)
-    pysmiles.smiles_helper.mark_aromatic_edges(mol_graph)
+    pysmiles.smiles_helper.correct_aromatic_rings(mol_graph, strict=True)
 
     nx.set_node_attributes(mol_graph, 0, 'hcount')
 
