@@ -244,7 +244,7 @@ def read_cgsmiles(pattern):
             # here we have a double edge
             for cycle_edge in cycle_edges:
                 if cycle_edge in mol_graph.edges:
-                    msg=("You define two edges between the same node."
+                    msg=("You define two edges between the same node. "
                          "Use bond order symbols instead.")
                     raise SyntaxError(msg)
                 mol_graph.add_edge(cycle_edge[0],

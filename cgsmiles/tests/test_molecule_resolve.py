@@ -311,10 +311,9 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
  ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index."),
  ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead."),
  # see: https://github.com/marrink-lab/polyply_1.0/issues/390#issuecomment-2455472121
- ("CC(c1ccccc1)CC(c1ccccc1)CCCCCCCCCC(CC)CC(CC)CC(c1ccccc1)CC(c1ccccc1)", "No polymeric fragments detected; likely not a valid CGSmiles/BigSMILES string."),
+ ("CC(c1ccccc1)CC(c1ccccc1)CCCCCCCCCC(CC)CC(CC)CC(c1ccccc1)CC(c1ccccc1)", "No polymeric fragments detected; likely not a valid CGSmiles string."),
 )))
 def test_syntax_errors(cgsmiles_str, error_message):
-    with pytest.raises(SyntaxError) as e_message:
+    with pytest.raises(SyntaxError, match=error_message):
         resolver = MoleculeResolver.from_string(cgsmiles_str)
         cg_mol, aa_mol = resolver.resolve()
-        assert e_message == error_message
