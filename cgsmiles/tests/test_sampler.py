@@ -104,7 +104,7 @@ def test_add_fragment(graph_str,
     ref_graph = read_cgsmiles(ref_mol)
     nx.set_node_attributes(ref_graph, bonding, 'bonding')
     nx.set_node_attributes(ref_graph, fragid, 'fragid')
-    nx.set_node_attributes(ref_graph, 1, 'weight')
+    nx.set_node_attributes(ref_graph, 1, 'w')
     atomnames = nx.get_node_attributes(ref_graph, 'fragname')
     nx.set_node_attributes(ref_graph, atomnames, 'atomname')
     nx.set_node_attributes(ref_graph, resnames, 'fragname')

@@ -248,7 +248,9 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
                          (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
                          (18, 21), (18, 22), (19, 23)],
-                        {},{}, {0: 0.5, 4: 0.5, 8: 0.5, 12: 0.5}),
+                        {},{}, {0: 0.5, 1: 1, 2: 1, 3: 1, 4: 0.5, 5: 1, 6: 1, 7: 1, 8: 0.5,
+                        9: 1, 10: 1, 11: 1, 12: 0.5, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1,
+                        18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1}),
                         # test 2 weights
                         ("{[#SP4]1[#SP4][#SP1r]1}.{#SP4=[OH;0.5][C;0.1][$]C[$]O,#SP1r=[$]OC[$]CO}",
                         [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
@@ -312,7 +314,7 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
     if weights:
         mol_weights = {node: 1 for node in ref_graph}
         mol_weights.update(weights)
-        weights_assigned = nx.get_node_attributes(molecule, 'weight')
+        weights_assigned = nx.get_node_attributes(molecule, 'w')
         assert mol_weights == weights_assigned
 
 @pytest.mark.parametrize('case, cgsmiles_str, ref_string',(
@@ -342,13 +344,14 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
         return n1["fragname"] == n2["atomname"]
     assert nx.is_isomorphic(ref_graph, molecule, node_match=_atomname_match)
 
-@pytest.mark.parametrize('cgsmiles_str, error_message',(
-(("{[#A][#B]}.{#A=CC[$]}", "Found node #B but no corresponding fragment."),
- ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index."),
- ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead."),
+@pytest.mark.parametrize('cgsmiles_str, error_message, error_type',(
+(("{[#A][#B]}.{#A=CC[$]}", "Found node #B but no corresponding fragment.", SyntaxError),
+ ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index.", SyntaxError),
+ ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead.", SyntaxError),
+ ("{[#A;w=abc][#B]}.{#A=CC[$],#B=OC[$]}", "Argument 'w' must be of type float.", TypeError),
 )))
-def test_syntax_errors(cgsmiles_str, error_message):
-    with pytest.raises(SyntaxError) as e_message:
+def test_syntax_errors(cgsmiles_str, error_message, error_type):
+    with pytest.raises(error_type) as e_message:
         resolver = MoleculeResolver.from_string(cgsmiles_str)
         cg_mol, aa_mol = resolver.resolve()
         assert e_message == error_message

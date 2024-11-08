@@ -91,8 +91,8 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
                 weight = hweights.pop()
             # make sure the weights are copied for implicit h-atoms
             else:
-                weight = mol_graph.nodes[anchor].get("weight", 1)
-            mol_graph.nodes[node]["weight"] = weight
+                weight = mol_graph.nodes[anchor].get("w", 1)
+            mol_graph.nodes[node]["w"] = weight
 
 def annotate_ez_isomers(molecule):
     """
