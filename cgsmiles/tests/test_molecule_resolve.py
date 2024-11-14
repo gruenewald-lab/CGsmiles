@@ -222,6 +222,16 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (1, 2), (0, 3), (0, 4),
                          (0, 5), (1, 7), (7, 6), (7, 8), (8, 9), (8, 10), (8, 11)],
                         {}, {2: (2, 1, 6, 7, 'trans'), 7: (7, 6, 1, 2, 'trans')}),
+                        # have more than one e/z pair
+                        ("{[#A][#B][#B][#C]}.{#A=CC(/F)=[>],#B=[<]=C(\F)C=[>],#C=[<]=C(\F)C}",
+                        [('A', 'C C F H H H'), ('B', 'C F C H'),
+                         ('B', 'C F C H'), ('C', 'C F C H H H')],
+                        'C C F H H H C F C H C F C H C F C H H H',
+                        [(0, 1), (0, 3), (0, 4), (0, 5), (1, 2), (1, 6), (6, 7), (6, 8),
+                         (8, 10), (8, 9), (10, 11), (10, 12), (12, 14), (12, 13),
+                         (14, 15), (14, 16), (16, 17), (16, 18), (16, 19)],
+                        {}, {2: (2, 1, 6, 7, 'trans'), 7: (7, 6, 1, 2, 'trans'),
+                             11: (11, 10, 14, 15, 'cis'), 15: (15, 14, 10, 11, 'cis')}),
                         # simple ez isomerism assigment between fragments inv
                         ("{[#A][#B]}.{#A=CC(/F)=[$],#B=[$]=C(/F)C}",
                         [('A', 'C C F H H H'), ('B', 'C F C H H H')],

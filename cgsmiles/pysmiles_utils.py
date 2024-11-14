@@ -97,7 +97,7 @@ def annotate_ez_isomers(molecule):
     ez_isomer_atoms = nx.get_node_attributes(molecule, 'ez_isomer_atoms')
     ez_isomer_class = nx.get_node_attributes(molecule, 'ez_isomer_class')
     ez_isomer_atoms_list = [atoms + [_class] for atoms, _class in zip(ez_isomer_atoms.values(), ez_isomer_class.values())]
-    ez_isomer_pairs = list(zip(ez_isomer_atoms_list[:-1], ez_isomer_atoms_list[1:]))
+    ez_isomer_pairs = list(zip(ez_isomer_atoms_list[::2], ez_isomer_atoms_list[1::2]))
     if len(ez_isomer_atoms)%2 != 0:
         msg = ("You have an uneven amount of atoms marked as CIS/TRANS isomers."
                "We will drop the last atom from assigning the iosmers.")
