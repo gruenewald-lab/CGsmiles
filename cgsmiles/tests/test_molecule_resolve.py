@@ -260,11 +260,7 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
         block_graph = meta_mol.nodes[node]['graph']
         target_elements = nx.get_node_attributes(block_graph, 'element')
         sorted_elements =  [target_elements[key] for key in sorted(target_elements)]
-        print(target_elements)
-        print("-->", sorted_elements)
-        print("-->", ref[1].split())
         assert sorted_elements == ref[1].split()
-        print(counter)
         counter += 1
     # make the full scale reference graph
     ref_graph = nx.Graph()
