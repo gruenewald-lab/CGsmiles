@@ -16,7 +16,10 @@ def check_and_cast_types(bound_args, signature):
                 raise TypeError(f"Argument '{name}' must be of type {expected_type.__name__}")
     return bound_args
 
-def _parse_node(string_iteratable, dialect_signature):
+def _parse_node(string_iterable,
+                dialect_signature,
+                annotation_sep_token=';',
+                annotation_assign_token='='):
     """
     This base function parsers a CGSmiles node. It must be
     decorated with a signature which defines the dialect.
@@ -25,10 +28,10 @@ def _parse_node(string_iteratable, dialect_signature):
     """
     args_found = []
     kwargs_found = {}
-    if len(string_iteratable) > 0:
-        elements = string_iteratable.split(';')
+    if len(string_iterable) > 0:
+        elements = string_iterable.split(annotation_sep_token)
         for entry in elements:
-            key_value = entry.split('=')
+            key_value = entry.split(annotation_assign_token)
             if len(key_value) == 1:
                 args_found.append(key_value[0])
             else:
@@ -43,9 +46,9 @@ def _parse_node(string_iteratable, dialect_signature):
 
 def create_dialect(default_attributes):
     """
-    Creates a signature of default attributes.
+    Creates a signature of default annotations.
     Note that the order of the entries in the dict
-    determines the order of the args accapted.
+    determines the order of the args accepted.
     """
     parameters = []
     for argname, default_value in default_attributes.items():
@@ -73,6 +76,4 @@ parse_graph_base_node = partial(_parse_node, dialect_signature=GRAPH_BASE)
 # in case of cgsmiles fragments it is a bit doing
 # double the work
 fragment_base = create_dialect({"w": 1.0})
-print(GRAPH_BASE)
-print(fragment_base)
 _fragment_node_parser = partial(_parse_node, dialect_signature=fragment_base)
