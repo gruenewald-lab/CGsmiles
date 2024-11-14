@@ -308,12 +308,20 @@ class MoleculeResolver:
                 # bonding descriptors are assumed to have bonding order 1
                 # unless they are specifically annotated
                 order = int(bonding[0][-1])
+                if self.molecule.nodes[edge[0]].get('aromatic', False) and\
+                   self.molecule.nodes[edge[1]].get('aromatic', False):
+                    order = 1.5
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
                 if all_atom:
                     for edge_node in edge:
-                        if self.molecule.nodes[edge_node]['element'] != 'H':
-                            self.molecule.nodes[edge_node]['hcount'] -= 1
-
+                        if self.molecule.nodes[edge_node]['element'] == 'H':
+                            continue
+                        hcount = self.molecule.nodes[edge_node]['hcount']
+                        if self.molecule.nodes[edge_node].get('aromatic', 'False'):
+                            hcount = max(0, hcount - 1.5)
+                        else:
+                            hcount = max(0, hcount - 1)
+                        self.molecule.nodes[edge_node]['hcount'] = hcount
     def squash_atoms(self):
         """
         Applies the squash operator by removing the duplicate node
