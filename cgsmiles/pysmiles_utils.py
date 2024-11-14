@@ -58,20 +58,22 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
         graph describing the full molecule without hydrogen atoms
     """
     for node in mol_graph.nodes:
-        if mol_graph.nodes[node].get('aromatic', False):
-            mol_graph.nodes[node]['hcount'] = 0
 
         if mol_graph.nodes[node].get('bonding', False) and  \
-        mol_graph.nodes[node].get('element', '*') == "H":
+            mol_graph.nodes[node].get('element', '*') == "H":
             mol_graph.nodes[node]['single_h_frag'] = True
 
-    for edge in mol_graph.edges:
-        if mol_graph.edges[edge]['order'] == 1.5:
-            mol_graph.edges[edge]['order'] = 1
-
-    pysmiles.smiles_helper.mark_aromatic_atoms(mol_graph, strict=False)
-    pysmiles.smiles_helper.mark_aromatic_edges(mol_graph)
-
+    try:
+        pysmiles.smiles_helper.correct_aromatic_rings(mol_graph, strict=True)
+    except SyntaxError as pysmiles_err:
+        print(pysmiles_err)
+        msg = ("Likely you are writing an aromatic molecule that does not "
+               "show delocalization-induced molecular equivalency and thus "
+               "is not considered aromatic. For example, 4-methyl imidazole "
+               "is often written as [nH]1cc(nc1)C, but should be written as "
+               "[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
+               "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
+        raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
 
     pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
