@@ -438,6 +438,9 @@ class MoleculeResolver:
         """
         # here we figure out how many resolutions we are dealing with
         elements = re.findall(r"\{[^\}]+\}", cgsmiles_str)
+        if len(elements) == 0:
+            raise SyntaxError("No polymeric fragments detected; likely "
+                              "not a valid CGSmiles string.")
         # the first one describes our lowest resolution
         molecule = read_cgsmiles(elements[0])
         # the rest are fragment lists
