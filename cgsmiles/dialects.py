@@ -118,10 +118,10 @@ def create_dialect(default_attributes, accept_kwargs=True):
 ##########################################################
 # this one is for global use
 # it is the base CGSmiles dialect
-GRAPH_BASE = create_dialect({"fragname": "NaN",
-                             "c": 0.0,
-                             "w": 1.0})
-parse_graph_base_node = partial(_parse_dialect_string, dialect_signature=GRAPH_BASE)
+CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": "NaN",
+                                           "c": 0.0,
+                                           "w": 1.0})
+parse_graph_base_node = partial(_parse_dialect_string, dialect_signature=CGSMILES_DEFAULT_DIALECT)
 # this one is an internal fukery until the pysmiles
 # base parser is available
 # it just strips the kwargs from fragments before
