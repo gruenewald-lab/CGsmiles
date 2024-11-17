@@ -1,11 +1,15 @@
 """
 Functions for reading the fragment list.
 """
+import logging
 from collections import defaultdict
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 from .dialects import _fragment_node_parser
+
+logger = logging.getLogger('pysmiles')
+logger.setLevel(level=logging.ERROR)
 
 class PeekIter(object):
     """
@@ -160,13 +164,12 @@ def strip_bonding_descriptors(fragment_string):
                             chiral_token = '@' + next(smile_iter)
                         rs_isomers[node_count] = (chiral_token, [])
                     # we have weights
-                    elif peek == ';':
+                    elif peek == ';' and not record_attributes:
                         record_attributes = True
                     elif record_attributes:
                         attribute_str += peek
                     else:
                         atom += peek
-
                     peek = next(smile_iter)
 
                 record_attributes=False

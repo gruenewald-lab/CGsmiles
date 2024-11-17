@@ -287,6 +287,14 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         None,
                         {'w': {0: 1, 1: 0.5, 2: 1}},
                         None),
+                        # smiple kwarg not part of the defaults
+                        ("[$]C[O;q=4;p=s][C;q=3;p=l][$]",
+                         "C[O][C]",
+                        {0: ["$1"], 2: ["$1"]},
+                        None,
+                        None,
+                        {'q': {1: '4', 2: '3'}, 'p': {1: 's', 2: 'l'}},
+                        None),
                         # smiple symmetric bonding with weight
                         # using cgsmiles string
                         ("[$][#TC4][#OT1;0.5][#CD1][$]",

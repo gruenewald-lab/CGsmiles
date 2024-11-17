@@ -22,8 +22,13 @@ from cgsmiles import MoleculeResolver
 ))
 def test_write_fragments(input_string):
     frag_dict = read_fragments(input_string)
+    for g in frag_dict.values():
+        print(g.nodes(data=True))
     out_string = write_cgsmiles_fragments(frag_dict, smiles_format=True)
     frag_dict_out = read_fragments(out_string)
+    for g in frag_dict_out.values():
+        print(g.nodes(data=True))
+    print(out_string)
     assert set(frag_dict_out) == set(frag_dict)
     for fragname in frag_dict:
         assertEqualGraphs(frag_dict_out[fragname], frag_dict[fragname])
@@ -58,6 +63,7 @@ def test_write_cgsmiles(input_string):
     fragment_dicts = resolver.fragment_dicts
     molecule = resolver.molecule
     output_string = write_cgsmiles(molecule, fragment_dicts)
+    print(output_string)
     out_resolver =  MoleculeResolver.from_string(output_string)
     out_mol = out_resolver.molecule
     assertEqualGraphs(molecule, out_mol)
