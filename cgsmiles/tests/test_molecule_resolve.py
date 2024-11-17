@@ -355,6 +355,8 @@ def test_resolve_cases(case, cgsmiles_str, ref_string):
  ("{[#A][#B]1}.{#A=CC[$],#B=OC[$]}", "You have a dangling ring index.", SyntaxError),
  ("{[#A]1[#B]1}{#A=CC[$],#B=OC[$]}", "You define two edges between the same node. Use bond order symbols instead.", SyntaxError),
  ("{[#A;w=abc][#B]}.{#A=CC[$],#B=OC[$]}", "Argument 'w' must be of type float.", TypeError),
+ ("{[#A;w=ab=c][#B]}.{#A=CC[$],#B=OC[$]}", "Your annotation w=ab=c contains too many = charachters. Only one chacracter per key value pair is allowed", SyntaxError),
+ ("{[#A;w=1,c=1,q=a;d][#B]}.{#A=CC[$],#B=OC[$]}", "You have too many positional arguments or ; as part of key value pairs which is not allowed.", SyntaxError),
 )))
 def test_syntax_errors(cgsmiles_str, error_message, error_type):
     with pytest.raises(error_type) as e_message:
