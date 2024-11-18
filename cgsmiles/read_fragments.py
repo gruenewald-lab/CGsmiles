@@ -7,6 +7,8 @@ import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
 from .dialects import _fragment_node_parser
+from .pysmiles_utils import read_fragment_smiles
+from .cgsmiles_utils import read_fragment_cgsmiles
 
 logger = logging.getLogger('pysmiles')
 logger.setLevel(level=logging.ERROR)
@@ -129,7 +131,6 @@ def strip_bonding_descriptors(fragment_string):
     rs_isomers = {}
     attributes = defaultdict(dict)
     record_attributes = False
-    hydrogen_weights = defaultdict(list)
     smile = ""
     node_count = 0
     prev_node = 0
@@ -176,12 +177,6 @@ def strip_bonding_descriptors(fragment_string):
                 # here we do some post processing cleanup
                 node_attributes = _fragment_node_parser(attribute_str)
                 attributes[node_count].update(node_attributes)
-                # hydrogen atoms are implicit so we filter
-                # them out here
-                if atom[1:] == 'H' and node_count == 0:
-                    hydrogen_weights[1].append(attributes[node_count]['w'])
-                elif atom[1:] == 'H':
-                    hydrogen_weights[prev_node].append(attributes[node_count]['w'])
 
                 smile = smile + atom + "]"
                 prev_node = node_count
@@ -219,8 +214,6 @@ def strip_bonding_descriptors(fragment_string):
                 smile += token
             current_order = None
             prev_node = node_count
-            # set default weight
-            attributes[node_count]['w'] = 1
             node_count += 1
 
     # we need to annotate rings to the chiral isomers
@@ -230,7 +223,7 @@ def strip_bonding_descriptors(fragment_string):
                 bonded_node = _find_bonded_ring_node(ring_nodes, node)
                 rs_isomers[node][1].append(bonded_node)
 
-    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms, attributes, hydrogen_weights
+    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms, attributes
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -260,39 +253,21 @@ def fragment_iter(fragment_str, all_atom=True):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
         frag_smile = fragment[delim+1:]
-        smile, bonding_descrpt, rs_isomers, ez_isomers, attributes, h_weights = strip_bonding_descriptors(frag_smile)
-        if smile == "H":
-            mol_graph = nx.Graph()
-            mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-        elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile,
-                                             reinterpret_aromatic=False,
-                                             strict=False)
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-            nx.set_node_attributes(mol_graph, rs_isomers, 'rs_isomer')
-            # we need to split countable node keys and the associated value
-            ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
-            ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
-            nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
-            nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
-            # set the hydrogen weight attribute
-            nx.set_node_attributes(mol_graph, h_weights, 'hweight')
+        smiles_str, bonding_descrpt, rs_isomers, ez_isomers, attributes = strip_bonding_descriptors(frag_smile)
+        # read an all_atom fragment using OpenSMILES definition
+        if all_atom:
+            mol_graph = read_fragment_smiles(smiles_str,
+                                             fragname,
+                                             bonding_descrpt,
+                                             rs_isomers,
+                                             ez_isomers,
+                                             attributes)
         # we deal with a CG resolution graph
         else:
-            mol_graph = read_cgsmiles(smile)
-            fragnames = nx.get_node_attributes(mol_graph, 'fragname')
-            nx.set_node_attributes(mol_graph, fragnames, 'atomname')
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-
-        if all_atom:
-            atomnames = {node[0]: node[1]['element']+str(node[0]) for node in mol_graph.nodes(data=True)}
-            nx.set_node_attributes(mol_graph, atomnames, 'atomname')
-
-        nx.set_node_attributes(mol_graph, fragname, 'fragname')
-        nx.set_node_attributes(mol_graph, 0, 'fragid')
-        # set other attributes
-        nx.set_node_attributes(mol_graph, attributes)
+            mol_graph = read_fragment_cgsmiles(smiles_str,
+                                               fragname,
+                                               bonding_descrpt,
+                                               attributes)
         yield fragname, mol_graph
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):

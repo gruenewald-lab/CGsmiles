@@ -89,8 +89,9 @@ def _parse_dialect_string(string_iterable,
     # if there are kwargs we need to put them into
     # output dict
     out_args = {}
-    out_args.update(applied_labels.arguments['kwargs'])
-    del applied_labels.arguments['kwargs']
+    if 'kwargs' in applied_labels.arguments:
+        out_args.update(applied_labels.arguments['kwargs'])
+        del applied_labels.arguments['kwargs']
     out_args.update(applied_labels.arguments)
     return out_args
 
@@ -128,5 +129,5 @@ parse_graph_base_node = partial(_parse_dialect_string, dialect_signature=CGSMILE
 # they go to the respective parser
 # in case of cgsmiles fragments it is a bit doing
 # double the work
-fragment_base = create_dialect({"w": 1.0})
+fragment_base = create_dialect({"w": 1.0}, accept_kwargs=True)
 _fragment_node_parser = partial(_parse_dialect_string, dialect_signature=fragment_base)

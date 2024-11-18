@@ -42,7 +42,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
 
 @pytest.mark.parametrize('smile, ref_frags, elements, ref_edges, chiral, ez, weights',(
                         # smiple linear seqeunce
-                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]COC[$],#OHter=[$][O]}",
+                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]COC[$],#OHter=[$]O}",
                         #           0 1             2 3 4 5 6 7 8
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
                         #        9 10 11 12 13 14 15         16 17
@@ -63,7 +63,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (6, 8), (7, 9), (7, 11), (10, 11), (10, 12), (10, 13),
                          (10, 14), (11, 15)], {}, {}, {}),
                         # smiple linear seqeunce unconsumed bonding descrpt
-                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]CO[>]C[$],#OHter=[$][O]}",
+                        ("{[#OHter][#PEO]|2[#OHter]}.{#PEO=[$]CO[>]C[$],#OHter=[$]O}",
                         #           0 1             2 3 4 5 6 7 8
                         [('OHter', 'O H'), ('PEO', 'C O C H H H H'),
                         #        9 10 11 12 13 14 15         16 17
@@ -115,7 +115,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         # something with a ring
                         #            012 34567
                         #            890123456
-                        ("{[#Hter][#PS]|2[#Hter]}.{#PS=[$]CC[$]c1ccccc1,#Hter=[$]H}",
+                        ("{[#Hter][#PS]|2[#Hter]}.{#PS=[$]CC[$]c1ccccc1,#Hter=[$][H]}",
                         [('Hter', 'H'), ('PS', 'C C C C C C C C H H H H H H H H'),
                          ('PS', 'C C C C C C C C H H H H H H H H'), ('Hter', 'H')],
                         'H C C C C C C C C H H H H H H H H C C C C C C C C H H H H H H H H H',
@@ -273,14 +273,13 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         {},{}, {0: 0.5, 1: 0.1, 5: 0.1, 4: 0.5, 8: 0.5, 9: 0.1, 12: 0.5, 13: 0.1}),
                         # test 2 weights and hydrogen weights
                         ("{[#SP4]1[#SP4][#SP1r]1}.{#SP4=[O;0.5]([H;0.2])[C;0.1][$]C[$]O,#SP1r=[$]OC[$]CO}",
-                        [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
+                        [('SP4', 'O H C C O H H H'), ('SP4', 'O H C C O H H H'),
                          ('SP1r', 'O C C O H H H H')],
-                        'O C C O H H H H O C C O H H H H O C C O H H H H',
-                        [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
-                         (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
-                         (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
-                         (18, 21), (18, 22), (19, 23)],
-                        {},{}, {0: 0.5, 1: 0.1, 5: 0.1, 4: 0.2, 8: 0.5, 9: 0.1, 12: 0.2, 13: 0.1}),
+                        'O H C C O H H H O H C C O H H H O C C O H H H H',
+                        [(0, 1), (0, 2), (2, 3), (2, 10), (2, 5), (3, 4), (3, 16), (3, 6), (4, 7), (8, 9),
+                         (8, 10), (10, 11), (10, 13), (11, 12), (11, 17), (11, 14), (12, 15), (16, 17),
+                         (17, 18), (17, 20), (18, 19), (18, 21), (18, 22), (19, 23)],
+                        {},{}, {0: 0.5, 1: 0.2, 2: 0.1, 5: 0.1, 8: 0.5, 9: 0.2, 10: 0.1, 13: 0.1}),
 ))
 def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral, ez, weights):
     meta_mol, molecule = MoleculeResolver.from_string(smile).resolve()

@@ -146,7 +146,6 @@ def annotate_fragments(meta_graph, molecule):
 
     return meta_graph
 
-
 def set_atom_names_atomistic(molecule, meta_graph=None):
     """
     Set atomnames according to commonly used convention
