@@ -319,7 +319,7 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
     if weights:
         mol_weights = {node: 1 for node in ref_graph}
         mol_weights.update(weights)
-        weights_assigned = nx.get_node_attributes(molecule, 'w')
+        weights_assigned = nx.get_node_attributes(molecule, 'weight')
         assert mol_weights == weights_assigned
 
 @pytest.mark.parametrize('case, cgsmiles_str, ref_string',(

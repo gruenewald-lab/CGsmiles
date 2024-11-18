@@ -17,6 +17,7 @@ def check_and_cast_types(bound_args, signature):
 
 def _parse_dialect_string(string_iterable,
                           dialect_signature,
+                          arg_to_fullname={},
                           annotation_sep_token=';',
                           annotation_assign_token='='):
     """
@@ -39,6 +40,8 @@ def _parse_dialect_string(string_iterable,
     dialect_signature: cls.inspec.Signature
         a signature defineing args, kwargs, default values
         and types
+    arg_to_fullname: dict
+        maps arguments to more verbose descriptions
     annotation_sep_token: str
         character used to seperate key value pairs
     annotation_assign_token: str
@@ -86,6 +89,18 @@ def _parse_dialect_string(string_iterable,
     applied_labels = check_and_cast_types(applied_labels,
                                           dialect_signature)
     applied_labels.apply_defaults()
+    # convert keys to more verbose names
+    # this should only apply to args know to
+    # the signature
+    remove_keys = []
+    for old_key, new_key in arg_to_fullname.items():
+        if old_key in applied_labels.arguments:
+            applied_labels.arguments[new_key] = applied_labels.arguments[old_key]
+            remove_keys.append(old_key)
+
+    for key in remove_keys:
+        del applied_labels.arguments[key]
+
     # if there are kwargs we need to put them into
     # output dict
     out_args = {}
@@ -120,9 +135,11 @@ def create_dialect(default_attributes, accept_kwargs=True):
 # this one is for global use
 # it is the base CGSmiles dialect
 CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": "NaN",
-                                           "c": 0.0,
+                                           "q": 0.0,
                                            "w": 1.0})
-parse_graph_base_node = partial(_parse_dialect_string, dialect_signature=CGSMILES_DEFAULT_DIALECT)
+parse_graph_base_node = partial(_parse_dialect_string,
+                                dialect_signature=CGSMILES_DEFAULT_DIALECT,
+                                arg_to_fullname = {"w": "weight", "q": "charge"})
 # this one is an internal fukery until the pysmiles
 # base parser is available
 # it just strips the kwargs from fragments before
@@ -130,4 +147,6 @@ parse_graph_base_node = partial(_parse_dialect_string, dialect_signature=CGSMILE
 # in case of cgsmiles fragments it is a bit doing
 # double the work
 fragment_base = create_dialect({"w": 1.0}, accept_kwargs=True)
-_fragment_node_parser = partial(_parse_dialect_string, dialect_signature=fragment_base)
+_fragment_node_parser = partial(_parse_dialect_string,
+                                dialect_signature=fragment_base,
+                                arg_to_fullname = {"w": "weight"})

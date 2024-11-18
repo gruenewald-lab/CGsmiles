@@ -32,7 +32,7 @@ def compute_mass(input_molecule):
         mass += pysmiles.PTE[element]['AtomicMass']
     return mass
 
-def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'w']):
+def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'weight']):
     """
     Helper function which add hydrogen atoms to the molecule graph.
 
@@ -212,7 +212,7 @@ def read_fragment_smiles(smiles_str,
     # set some default values
     nx.set_node_attributes(mol_graph, fragname, 'fragname')
     nx.set_node_attributes(mol_graph, 0, 'fragid')
-    nx.set_node_attributes(mol_graph, 1, 'w')
+    nx.set_node_attributes(mol_graph, 1, 'weight')
 
     # we add all bonding descriptors to the molecule
     nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
