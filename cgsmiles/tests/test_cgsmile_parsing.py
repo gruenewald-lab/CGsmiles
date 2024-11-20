@@ -281,6 +281,12 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: ["$1"], 1: ["$1"]},
                         None,
                         None),
+                        # clear order symbol
+                        ("[CH][$a]=[CH][$c]",
+                         "[CH]=[CH]",
+                        {0: ["$a1"], 1: ["$c1"]},
+                        None,
+                        None),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",

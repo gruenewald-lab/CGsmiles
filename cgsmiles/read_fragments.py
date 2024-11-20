@@ -158,10 +158,10 @@ def strip_bonding_descriptors(fragment_string):
                     else:
                         atom += peek
                     peek = next(smile_iter)
-
                 smile = smile + atom + "]"
                 prev_node = node_count
                 node_count += 1
+                current_order = None
         elif token == '(':
             anchor.append(prev_node)
             smile += token
