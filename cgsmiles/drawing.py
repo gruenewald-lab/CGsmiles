@@ -159,4 +159,4 @@ def draw_molecule(graph,
     ax.set_xlim(-w, w)
     ax.set_ylim(-h, h)
 
-    return ax
+    return ax, pos
