@@ -318,16 +318,16 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         None,
                         None),
                         # simple chirality in residue
-                        ("[>]C[C@](F)(B)N[<]",
+                        ("[>]C[C@R](F)(B)N[<]",
                         "C[C](F)(B)N",
                         {0: [">1"], 4: ["<1"]},
-                        {1: ('@', [])},
+                        {1: '@R'},
                         None),
                         # simple chirality inverse in residue
-                        ("[>]C[C@@](F)(B)N[<]",
+                        ("[>]C[C@S](F)(B)N[<]",
                         "C[C](F)(B)N",
                         {0: [">1"], 4: ["<1"]},
-                        {1: ('@@', [])},
+                        {1: '@S'},
                         None),
                         # \ fragment split
                         ("[>]CC(\F)=[<]",

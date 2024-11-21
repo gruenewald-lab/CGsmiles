@@ -150,10 +150,15 @@ def strip_bonding_descriptors(fragment_string):
                 while peek != ']':
                     # deal with rs chirality
                     if peek == '@':
-                        chiral_token = peek
-                        if smile_iter.peek() == '@':
+                        if smile_iter.peek() in 'RS':
                             chiral_token = '@' + next(smile_iter)
-                        rs_isomers[node_count] = (chiral_token, [])
+                            if smile_iter.peek() in 'RS':
+                                chiral_token = '@' + next(smile_iter)
+                        else:
+                            msg = ("Invalid chirality. CGSmiles chirality"
+                                   "definition follows the pattern @R, @S, @RS, @SR")
+                            raise SyntaxError(msg)
+                        rs_isomers[node_count] = chiral_token
                     else:
                         atom += peek
                     peek = next(smile_iter)
@@ -170,7 +175,6 @@ def strip_bonding_descriptors(fragment_string):
         elif token in bond_to_order:
             current_order = bond_to_order[token]
             smile += token
-        # for chirality assignment we need to collect rings
         elif token == '%' or token.isdigit():
             smile_iter, token, part_str, rings = collect_ring_number(smile_iter,
                                                                      token,
@@ -195,12 +199,6 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = node_count
             node_count += 1
 
-    # we need to annotate rings to the chiral isomers
-    for node in rs_isomers:
-        for ring_idx, ring_nodes in rings.items():
-            if node in ring_nodes:
-                bonded_node = _find_bonded_ring_node(ring_nodes, node)
-                rs_isomers[node][1].append(bonded_node)
     return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
 
 def fragment_iter(fragment_str, all_atom=True):
@@ -239,7 +237,7 @@ def fragment_iter(fragment_str, all_atom=True):
         elif all_atom:
             mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False, strict=False)
             nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-            nx.set_node_attributes(mol_graph, rs_isomers, 'rs_isomer')
+            nx.set_node_attributes(mol_graph, rs_isomers, 'chiral')
             # we need to split countable node keys and the associated value
             ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
             ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}

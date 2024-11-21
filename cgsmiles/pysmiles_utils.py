@@ -2,7 +2,6 @@ import logging
 import networkx as nx
 import pysmiles
 from pysmiles.smiles_helper import (_annotate_ez_isomers,
-                                    _mark_chiral_atoms,
                                     remove_explicit_hydrogens,
                                     add_explicit_hydrogens)
 
@@ -75,7 +74,6 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
                "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
-
     pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
     pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
 
@@ -109,61 +107,3 @@ def annotate_ez_isomers(molecule):
     for node in ez_isomer_atoms:
         del  molecule.nodes[node]['ez_isomer_atoms']
         del  molecule.nodes[node]['ez_isomer_class']
-
-def mark_chiral_atoms(molecule):
-    """
-    For all nodes tagged as chiral, figure out the three
-    substituents and annotate the node with a tuple that
-    has the order in which to rotate. This essentially
-    corresponds to the definition of an improper dihedral
-    angle centered on the chiral atom.
-
-    Pysmiles treats explicit hydrogen atoms differently
-    from implicit ones. In cgsmiles at the time when this
-    function is called all hydrogen atoms have been added
-    explicitly. However, we need to correct the chirality
-    assigment for this.
-
-    Note that this means it is not possible to have explicit
-    hydrogen atoms attached to chiral centers within cgsmiles
-    to begin with. However, this is a rather edge case.
-    """
-    chiral_nodes = nx.get_node_attributes(molecule, 'rs_isomer')
-    for node, (direction, rings) in chiral_nodes.items():
-        # first the ring atoms in order
-        # that they were connected then the
-        # other neighboring atoms in order
-        bonded_neighbours = sorted(molecule[node])
-        neighbours = list(rings)
-        hstash = []
-        for neighbour in bonded_neighbours:
-            if neighbour not in neighbours:
-                # all hydrogen atoms are explicit in cgsmiles
-                # BUT in the input of chirality they are usual
-                # implicit. At this point we need to treat all
-                # hydrogen atoms as if they were implicit.
-                if molecule.nodes[neighbour]['element'] != 'H':
-                    neighbours.append(neighbour)
-                else:
-                    hstash.append(neighbour)
-        if hstash and len(hstash) == 1:
-            neighbours.insert(1, hstash[0])
-        elif len(hstash) > 1:
-            msg = (f"Chiral node {node} as more than 1 hydrogen neighbor."
-                    "Therefore it is not chiral.")
-            raise ValueError(msg)
-
-        if len(neighbours) != 4:
-            # FIXME Tetrahedral Allene-like Systems such as `NC(Br)=[C@]=C(O)C`
-            msg = (f"Chiral node {node} has {len(neighbours)} neighbors, which "
-                    "is different than the four expected for tetrahedral "
-                    "chirality.")
-            raise ValueError(msg)
-        # the default is anti-clockwise sorting indicated by '@'
-        # in this case the nodes are sorted with increasing
-        # node index; however @@ means clockwise and the
-        # order of nodes is reversed (i.e. with decreasing index)
-        if direction == '@@':
-            neighbours = [neighbours[0],  neighbours[1], neighbours[3], neighbours[2]]
-
-        molecule.nodes[node]['rs_isomer'] = tuple(neighbours)
