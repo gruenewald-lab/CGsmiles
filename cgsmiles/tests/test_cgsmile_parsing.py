@@ -269,6 +269,36 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: ["$1"], 2: ["$1"]},
                         None,
                         None),
+                        # smiple symmetric bonding after branch
+                        ("[$]CC(CC)[$]",
+                         "CC(CC)",
+                        {0: ["$1"], 1: ["$1"]},
+                        None,
+                        None),
+                        # smiple symmetric bonding after ring
+                        ("[$]CC1[$]CCC1",
+                         "CC1CCC1",
+                        {0: ["$1"], 1: ["$1"]},
+                        None,
+                        None),
+                        # clear order symbol
+                        ("[CH][$a]=[CH][$c]",
+                         "[CH]=[CH]",
+                        {0: ["$a1"], 1: ["$c1"]},
+                        None,
+                        None),
+                        # multiple non-one bonding l
+                        ("CC=[$a]=[$b]CC",
+                         "CCCC",
+                        {1: ["$a2", "$b2"]},
+                        None,
+                        None),
+                        # multiple non-one bonding l
+                        ("CC[$a]=[$b]CC",
+                         "CCCC",
+                        {1: ["$a1", "$b2"]},
+                        None,
+                        None),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",

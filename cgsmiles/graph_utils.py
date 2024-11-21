@@ -175,7 +175,9 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
             assert len(fragids) == 1
             fraglist[fragids[0]].append(node)
 
-    for fragnodes in fraglist.values():
+    for meta_node, fragnodes in fraglist.items():
         for idx, node in enumerate(fragnodes):
             atomname = molecule.nodes[node]['element'] + str(idx)
             molecule.nodes[node]['atomname'] = atomname
+            if meta_graph:
+                meta_graph.nodes[meta_node]['graph'].nodes[node]['atomname'] = atomname
