@@ -67,12 +67,12 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
         pysmiles.smiles_helper.correct_aromatic_rings(mol_graph, strict=True)
     except SyntaxError as pysmiles_err:
         print(pysmiles_err)
-        msg = (r"Likely you are writing an aromatic molecule that does not "
-               r"show delocalization-induced molecular equivalency and thus "
-               r"is not considered aromatic. For example, 4-methyl imidazole "
-               r"is often written as [nH]1cc(nc1)C, but should be written as "
-               r"[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
-               r"{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
+        msg = ("Likely you are writing an aromatic molecule that does not "
+               "show delocalization-induced molecular equivalency and thus "
+               "is not considered aromatic. For example, 4-methyl imidazole "
+               "is often written as [nH]1cc(nc1)C, but should be written as "
+               "[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
+               "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
 
@@ -84,8 +84,6 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
     if keep_bonding:
         bonding_nodes = nx.get_node_attributes(mol_graph, 'bonding')
         for node, bond_ops in bonding_nodes.items():
-            print(bond_ops)
-            print(sum([int(bond[-1]) for bond in bond_ops]))
             mol_graph.nodes[node]['hcount'] -= sum([int(bond[-1]) for bond in bond_ops])
 
     # now we add the hydrogen atoms
