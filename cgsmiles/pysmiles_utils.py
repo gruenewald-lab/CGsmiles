@@ -76,9 +76,21 @@ def rebuild_h_atoms(mol_graph, keep_bonding=False):
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
 
+    # first we need to figure out the correct hcounts on each node
+    # this also corrects for simple aromatic problems like in thiophene
     pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
+
+    # optionally we adjust the hcount by the number of bonding operators
+    if keep_bonding:
+        bonding_nodes = nx.get_node_attributes(mol_graph, 'bonding')
+        for node, bond_ops in bonding_nodes.items():
+            mol_graph.nodes[node]['hcount'] -= len(bond_ops)
+
+    # now we add the hydrogen atoms
     pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
 
+    # if we are having single hydrogen fragments we need to
+    # make sure the fragid and fragname is keept
     for node in mol_graph.nodes:
         if mol_graph.nodes[node].get("element", "*") == "H" and\
         not mol_graph.nodes[node].get("single_h_frag", False):
