@@ -378,18 +378,16 @@ class MoleculeResolver:
         if all_atom:
             # assign rs isomerism
             annotate_ez_isomers(self.molecule)
-            # in all-atom MD there are common naming conventions
-            # that might be expected and hence we set them here
-            set_atom_names_atomistic(self.molecule, self.meta_graph)
 
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
                                              self.molecule)
 
-        # in all-atom MD there are common naming conventions
-        # that might be expected and hence we set them here
         if all_atom:
-            set_atom_names_atomistic(self.molecule, self.meta_graph)
+            # in all-atom MD there are common naming conventions
+            # that might be expected and hence we set them here
+            set_atom_names_atomistic(self.molecule,
+                                     self.meta_graph)
 
         # increment the resolution counter
         self.resolution_counter += 1

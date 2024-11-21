@@ -126,6 +126,7 @@ def strip_bonding_descriptors(fragment_string):
     node_count = 0
     prev_node = 0
     current_order = None
+    anchor = []
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
@@ -162,15 +163,15 @@ def strip_bonding_descriptors(fragment_string):
                     else:
                         atom += peek
                     peek = next(smile_iter)
-
                 smile = smile + atom + "]"
                 prev_node = node_count
                 node_count += 1
+                current_order = None
         elif token == '(':
-            anchor = prev_node
+            anchor.append(prev_node)
             smile += token
         elif token == ')':
-            prev_node = anchor
+            prev_node = anchor.pop()
             smile += token
         elif token in bond_to_order:
             current_order = bond_to_order[token]
