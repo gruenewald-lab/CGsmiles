@@ -32,7 +32,9 @@ def compute_mass(input_molecule):
         mass += pysmiles.PTE[element]['AtomicMass']
     return mass
 
-def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'weight']):
+def rebuild_h_atoms(mol_graph,
+                    keep_bonding=False,
+                    copy_attrs=['fragid', 'fragname', 'weight']):
     """
     Helper function which add hydrogen atoms to the molecule graph.
 
@@ -48,6 +50,10 @@ def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'weight']):
     The molecule graph is updated in place with the hydrogen atoms
     that are missing.
 
+    Using the keep_bonding argument the hydrogen count is reduced
+    by the number of bonding descriptors. In this way hydrogen
+    atoms can also be added to fragments only.
+
     The `copy_attrs` argument defines a list of attributes to copy
     to the newly added hydrogen atoms. In case the hydrogen atoms
     are their own fragments attributes are not copied. If an attribute
@@ -61,6 +67,8 @@ def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'weight']):
     copy_attrs: list[abc.hashable]
         a list of attributes to copy from the parent node to the
         hydrogen atom
+    keep_bonding: bool
+        adjust hcount for number of bonding descriptors
     """
     try:
         pysmiles.smiles_helper.correct_aromatic_rings(mol_graph, strict=True)
@@ -75,7 +83,17 @@ def rebuild_h_atoms(mol_graph, copy_attrs=['fragid', 'fragname', 'weight']):
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
 
+    # first we need to figure out the correct hcounts on each node
+    # this also corrects for simple aromatic problems like in thiophene
     pysmiles.smiles_helper.fill_valence(mol_graph, respect_hcount=False)
+
+    # optionally we adjust the hcount by the number of bonding operators
+    if keep_bonding:
+        bonding_nodes = nx.get_node_attributes(mol_graph, 'bonding')
+        for node, bond_ops in bonding_nodes.items():
+            mol_graph.nodes[node]['hcount'] -= sum([int(bond[-1]) for bond in bond_ops])
+
+    # now we add the hydrogen atoms
     pysmiles.smiles_helper.add_explicit_hydrogens(mol_graph)
 
     for node, element in mol_graph.nodes(data='element'):

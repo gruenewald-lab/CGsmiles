@@ -271,7 +271,7 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
         assert set_charges == charges
 
 @pytest.mark.parametrize('big_smile, smile, bonding, rs, ez, attrs',(
-  # smiple symmetric bonding
+                        # smiple symmetric bonding
                         ("[$]COC[$]",
                          "COC",
                         {0: ["$1"], 2: ["$1"]},
@@ -323,6 +323,41 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         None,
                         None,
                         {'weight': {0: 0.3, 3: 0.5}}),
+                        # smiple symmetric bonding after branch
+                        ("[$]CC(CC)[$]",
+                         "CC(CC)",
+                        {0: ["$1"], 1: ["$1"]},
+                        None,
+                        None,
+                        None),
+                        # smiple symmetric bonding after ring
+                        ("[$]CC1[$]CCC1",
+                         "CC1CCC1",
+                        {0: ["$1"], 1: ["$1"]},
+                        None,
+                        None,
+                        None),
+                        # clear order symbol
+                        ("[CH][$a]=[CH][$c]",
+                         "[CH]=[CH]",
+                        {0: ["$a1"], 1: ["$c1"]},
+                        None,
+                        None,
+                        None),
+                        # multiple non-one bonding l
+                        ("CC=[$a]=[$b]CC",
+                         "CCCC",
+                        {1: ["$a2", "$b2"]},
+                        None,
+                        None,
+                        None),
+                        # multiple non-one bonding l
+                        ("CC[$a]=[$b]CC",
+                         "CCCC",
+                        {1: ["$a1", "$b2"]},
+                        None,
+                        None,
+                        None),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
