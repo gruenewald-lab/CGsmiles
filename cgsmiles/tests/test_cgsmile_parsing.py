@@ -293,6 +293,12 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {1: ["$a2", "$b2"]},
                         None,
                         None),
+                        # multiple non-one bonding l
+                        ("CC[$a]=[$b]CC",
+                         "CCCC",
+                        {1: ["$a1", "$b2"]},
+                        None,
+                        None),
                         # smiple symmetric bonding with more than one name
                         ("[$1A]COC[$1A]",
                          "COC",
