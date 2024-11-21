@@ -9,8 +9,7 @@ from .graph_utils import (merge_graphs,
                           annotate_fragments,
                           set_atom_names_atomistic)
 from .pysmiles_utils import (rebuild_h_atoms,
-                             annotate_ez_isomers,
-                             mark_chiral_atoms)
+                             annotate_ez_isomers)
 
 def compatible(left, right, legacy=False):
     """
@@ -363,7 +362,6 @@ class MoleculeResolver:
 
         # add disconnected fragments to graph
         self.resolve_disconnected_molecule(fragment_dict)
-
         # connect valid bonding descriptors
         self.edges_from_bonding_descrpt(all_atom=all_atom)
 
@@ -378,8 +376,6 @@ class MoleculeResolver:
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
         if all_atom:
-            # assign chiral atoms
-            mark_chiral_atoms(self.molecule)
             # assign rs isomerism
             annotate_ez_isomers(self.molecule)
             # in all-atom MD there are common naming conventions
