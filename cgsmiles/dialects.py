@@ -92,14 +92,9 @@ def _parse_dialect_string(string_iterable,
     # convert keys to more verbose names
     # this should only apply to args know to
     # the signature
-    remove_keys = []
     for old_key, new_key in arg_to_fullname.items():
         if old_key in applied_labels.arguments:
-            applied_labels.arguments[new_key] = applied_labels.arguments[old_key]
-            remove_keys.append(old_key)
-
-    for key in remove_keys:
-        del applied_labels.arguments[key]
+            applied_labels.arguments[new_key] = applied_labels.arguments.pop(old_key)
 
     # if there are kwargs we need to put them into
     # output dict
