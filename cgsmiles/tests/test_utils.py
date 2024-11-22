@@ -16,6 +16,7 @@ err_msg_rebuild_h = ("Likely you are writing an aromatic molecule that does not 
                         ('{#A=[$]=CCC=[$]}', 4, None, None),
                         ('{#A=[$]cccc}',5, None, None),
                         ('{#A=[$]ccc}', 0, SyntaxError, err_msg_rebuild_h),
+                        ('{#A=[$]C(Cl)(Cl)(Cl)(Cl)}', 0, None, None),
 ))
 def test_rebuild_hatoms(frag_str, hatoms_ref, error_type, err_msg):
     frag_dict = cgsmiles.read_fragments(frag_str)

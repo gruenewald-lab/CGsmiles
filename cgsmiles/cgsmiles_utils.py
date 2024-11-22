@@ -1,5 +1,6 @@
 from collections import defaultdict
 import networkx as nx
+from .read_cgsmiles import read_cgsmiles
 
 def find_complementary_bonding_descriptor(bonding_descriptor, ellegible_descriptors=None):
     """
@@ -64,3 +65,35 @@ def find_open_bonds(molecule, target_nodes=None):
             for bonding_types in bonding_types:
                 open_bonds_by_descriptor[bonding_types].append(node)
     return open_bonds_by_descriptor
+
+def read_fragment_cgsmiles(cgsmiles_str,
+                           fragname,
+                           bonding_descrpt={},
+                           attributes={}):
+    """
+    Read a smiles_str corresponding to a CGSmiles fragment and
+    annotate bonding descriptors, isomers, as well as any other
+    attributes.
+
+    Parameters
+    ----------
+    smiles_str: str
+        string in CGSmiles format
+    fragname: str
+        the name of the fragment
+    attributes: dict
+
+    Returns
+    -------
+    nx.Graph
+        the graph of the molecular fragment
+    """
+    mol_graph = read_cgsmiles(cgsmiles_str)
+    fragnames = nx.get_node_attributes(mol_graph, 'fragname')
+    nx.set_node_attributes(mol_graph, fragnames, 'atomname')
+    nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
+    nx.set_node_attributes(mol_graph, fragname, 'fragname')
+    nx.set_node_attributes(mol_graph, 0, 'fragid')
+    nx.set_node_attributes(mol_graph, 1, 'w')
+    nx.set_node_attributes(mol_graph, attributes)
+    return mol_graph

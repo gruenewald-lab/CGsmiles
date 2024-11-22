@@ -2,6 +2,7 @@ from collections import defaultdict
 import re
 import numpy as np
 import networkx as nx
+from .dialects import parse_graph_base_node
 
 PATTERNS = {"bond_anchor": r"\[\$.*?\]",
             "place_holder": r"\[\#.*?\]",
@@ -31,21 +32,21 @@ def _expand_branch(mol_graph, current, anchor, recipe):
     anchor: abc.hashable
         anchor to which to connect current node
 
-    recipe: list[(str, int, int)]
+    recipe: list[(str, int, dict, int)]
         list storing tuples of node names and
-        the number of times the node has to be added
-        and their bond order
+        the number of times the node has to be added,
+        a dict of attributes and the bond order
 
     Returns
     -------
     nx.Graph
     """
     prev_node = anchor
-    for bdx, (fragname, n_mon, order) in enumerate(recipe):
+    for bdx, (n_mon, attributes, order) in enumerate(recipe):
         if bdx == 0:
             anchor = current
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, fragname=fragname)
+            mol_graph.add_node(current, **attributes)
             mol_graph.add_edge(prev_node, current, order=order)
 
             prev_node = current
@@ -144,7 +145,7 @@ def read_cgsmiles(pattern):
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
             # at this point the bond order is still 1 unless we have an expansion
-            recipes[branch_anchor[-1]] = [(mol_graph.nodes[prev_node]['fragname'], 1, 1)]
+            recipes[branch_anchor[-1]] = [(1, attributes, 1)]
 
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
@@ -215,26 +216,18 @@ def read_cgsmiles(pattern):
         # the fragname starts at the second character and ends
         # one before the last according to the above pattern
         fragname = match.group(0)[2:-1]
-        # check for charge
-        charge = 0.0
-        for sign in ["+", "-"]:
-            if sign in fragname:
-                fragname, charge = fragname.split(sign)
-                if len(charge) == 0:
-                    charge = float(sign+"1")
-                else:
-                    charge = float(sign+charge)
+        # read the annotations
+        attributes = parse_graph_base_node(fragname)
 
         # if this residue is part of a branch we store it in
         # the recipe dict together with the anchor residue
         # and expansion number
         if branching:
-            recipes[branch_anchor[-1]].append((fragname, n_mon, prev_bond_order))
-
+            recipes[branch_anchor[-1]].append((n_mon, attributes, prev_bond_order))
         # new we add new residue as often as required
         connection = []
         for _ in range(0, n_mon):
-            mol_graph.add_node(current, fragname=fragname, charge=charge)
+            mol_graph.add_node(current, **attributes)
 
             if prev_node is not None:
                 mol_graph.add_edge(prev_node, current, order=prev_bond_order)
