@@ -128,7 +128,6 @@ def strip_bonding_descriptors(fragment_string):
     bonding_descrpt = defaultdict(list)
     rings = defaultdict(list)
     ez_isomer_atoms = {}
-    rs_isomers = {}
     attributes = defaultdict(dict)
     record_attributes = False
     smile = ""
@@ -159,14 +158,8 @@ def strip_bonding_descriptors(fragment_string):
                 atom = token
                 attribute_str = ""
                 while peek != ']':
-                    # deal with rs chirality
-                    if peek == '@':
-                        chiral_token = peek
-                        if smile_iter.peek() == '@':
-                            chiral_token = '@' + next(smile_iter)
-                        rs_isomers[node_count] = (chiral_token, [])
-                    # we have weights
-                    elif peek == ';' and not record_attributes:
+                    # we have annotations
+                    if peek == ';' and not record_attributes:
                         record_attributes = True
                     elif record_attributes:
                         attribute_str += peek
@@ -217,14 +210,7 @@ def strip_bonding_descriptors(fragment_string):
             prev_node = node_count
             node_count += 1
 
-    # we need to annotate rings to the chiral isomers
-    for node in rs_isomers:
-        for ring_idx, ring_nodes in rings.items():
-            if node in ring_nodes:
-                bonded_node = _find_bonded_ring_node(ring_nodes, node)
-                rs_isomers[node][1].append(bonded_node)
-
-    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms, attributes
+    return smile, bonding_descrpt, ez_isomer_atoms, attributes
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -254,13 +240,12 @@ def fragment_iter(fragment_str, all_atom=True):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
         frag_smile = fragment[delim+1:]
-        smiles_str, bonding_descrpt, rs_isomers, ez_isomers, attributes = strip_bonding_descriptors(frag_smile)
+        smiles_str, bonding_descrpt, ez_isomers, attributes = strip_bonding_descriptors(frag_smile)
         # read an all_atom fragment using OpenSMILES definition
         if all_atom:
             mol_graph = read_fragment_smiles(smiles_str,
                                              fragname,
                                              bonding_descrpt,
-                                             rs_isomers,
                                              ez_isomers,
                                              attributes)
         # we deal with a CG resolution graph

@@ -186,17 +186,17 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                          (1, 7), (5, 9), (5, 6), (7, 13), (7, 8),
                          (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)], {}, {}, {}),
                          # simple chirality assigment with rings
-                         ("{[#GLC]}.{#GLC=C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O)O)O)O)O}",
+                         # (3R,4S,5S,6R)-6-(hydroxymethyl)oxane-2,3,4,5-tetrol (cyclic form)
+                         ("{[#GLC]}.{#GLC=[CH;x=R]([CH;x=S]1[CH;x=S]([C;x=R](C(C(O1)O)O)O)O)O}",
                          # 0 1 2 3
                          [('GLC', 'C C C C C C O O O O O O H H H H H H H H H H H H')],
                          'C C C C C C O O O O O O H H H H H H H H H H H H',
                          [(0, 1), (0, 11), (0, 12), (0, 13), (1, 2), (1, 6), (1, 14), (2, 3), (2, 10),
                           (2, 15), (3, 4), (3, 9), (3, 16), (4, 5), (4, 8), (4, 17), (5, 6), (5, 7), (5, 18),
                           (7, 19), (8, 20), (9, 21), (10, 22), (11, 23)],
-                         {1: (6, 14, 2, 0), 2: (1, 15, 3, 10), 3: (2, 16, 9, 4),
-                          4: (3, 17, 5, 8), 5: (4, 18, 6, 7)}, {}, {}),
+                         {0: 'R', 1: 'S', 2: 'S', 3: 'R'}, {}, {}),
                         # simple chirality assigment between fragments
-                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@H][>]C(=O)OC}",
+                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[CH;x=R][>]C(=O)OC}",
                         # 0 1 2 3
                         [('A', 'O H'), ('B', 'C C C O O C H H H H H H'),
                          ('C', 'O H')],
@@ -204,9 +204,9 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (2, 5), (5, 6), (5, 7), (7, 8), (7, 9), (9, 10), (10, 11), (10, 12),
                          (10, 13), (5, 14), (14, 15)],
-                        {3: (2, 10, 4, 14)}, {}, {}),
+                        {3: 'R'}, {}, {}),
                         # simple chirality assigment between fragments inv
-                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[C@@H][>]C(=O)OC}",
+                        ("{[#A][#B][#C]}.{#A=O[>],#C=O[<],#B=[<]C[CH;x=S][>]C(=O)OC}",
                         # 0 1 2 3
                         [('A', 'O H'), ('B', 'C C C O O C H H H H H H'),
                          ('C', 'O H')],
@@ -214,7 +214,7 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (2, 5), (5, 6), (5, 7), (7, 8), (7, 9), (9, 10), (10, 11), (10, 12),
                          (10, 13), (5, 14), (14, 15)],
-                        {3: (2, 10, 14, 4)}, {}, {}),
+                        {3: 'S'}, {}, {}),
                         # smiple ez isomerism assigment between fragments inv
                         ("{[#A][#B]}.{#A=CC(/F)=[$],#B=[$]=C(\F)C}",
                         [('A', 'C C F H H H'), ('B', 'C F C H H H')],
@@ -309,7 +309,7 @@ def test_all_atom_resolve_molecule(smile, ref_frags, elements, ref_edges, chiral
 
     # check chirality
     if chiral:
-        chiral_assigned = nx.get_node_attributes(molecule, 'rs_isomer')
+        chiral_assigned = nx.get_node_attributes(molecule, 'chiral')
         assert chiral == chiral_assigned
     # check ez isomerism
     if ez:
