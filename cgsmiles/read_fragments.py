@@ -1,10 +1,17 @@
 """
 Functions for reading the fragment list.
 """
+import logging
 from collections import defaultdict
 import networkx as nx
 import pysmiles
 from .read_cgsmiles import read_cgsmiles
+from .dialects import _fragment_node_parser
+from .pysmiles_utils import read_fragment_smiles
+from .cgsmiles_utils import read_fragment_cgsmiles
+
+logger = logging.getLogger('pysmiles')
+logger.setLevel(level=logging.ERROR)
 
 class PeekIter(object):
     """
@@ -122,10 +129,13 @@ def strip_bonding_descriptors(fragment_string):
     rings = defaultdict(list)
     ez_isomer_atoms = {}
     rs_isomers = {}
+    attributes = defaultdict(dict)
+    record_attributes = False
     smile = ""
     node_count = 0
     prev_node = 0
     current_order = None
+    anchor = []
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
@@ -147,6 +157,7 @@ def strip_bonding_descriptors(fragment_string):
                 bonding_descrpt[prev_node].append(bond_descrp + str(order))
             else:
                 atom = token
+                attribute_str = ""
                 while peek != ']':
                     # deal with rs chirality
                     if peek == '@':
@@ -154,18 +165,29 @@ def strip_bonding_descriptors(fragment_string):
                         if smile_iter.peek() == '@':
                             chiral_token = '@' + next(smile_iter)
                         rs_isomers[node_count] = (chiral_token, [])
+                    # we have weights
+                    elif peek == ';' and not record_attributes:
+                        record_attributes = True
+                    elif record_attributes:
+                        attribute_str += peek
                     else:
                         atom += peek
                     peek = next(smile_iter)
 
+                record_attributes=False
+                # here we do some post processing cleanup
+                node_attributes = _fragment_node_parser(attribute_str)
+                attributes[node_count].update(node_attributes)
+
                 smile = smile + atom + "]"
                 prev_node = node_count
                 node_count += 1
+                current_order = None
         elif token == '(':
-            anchor = prev_node
+            anchor.append(prev_node)
             smile += token
         elif token == ')':
-            prev_node = anchor
+            prev_node = anchor.pop()
             smile += token
         elif token in bond_to_order:
             current_order = bond_to_order[token]
@@ -201,7 +223,8 @@ def strip_bonding_descriptors(fragment_string):
             if node in ring_nodes:
                 bonded_node = _find_bonded_ring_node(ring_nodes, node)
                 rs_isomers[node][1].append(bonded_node)
-    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms
+
+    return smile, bonding_descrpt, rs_isomers, ez_isomer_atoms, attributes
 
 def fragment_iter(fragment_str, all_atom=True):
     """
@@ -230,34 +253,22 @@ def fragment_iter(fragment_str, all_atom=True):
     for fragment in fragment_str[1:-1].split(','):
         delim = fragment.find('=', 0)
         fragname = fragment[1:delim]
-        big_smile = fragment[delim+1:]
-        smile, bonding_descrpt, rs_isomers, ez_isomers = strip_bonding_descriptors(big_smile)
-        if smile == "H":
-            mol_graph = nx.Graph()
-            mol_graph.add_node(0, element="H", bonding=bonding_descrpt[0])
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-        elif all_atom:
-            mol_graph = pysmiles.read_smiles(smile, reinterpret_aromatic=False, strict=False)
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-            nx.set_node_attributes(mol_graph, rs_isomers, 'rs_isomer')
-            # we need to split countable node keys and the associated value
-            ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
-            ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
-            nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
-            nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
+        frag_smile = fragment[delim+1:]
+        smiles_str, bonding_descrpt, rs_isomers, ez_isomers, attributes = strip_bonding_descriptors(frag_smile)
+        # read an all_atom fragment using OpenSMILES definition
+        if all_atom:
+            mol_graph = read_fragment_smiles(smiles_str,
+                                             fragname,
+                                             bonding_descrpt,
+                                             rs_isomers,
+                                             ez_isomers,
+                                             attributes)
         # we deal with a CG resolution graph
         else:
-            mol_graph = read_cgsmiles(smile)
-            fragnames = nx.get_node_attributes(mol_graph, 'fragname')
-            nx.set_node_attributes(mol_graph, fragnames, 'atomname')
-            nx.set_node_attributes(mol_graph, bonding_descrpt, 'bonding')
-
-        if all_atom:
-            atomnames = {node[0]: node[1]['element']+str(node[0]) for node in mol_graph.nodes(data=True)}
-            nx.set_node_attributes(mol_graph, atomnames, 'atomname')
-
-        nx.set_node_attributes(mol_graph, fragname, 'fragname')
-        nx.set_node_attributes(mol_graph, 0, 'fragid')
+            mol_graph = read_fragment_cgsmiles(smiles_str,
+                                               fragname,
+                                               bonding_descrpt,
+                                               attributes)
         yield fragname, mol_graph
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):
