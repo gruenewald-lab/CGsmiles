@@ -36,26 +36,40 @@ FRAGID_TO_COLOR = {0: "tab:blue",
 DEFAULT_COLOR = "orchid"
 
 def draw_molecule(graph,
+                  ax=None,
+                  pos=None,
                   cg_mapping=True,
                   colors=None,
                   labels=None,
-                  edge_widths=10,
-                  mapped_edge_width=80,
-                  pos=None,
-                  ax=None,
-                  scale=4,
-                  fontsize=64,
-                  default_bond=None,
-                  layout_method='vespr_refined',
+                  scale=2,
                   outline=False,
-                  layout_kwargs={},
                   use_weights=False,
                   align_with='diag',
-                  text_color='black'):
+                  fontsize=10,
+                  text_color='black',
+                  edge_widths=3,
+                  mapped_edge_width=20,
+                  layout_method='vespr_refined',
+                  default_bond=1,
+                  layout_kwargs={}):
     """
     Draw the graph of a molecule optionally with a coarse-grained
     projection if `cg_mapping` is set to True. The membership of
     atoms to the CG projection is taken from the 'fragid' attribute.
+
+    If no positions are provided one of three layout methods may be
+    specified. These are vespr_refined, vespr, and circular. Note
+    that the vespr_refined is slow but yields the best quality results.
+    For a quick look vespr is recommended. The drawing function also
+    accepts a layout_kwarg dictionary specifiying options to be given
+    to the three layout methods. See also `cgsmiles.graph_layout`.
+
+    The drawing is always of fixed size based on the canvas size. This
+    means that molecules drawn on a canvas with the same size will have
+    the same dimensions (i.e. bond length, atom size). Using the scale
+    argument a drawing can be scaled to make it larger or smaller on
+    a given canvas. That means if your molecule is too small or large
+    redraw it setting a different scale parameter.
 
     Parameters
     ----------
@@ -86,6 +100,13 @@ def draw_molecule(graph,
         the width of the bonds
     mapped_edge_widths: float
         the width of the mapped projection
+
+    Returns
+    -------
+    :class:`matplotlib.pyplot.axis`
+        the updated axis object
+    dict
+        a dict of positions
     """
     # check input args
     if pos and layout_method:
@@ -133,8 +154,6 @@ def draw_molecule(graph,
 
     # generate inital positions
     if not pos:
-        if default_bond is None:
-            default_bond = bbox.width /4
         pos = LAYOUT_METHODS[layout_method](graph,
                                             default_bond=default_bond,
                                             bounding_box=[w, h],
