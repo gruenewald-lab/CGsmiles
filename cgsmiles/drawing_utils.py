@@ -1,8 +1,6 @@
 from collections import defaultdict
 import math
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
 
 def angle_between(v1, v2):
     cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
@@ -18,13 +16,6 @@ def angle_of_interest(v1, v2):
     # Rotation angle with respect to the x-axis
     angle_x_axis = rotation_from_x_axis(vtot)
     return angle_x_axis
-
-def create_rwb_colormap(n):
-    cmap = plt.get_cmap('tab20', n)
-    colors = cmap(np.linspace(0, 1, n))
-    return ListedColormap(colors)
-
-default_colormap = create_rwb_colormap
 
 def rotate_2D(x, y, theta):
     return x*math.cos(theta) - y*math.sin(theta), x*math.sin(theta) + y*math.cos(theta)
@@ -75,7 +66,7 @@ def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
         out.append([[x0pp, y0pp], [x1pp, y1pp]])
     return out
 
-def make_graph_edges(graph, pos):
+def make_graph_edges(graph, pos, spacing=0.1, sep=0.2):
     """
     Given a molecule graph generate starting and stop
     points for the edges taking into account the bond
@@ -87,8 +78,12 @@ def make_graph_edges(graph, pos):
         Graph with bond oder attribute
     pos: np.ndarray((2, len(graph)))
         2D positions for the nodes
-    spacing:
+    spacing: float
+        distance between pos and start of edge
+        (default: 0.1)
     sep: float
+        separation for bond orders higher than 1
+        (default: 0.2)
 
     Returns
     -------
@@ -104,13 +99,21 @@ def make_graph_edges(graph, pos):
         if not bond_order:
             bond_order = 1
         if bond_order == 1.5:
-            tmp = make_edge(pos[idx], pos[jdx], 2, sep=0.2)
+            tmp = make_edge(pos[idx],
+                            pos[jdx],
+                            bond_order=2,
+                            spacing=spacing,
+                            sep=sep)
             arom_edges.append(tmp[0])
             edges.append(tmp[1])
-            plain_edges[frozenset([idx, jdx])] = make_edge(pos[idx], pos[jdx], 1)
         else:
-            edges.extend(make_edge(pos[idx], pos[jdx], bond_order))
-            plain_edges[frozenset([idx, jdx])] = make_edge(pos[idx], pos[jdx], 1)
+            edges.extend(make_edge(pos[idx],
+                                   pos[jdx],
+                                   bond_order=bond_order,
+                                   spacing=spacing,
+                                   sep=0))
+
+        plain_edges[frozenset([idx, jdx])] = make_edge(pos[idx], pos[jdx], 1)
     return edges, arom_edges, plain_edges
 
 def make_mapped_edges(graph, plain_edges):
@@ -118,34 +121,90 @@ def make_mapped_edges(graph, plain_edges):
     Mapped edges are all those edges between atoms
     that belong to the same fragment (i.e. where both
     nodes have the same fragid attribute).
+
+    Parameters
+    ----------
+    graph: nx.Graph
+        graph of the molecule with 'fragid' attribute
+    plain_edges: dict[frozenset([abc.hashable])]
+        dict of edge coordintes indexed by node keys
+
+    Returns
+    -------
+    dict[list]
+        dict of edges belonging to a paticular fragid
     """
     mapped_edges = defaultdict(list)
     for idx, jdx in graph.edges:
-        if graph.nodes[idx]['fragid'] == graph.nodes[jdx]['fragid']:
-            fragid = graph.nodes[idx]['fragid'][0]
+        frag_idx = graph.nodes[idx]['fragid']
+        frag_jdx = graph.nodes[jdx]['fragid']
+        # edge belongs to the same fragment
+        # e.g. [0] == [0]
+        if frag_idx == frag_jdx:
+            frag_id = frag_idx[0]
+            mapped_edges[frag_id].extend(plain_edges[frozenset([idx, jdx])])
+        # edge on idx belongs to multiple fragments and at least one
+        # fragment id is the same as in jdx e.g. [1,2] in [2] or
+        # [1, 2] & [2, 3]
+        elif len(frag_idx) > 1 and any(fid in frag_idx for fid in frag_idx):
+            fragid = frag_jdx[0]
             mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
-        elif len(graph.nodes[idx]['fragid']) > 1 and\
-             graph.nodes[jdx]['fragid'][0] in graph.nodes[idx]['fragid']:
-            fragid = graph.nodes[jdx]['fragid'][0]
-            mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
-        elif len(graph.nodes[jdx]['fragid']) > 1 and\
-             graph.nodes[idx]['fragid'][0] in graph.nodes[jdx]['fragid']:
+        # same as above
+        elif len(frag_jdx) > 1 and any(fid in frag_idx for fid in frag_idx):
             fragid = graph.nodes[idx]['fragid'][0]
             mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
     return mapped_edges
 
-def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, linewidth=0.2, use_weights=False):
+def make_node_pies(graph,
+                   pos,
+                   cgmapping,
+                   colors,
+                   outline=False,
+                   radius=0.2,
+                   linewidth=0.2,
+                   use_weights=False):
     """
     Generate the slices for the matplotlip pies used to draw nodes.
+
+    Parameters
+    ----------
+    graph: nx.Graph
+        graph of the molecule
+    pos: dict[np.array]
+        dict of 2D node positions
+    cgmapping: bool
+        if the drawing includes a cgmapping;
+        uses the fragid attribute for colors
+        otherwise node keys are used
+    colors: dict
+        dict of colors
+    radius: float
+        radius fo the pie
+    linewidth: float
+        outline width of the pie
+    use_weights: bool
+        use the weight attribute when drawing node pies
+
+    Yields
+    ------
+    np.array, dict
+        array slices and keyword arguments to be given
+        to mpl.Pie class
     """
-    for idx, node in enumerate(graph.nodes):
+    for node in graph.nodes:
         position = pos[node]
         fragids = graph.nodes[node].get('fragid', None)
         wedgeprops=None
+        # here we have a zero weight node where the node belongs to more than
+        # a single fragid in a cgmapping
         if use_weights and fragids and len(fragids) > 1 and graph.nodes[node].get('weight', 1) == 0:
             wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
             slices = np.array([1])
             pie_colors = ['white', 'white']
+        # in this case we have one node that belongs to multiple fragids
+        # thus we color the pie slices according to the fragment and rotate
+        # the node such that the colors aling; this is only possible if we
+        # have cgmapping
         elif fragids and len(fragids) > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
@@ -160,13 +219,13 @@ def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, lin
                     if angle < 0:
                         angle += 360
                     angles.append(angle)
-                    pie_colors.append(colors(graph.nodes[neigh]['fragid'][0]))
+                    pie_colors.append(colors[graph.nodes[neigh]['fragid'][0]])
             # compute the rotation to align the pie
             startangle = angle_of_interest(edges[0], edges[1])
             if startangle < 0:
                 startangle += 360
             # sort angles and pie colors
-            pre_pie_colors = [x for _, x in sorted(zip(angles, pie_colors))][::-1]
+            pre_pie_colors = [x for _, x in sorted(zip(angles, pie_colors), reverse=True)]
             angles = np.array(sorted(angles))
             for angle in angles:
                 if angle < startangle: # and angle > startangle - (360/len(fragids)):
@@ -177,26 +236,32 @@ def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, lin
             # I guess in principle on could also use the weight attribute
             weight = 1/len(fragids)
             slices = np.array([weight for n in range(0, len(fragids))])
+        # in this case we have a node belonging to a single fragid or we
+        # don't draw a cgmapping
         else:
+            # first we make slices according to the weights if required
             if use_weights:
                 weight = graph.nodes[node].get('weight', 1)
                 if weight == 0:
-                    wedgeprops = {'edgecolor': colors(fragids[0]), 'linewidth':linewidth}
+                    wedgeprops = {'edgecolor': colors[fragids[0]], 'linewidth':linewidth}
                     slices = np.array([1])
                 else:
                     slices = np.array([weight, 1-weight])
-                    wedgeprops = {'edgecolor': colors(fragids[0]), 'linewidth':linewidth}
+                    wedgeprops = {'edgecolor': colors[fragids[0]], 'linewidth':linewidth}
             else:
                 slices = np.array([1])
 
+            # now we assign colors; white in case the weight is zero
             if cgmapping and use_weights and weight == 0:
                 pie_colors = ['white', 'white']
+            # if we have a cgmapping the fragid is used to color the node
             elif cgmapping:
-                pie_colors = [colors(fragids[0]), 'white', 'white']
+                pie_colors = [colors[fragids[0]], 'white', 'white']
+            # otherwise we color the node according to the node index
             else:
                 pie_colors = [colors[node], 'white']
                 if outline:
-                   wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
+                    wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
 
             startangle = 0
 
@@ -207,4 +272,5 @@ def make_node_pies(graph, pos, cgmapping, colors, outline=False, radius=0.2, lin
 
         if wedgeprops:
             pie_kwargs['wedgeprops'] = wedgeprops
+
         yield slices, pie_kwargs
