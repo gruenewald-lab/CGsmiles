@@ -2,6 +2,6 @@ sphinx >= 1.8.0
 sphinxcontrib-apidoc
 pbr
 setuptools >= 30.3.0
-
+furo
 numpy
 networkx ~= 2.0
