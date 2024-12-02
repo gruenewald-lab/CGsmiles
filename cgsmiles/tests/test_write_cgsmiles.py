@@ -67,6 +67,7 @@ def test_write_cgsmiles(input_string):
     out_resolver =  MoleculeResolver.from_string(output_string)
     out_mol = out_resolver.molecule
     assertEqualGraphs(molecule, out_mol)
+    print("fragments")
     out_fragments = out_resolver.fragment_dicts
     assert len(fragment_dicts) == len(out_fragments)
     for frag_dict, frag_dict_out in zip(fragment_dicts, out_fragments):

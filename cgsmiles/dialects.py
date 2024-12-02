@@ -19,7 +19,8 @@ def _parse_dialect_string(string_iterable,
                           dialect_signature,
                           arg_to_fullname={},
                           annotation_sep_token=';',
-                          annotation_assign_token='='):
+                          annotation_assign_token='=',
+                          drop_none=True):
     """
     This base function parsers a string that describes key value pairs
     in having a pattern of:
@@ -46,6 +47,8 @@ def _parse_dialect_string(string_iterable,
         character used to seperate key value pairs
     annotation_assign_token: str
         character used to assign a key from a value
+    drop_none: bool
+        drop all entries with value equal to None
 
     Returns
     -------
@@ -89,6 +92,12 @@ def _parse_dialect_string(string_iterable,
     applied_labels = check_and_cast_types(applied_labels,
                                           dialect_signature)
     applied_labels.apply_defaults()
+
+    # drop all attributes that are None by default
+    not_defined = [ attr for attr, value in applied_labels.arguments.items() if value is None]
+    for attr in not_defined:
+        del applied_labels.arguments[attr]
+
     # convert keys to more verbose names
     # this should only apply to args know to
     # the signature
@@ -105,19 +114,21 @@ def _parse_dialect_string(string_iterable,
     out_args.update(applied_labels.arguments)
     return out_args
 
-def create_dialect(default_attributes, accept_kwargs=True):
+def create_dialect(default_attributes,
+                   optional_attributes={},
+                   accept_kwargs=True):
     """
     Creates a signature of default annotations.
     Note that the order of the entries in the dict
     determines the order of the args accepted.
     """
     parameters = []
-    for argname, default_value in default_attributes.items():
-        arg_type = type(default_value)
+    for argname, (default_value, arg_type) in default_attributes.items():
         parameters.append(Parameter(argname,
                                     Parameter.POSITIONAL_OR_KEYWORD,
                                     default=default_value,
                                     annotation=arg_type))
+
     if accept_kwargs:
         parameters.append(Parameter('kwargs',
                                     kind=Parameter.VAR_KEYWORD))
@@ -129,9 +140,9 @@ def create_dialect(default_attributes, accept_kwargs=True):
 ##########################################################
 # this one is for global use
 # it is the base CGSmiles dialect
-CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": "NaN",
-                                           "q": 0.0,
-                                           "w": 1.0})
+CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": (None, str),
+                                           "q": (0.0, float),
+                                           "w": (1.0, float)})
 parse_graph_base_node = partial(_parse_dialect_string,
                                 dialect_signature=CGSMILES_DEFAULT_DIALECT,
                                 arg_to_fullname = {"w": "weight", "q": "charge"})
@@ -141,7 +152,7 @@ parse_graph_base_node = partial(_parse_dialect_string,
 # they go to the respective parser
 # in case of cgsmiles fragments it is a bit doing
 # double the work
-fragment_base = create_dialect({"w": 1.0}, accept_kwargs=True)
+fragment_base = create_dialect({"w": (1.0, float), "x": (None, str)}, accept_kwargs=True)
 _fragment_node_parser = partial(_parse_dialect_string,
                                 dialect_signature=fragment_base,
-                                arg_to_fullname = {"w": "weight"})
+                                arg_to_fullname = {"w": "weight", "x": "chiral"})
