@@ -1,37 +1,72 @@
 from collections import OrderedDict
 import numpy as np
-from numpy import unravel_index
+import scipy.ndimage
 import scipy.optimize
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist
 import networkx as nx
+from .linalg_functions import vector_angle_degrees, dihedral_angle_between, reflect, rotate_degrees
 
-def rotate_to_axis(positions, align_with, diagonal=None):
+def rotate_subgraph(graph, anchor, reference, target, points, angle=120):
     """
-    Rotate position array to aling with one of the principle axis
-    or the diagonal.
+    Given a graph of which each node is associated with
+    a point in 2D. Take a `target` edge and remove it
+    from the subgraph. Then take the first connected
+    component and rotate this subgraph by `angle` degrees
+    about the reference point given by the first node in
+    the target edge.
+
+    Parameters
+    ----------
+    graph: nx.Graph
+        the graph
+    target: tuple(abc.hashable, abc.hashable)
+        the target edge
+    points: dict[abc.hashable: np.array]
+        the dict of 2D positions
+    angle: float
+        the angle to rotate by
+
+    Returns
+    -------
+    dict
+        the updated positions dict
     """
-    # get all the distances
-    distances = squareform(pdist(positions, 'euclidean'))
-    # find pair belonging to largest distance
-    pair = unravel_index(distances.argmax(), distances.shape)
-    # get vector
-    vector = positions[pair[0]] - positions[pair[1]]
-    # compute angle
-    if align_with == 'diag':
-        diagonal = np.array(diagonal)
-    elif align_with == 'x':
-        diagonal = np.array([1,0])
-    elif align_with == 'y':
-        diagonal = np.array([0, 1])
+    graph_copy = nx.subgraph(graph, graph.nodes).copy()
+    graph_copy.remove_edge(anchor, target)
+    connected_comps = nx.connected_components(graph_copy)
+    target_nodes = next(connected_comps)
+    while target_nodes:
+        if target in target_nodes:
+            break
+        target_nodes = next(connected_comps)
+    target_points = np.array([points[node] for node in target_nodes])
+    ref_vector = points[reference] - points[anchor]
+    target_vector = points[target] - points[anchor]
+    rotate_angle = vector_angle_degrees(ref_vector, target_vector) - angle
+    new_points = rotate_degrees(target_points, rotate_angle, origin=points[anchor])
+    for point, node in zip(new_points, target_nodes):
+        points[node] = point
+    return points
 
-    angle = np.arctan2(diagonal[1], diagonal[0]) - np.arctan2(vector[1], vector[0])
-    # rotate object onto diagonal
-    rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],
-                                [np.sin(angle), np.cos(angle)]])
+def check_and_fix_cis_trans(graph, points):
+    cis_trans = nx.get_node_attributes(graph, 'ez_isomer')
+    for n1, n2, n3, n4, _type in cis_trans.values():
+        # the ligand of the double bond is rotated oddly
+        # we fix that first
+        if _type == 'trans':
+           angle = 120
+        elif n1 < n4:
+            angle = 120
+        else:
+            angle = 240
 
-    # Apply the rotation matrix to all positions
-    rotated_positions = np.dot(positions, rotation_matrix.T)
-    return rotated_positions
+        rotate_subgraph(graph,
+                        anchor=n2,
+                        reference=n3,
+                        target=n1,
+                        points=points,
+                        angle=angle)
+    return points
 
 def find_triplets(graph):
     """
@@ -140,16 +175,6 @@ def assign_bonds(graph, pos, default_bond=None):
         bonds.append((edge[0], edge[1], dist))
     return bonds
 
-def _angle_between(v1, v2):
-    """
-    Compute angle between two 2D vectors.
-    """
-    cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    angle_rad = np.arccos(np.clip(cos_theta, -1.0, 1.0))
-    angle_deg = np.degrees(angle_rad)
-    return angle_deg
-
-
 def _bond_potential(atom_pos, ref):
     """
     Compute energy associated to the bonds.
@@ -164,7 +189,7 @@ def _angle_potential(atom_pos, ref):
     """
     v1 = atom_pos[1] - atom_pos[0]
     v2 = atom_pos[1] - atom_pos[2]
-    energy = (ref-_angle_between(v1, v2))**2
+    energy = (ref-vector_angle_degrees(v1, v2))**2
     return energy
 
 def _nonbonded_potential(positions, neighbors):

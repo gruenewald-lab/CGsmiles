@@ -5,7 +5,8 @@ from collections import OrderedDict
 import math
 import numpy as np
 import networkx as nx
-from .graph_layout_utils import _force_minimize, rotate_to_axis, _generate_circle_coordinates
+from .graph_layout_utils import _force_minimize, _generate_circle_coordinates, check_and_fix_cis_trans
+from .linalg_functions import rotate_to_axis
 
 def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
     """
@@ -48,6 +49,7 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
                                  dist=dist,
                                  scale=1.0)
 
+    pos = check_and_fix_cis_trans(graph, pos)
     # rotate molecule to fit into bounding box
     if align_with:
         pos_aligned = rotate_to_axis(pos,
@@ -156,11 +158,17 @@ def vespr_refined_layout(graph,
         pos_aligned = rotate_to_axis(pos,
                                      align_with,
                                      bounding_box)
+    else:
+        pos_aligned = pos
 
     # write positions as dict of graph node keys
     positions = {}
     for node_key, idx in atom_to_idx.items():
         positions[node_key] = pos_aligned[idx]
+
+    # fix cis trans
+    positions = check_and_fix_cis_trans(graph, positions)
+
     return positions
 
 LAYOUT_METHODS = {'vespr_refined': vespr_refined_layout,

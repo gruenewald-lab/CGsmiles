@@ -49,7 +49,7 @@ def draw_molecule(graph,
                   text_color='black',
                   edge_widths=3,
                   mapped_edge_width=20,
-                  layout_method='vespr_refined',
+                  layout_method=None,
                   default_bond=1,
                   layout_kwargs={}):
     """
