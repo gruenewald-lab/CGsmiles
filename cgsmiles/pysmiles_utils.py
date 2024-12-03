@@ -1,7 +1,7 @@
 import logging
 import networkx as nx
 import pysmiles
-from pysmiles.smiles_helper import (annotate_ez_isomers,
+from pysmiles.smiles_helper import (_annotate_ez_isomers,
                                     remove_explicit_hydrogens,
                                     add_explicit_hydrogens)
 
@@ -115,7 +115,7 @@ def annotate_ez_isomers_cgsmiles(molecule):
         and ez_isomer_class set as node attributes
     """
     ez_isomer_class = nx.get_node_attributes(molecule, 'ez_isomer_class')
-    annotate_ez_isomers(molecule, ez_isomer_class)
+    _annotate_ez_isomers(molecule, ez_isomer_class)
     # clean up
     for node in ez_isomer_class:
         del  molecule.nodes[node]['ez_isomer_class']
