@@ -111,7 +111,7 @@ def assign_angles(graph, default_angle=120):
     Assign angle values for all angles in a molecule
     graph. We assume they are all 120 if atoms have
     2 or 3 neighbors. Otherwise, they are skipped. On
-    top we take care that fife membered rings and triangles
+    top we take care that five membered rings and triangles
     have the correct angle sum.
 
     Parameters
@@ -133,32 +133,25 @@ def assign_angles(graph, default_angle=120):
             # find ring and check that all are part
             for idx, cycle in enumerate(cycles):
                 if all([node in cycle for node in triplet]):
-                    if len(cycle) == 6:
-                        angles.append((triplet[0],
-                                       triplet[1],
-                                       triplet[2],
-                                       120))
-                    elif len(cycle) == 5:
-                        angles.append((triplet[0],
-                                       triplet[1],
-                                       triplet[2],
-                                       72))
-                    elif len(cycle) == 4:
-                        angles.append((triplet[0],
-                                       triplet[1],
-                                       triplet[2],
-                                       90))
-                    elif len(cycle) == 3:
-                        angles.append((triplet[0],
-                                       triplet[1],
-                                       triplet[2],
-                                       60))
+                    angles.append((triplet[0],
+                                   triplet[1],
+                                   triplet[2],
+                                   180-360/len(cycle)))
 
-        if graph.degree(triplet[1]) in [2, 3]:
+        if graph.edges[triplet[0], triplet[1]]['order'] > 2 or\
+            graph.edges[triplet[1], triplet[2]]['order'] > 2:
+            angles.append((triplet[0],
+                          triplet[1],
+                          triplet[2],
+                          180))
+
+        elif graph.degree(triplet[1]) in [2, 3]:
             angles.append((triplet[0],
                           triplet[1],
                           triplet[2],
                           default_angle))
+
+
     return angles
 
 def assign_bonds(graph, pos, default_bond=None):
@@ -326,7 +319,7 @@ def _force_minimize(graph,
                      'angles': _angle_potential,
                      'dihedrals': _dihedral_potential}
     n_atoms = len(pos)
-    atom_to_idx = OrderedDict(zip(list(pos.keys()), range(0, n_atoms)))
+    atom_to_idx = atom_to_idx = {n: idx for idx, n in enumerate(pos.keys())}
     pos = np.ravel(np.array(list(pos.values())))
     bonds = assign_bonds(graph, pos, default_bond)
     angles = assign_angles(graph, default_angle)
