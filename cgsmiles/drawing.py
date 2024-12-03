@@ -112,6 +112,9 @@ def draw_molecule(graph,
     if pos and layout_method:
         msg = "You cannot provide both positions and a layout method."
         raise ValueError(msg)
+    if pos is None and layout_method is None:
+        msg = "You need to provide either positions or a layout method."
+        raise ValueError(msg)
 
     # scaling cannot be negative
     assert scale > 0
