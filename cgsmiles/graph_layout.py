@@ -53,7 +53,7 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
     # rotate molecule to fit into bounding box
     if align_with:
         pos_arr = np.array(list(pos.values()))
-        pos_aligned = rotate_to_axis(pos,
+        pos_aligned = rotate_to_axis(pos_arr,
                                      align_with,
                                      bounding_box)
         for idx, node in enumerate(pos):
