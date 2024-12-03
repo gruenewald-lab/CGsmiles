@@ -38,6 +38,7 @@ DEFAULT_COLOR = "orchid"
 def draw_molecule(graph,
                   ax=None,
                   pos=None,
+                  layout_method=None,
                   cg_mapping=True,
                   colors=None,
                   labels=None,
@@ -49,7 +50,6 @@ def draw_molecule(graph,
                   text_color='black',
                   edge_widths=3,
                   mapped_edge_width=20,
-                  layout_method=None,
                   default_bond=1,
                   layout_kwargs={}):
     """
@@ -57,12 +57,24 @@ def draw_molecule(graph,
     projection if `cg_mapping` is set to True. The membership of
     atoms to the CG projection is taken from the 'fragid' attribute.
 
-    If no positions are provided one of three layout methods may be
-    specified. These are vespr_refined, vespr, and circular. Note
+    Positions or one of three layout methods mus be specified. The
+    layout options are vespr_refined, vespr, and circular. Note
     that the vespr_refined is slow but yields the best quality results.
     For a quick look vespr is recommended. The drawing function also
     accepts a layout_kwarg dictionary specifiying options to be given
     to the three layout methods. See also `cgsmiles.graph_layout`.
+
+    For example to draw Benzen using the Martini 3 mapping:
+
+    >>> import matplotlib.pyplot as plt
+    >>> from cgsmiles import MoleculeResolver
+    >>> from cgsmiles import draw_molecule
+
+    >>> cgsmiles_str = "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}"
+    >>> resolver = MoleculeResolver.from_string(cgsmiles_str)
+    >>> cg_mol, aa_mol = resolver.resolve()
+    >>> draw_molecule(aa_mol, layout_method="vespr_refined")
+    >>> plt.show()
 
     The drawing is always of fixed size based on the canvas size. This
     means that molecules drawn on a canvas with the same size will have
@@ -77,6 +89,8 @@ def draw_molecule(graph,
         mpl axis object
     pos: dict
         a dict mapping nodes to 2D positions
+    layout_method:
+        choice of vespr, vespr_refined, circular
     cg_mapping: bool
         draw outline for the CG mapping (default: True)
     colors: dict
@@ -100,6 +114,10 @@ def draw_molecule(graph,
         the width of the bonds
     mapped_edge_widths: float
         the width of the mapped projection
+    default_bond: float
+        default bond length (default: 1)
+    layout_kwargs: dict
+        dict with arguments passed to the layout methods
 
     Returns
     -------
@@ -131,8 +149,7 @@ def draw_molecule(graph,
 
     # default labels are the element names
     if labels is None:
-        elem = nx.get_node_attributes(graph, 'element')
-        labels = elem.values()
+        labels = nx.get_node_attributes(graph, 'element')
 
     # collect the fragids if CG projection is to be drawn
     if cg_mapping:
