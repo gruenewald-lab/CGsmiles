@@ -6,3 +6,4 @@ from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments
 from .resolve import MoleculeResolver
 from .sample import MoleculeSampler
+from .drawing import draw_molecule

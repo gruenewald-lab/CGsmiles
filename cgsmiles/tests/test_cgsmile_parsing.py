@@ -410,19 +410,19 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         ("[>]CC(\F)=[<]",
                         "CC(F)",
                         {0: [">1"], 1: ["<2"]},
-                        {2: (2, 1, '\\')},
+                        {1: '\\', 2: '\\'},
                         None),
                         # / fragment split
                         ("[>]CC(/F)=[<]",
                         "CC(F)",
                         {0: [">1"], 1: ["<2"]},
-                        {2: (2, 1, '/')},
+                        {1: '/', 2: '/'},
                         None),
                         # both in one fragment
                         ("[>]CC(/F)=C(\F)C[<]",
                         "CC(F)=C(F)C",
                         {0: [">1"], 5: ["<1"]},
-                        {2: (2, 1, '/'), 4: (4, 3, '\\')},
+                        {1: '/', 2: '/', 3: '\\', 4: '\\'},
                         None),
 ))
 def test_strip_bonding_descriptors(big_smile, smile, bonding, ez, attrs):
