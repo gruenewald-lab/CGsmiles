@@ -4,7 +4,13 @@ import scipy.ndimage
 import scipy.optimize
 from scipy.spatial.distance import pdist
 import networkx as nx
-from .linalg_functions import vector_angle_degrees, dihedral_angle_between, reflect, rotate_degrees
+from .linalg_functions import vector_angle_degrees, dihedral_angle_between, rotate_degrees
+
+def _angle(n1, n2, n3, points):
+    ref_vector = points[n3] - points[n2]
+    target_vector = points[n1] - points[n2]
+    angle = vector_angle_degrees(ref_vector, target_vector)
+    return angle
 
 def rotate_subgraph(graph, anchor, reference, target, points, angle=120):
     """
@@ -50,22 +56,27 @@ def rotate_subgraph(graph, anchor, reference, target, points, angle=120):
 
 def check_and_fix_cis_trans(graph, points):
     cis_trans = nx.get_node_attributes(graph, 'ez_isomer')
-    for n1, n2, n3, n4, _type in cis_trans.values():
-        # the ligand of the double bond is rotated oddly
-        # we fix that first
-        if _type == 'trans':
-           angle = 120
-        elif n1 < n4:
-            angle = 120
-        else:
-            angle = 240
+    for  cis_trans_item in cis_trans.values():
+        for n1, n2, n3, n4, _type in cis_trans_item:
+            angle_init = _angle(n1, n2, n3, points)
+            angle_compl = _angle(n4, n3, n2, points)
+            if _type == 'trans' and np.isclose(angle_init,120, atol=10):
+                continue
+            if _type  == 'cis' and n1 < n4 and np.isclose(angle_init, 120, atol=10):
+                continue
+            if _type == 'trans':
+                angle = 120
+            elif n1 < n4:
+                angle = 120
+            else:
+                angle = 240
 
-        rotate_subgraph(graph,
-                        anchor=n2,
-                        reference=n3,
-                        target=n1,
-                        points=points,
-                        angle=angle)
+            rotate_subgraph(graph,
+                            anchor=n2,
+                            reference=n3,
+                            target=n1,
+                            points=points,
+                            angle=angle)
     return points
 
 def find_triplets(graph):
@@ -175,6 +186,15 @@ def assign_bonds(graph, pos, default_bond=None):
         bonds.append((edge[0], edge[1], dist))
     return bonds
 
+def assing_dihedral_angles(graph):
+    cis_trans = nx.get_node_attributes(graph, 'ez_isomer')
+    dihedrals = []
+    ref = {"cis": 0, "trans": 180}
+    for cis_trans_items in cis_trans.values():
+        for cis_trans_item in cis_trans_items:
+            dihedrals.append([*cis_trans_item[:4], ref[cis_trans_item[4]]])
+    return dihedrals
+
 def _bond_potential(atom_pos, ref):
     """
     Compute energy associated to the bonds.
@@ -190,6 +210,11 @@ def _angle_potential(atom_pos, ref):
     v1 = atom_pos[1] - atom_pos[0]
     v2 = atom_pos[1] - atom_pos[2]
     energy = (ref-vector_angle_degrees(v1, v2))**2
+    return energy
+
+def _dihedral_potential(atom_pos, ref):
+    dih = dihedral_angle_between(*atom_pos)
+    energy = 100*(dih-ref)**2
     return energy
 
 def _nonbonded_potential(positions, neighbors):
@@ -298,13 +323,15 @@ def _force_minimize(graph,
     which descibes 2D moleucle layout.
     """
     inter_methods = {'bonds': _bond_potential,
-                     'angles': _angle_potential}
+                     'angles': _angle_potential,
+                     'dihedrals': _dihedral_potential}
     n_atoms = len(pos)
     atom_to_idx = OrderedDict(zip(list(pos.keys()), range(0, n_atoms)))
     pos = np.ravel(np.array(list(pos.values())))
     bonds = assign_bonds(graph, pos, default_bond)
     angles = assign_angles(graph, default_angle)
-    interactions = {'bonds': bonds, 'angles': angles}
+    dihedrals = assing_dihedral_angles(graph)
+    interactions = {'bonds': bonds, 'angles': angles, 'dihedrals': dihedrals}
     neighbors = np.zeros((n_atoms, n_atoms))
     for edge in graph.edges:
         neighbors[atom_to_idx[edge[0]], atom_to_idx[edge[1]]] = True

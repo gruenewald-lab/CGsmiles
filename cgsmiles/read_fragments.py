@@ -196,11 +196,8 @@ def strip_bonding_descriptors(fragment_string):
             smile += token
         # deal with ez isomers
         elif token in '/ \\':
-            # we have a branch
-            if node_count == 0:
-                ez_isomer_atoms[node_count] = (node_count, 1, token)
-            else:
-                ez_isomer_atoms[node_count] = (node_count, prev_node, token)
+            ez_isomer_atoms[node_count] = token
+            ez_isomer_atoms[prev_node] = token
         else:
             if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
                 smile += (token + next(smile_iter))

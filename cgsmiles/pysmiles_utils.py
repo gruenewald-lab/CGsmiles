@@ -1,7 +1,7 @@
 import logging
 import networkx as nx
 import pysmiles
-from pysmiles.smiles_helper import (_annotate_ez_isomers,
+from pysmiles.smiles_helper import (annotate_ez_isomers,
                                     remove_explicit_hydrogens,
                                     add_explicit_hydrogens)
 
@@ -104,7 +104,7 @@ def rebuild_h_atoms(mol_graph,
                 value = mol_graph.nodes[anchor][attr]
                 mol_graph.nodes[node][attr] = value
 
-def annotate_ez_isomers(molecule):
+def annotate_ez_isomers_cgsmiles(molecule):
     """
     Small wrapper dealing with ez_isomer annotation.
 
@@ -114,18 +114,10 @@ def annotate_ez_isomers(molecule):
         The molecule of interest, which must of ez_isomer_pairs
         and ez_isomer_class set as node attributes
     """
-    ez_isomer_atoms = nx.get_node_attributes(molecule, 'ez_isomer_atoms')
     ez_isomer_class = nx.get_node_attributes(molecule, 'ez_isomer_class')
-    ez_isomer_atoms_list = [atoms + [_class] for atoms, _class in zip(ez_isomer_atoms.values(), ez_isomer_class.values())]
-    ez_isomer_pairs = list(zip(ez_isomer_atoms_list[::2], ez_isomer_atoms_list[1::2]))
-    if len(ez_isomer_atoms)%2 != 0:
-        msg = ("You have an uneven amount of atoms marked as CIS/TRANS isomers."
-               "We will drop the last atom from assigning the iosmers.")
-        LOGGER.warning(msg)
-    _annotate_ez_isomers(molecule, ez_isomer_pairs)
+    annotate_ez_isomers(molecule, ez_isomer_class)
     # clean up
-    for node in ez_isomer_atoms:
-        del  molecule.nodes[node]['ez_isomer_atoms']
+    for node in ez_isomer_class:
         del  molecule.nodes[node]['ez_isomer_class']
 
 def read_fragment_smiles(smiles_str,
@@ -210,9 +202,7 @@ def read_fragment_smiles(smiles_str,
                            'element')
 
     # we need to split countable node keys and the associated value
-    ez_isomer_atoms = {idx: val[:-1] for idx, val in ez_isomers.items()}
     ez_isomer_class = {idx: val[-1] for idx, val in ez_isomers.items()}
-    nx.set_node_attributes(mol_graph, ez_isomer_atoms, 'ez_isomer_atoms')
     nx.set_node_attributes(mol_graph, ez_isomer_class, 'ez_isomer_class')
 
     return mol_graph

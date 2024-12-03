@@ -166,8 +166,8 @@ def vespr_refined_layout(graph,
     for node_key, idx in atom_to_idx.items():
         positions[node_key] = pos_aligned[idx]
 
-    # fix cis trans
-    positions = check_and_fix_cis_trans(graph, positions)
+#    # fix cis trans
+#    positions = check_and_fix_cis_trans(graph, positions)
 
     return positions
 

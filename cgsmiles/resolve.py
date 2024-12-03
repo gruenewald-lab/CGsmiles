@@ -9,7 +9,7 @@ from .graph_utils import (merge_graphs,
                           annotate_fragments,
                           set_atom_names_atomistic)
 from .pysmiles_utils import (rebuild_h_atoms,
-                             annotate_ez_isomers)
+                             annotate_ez_isomers_cgsmiles)
 
 def compatible(left, right, legacy=False):
     """
@@ -380,7 +380,7 @@ class MoleculeResolver:
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
         if all_atom:
-            annotate_ez_isomers(self.molecule)
+            annotate_ez_isomers_cgsmiles(self.molecule)
 
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
