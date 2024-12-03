@@ -52,9 +52,12 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
     pos = check_and_fix_cis_trans(graph, pos)
     # rotate molecule to fit into bounding box
     if align_with:
+        pos_arr = np.array(list(pos.values()))
         pos_aligned = rotate_to_axis(pos,
                                      align_with,
                                      bounding_box)
+        for idx, node in enumerate(pos):
+            pos[node] = pos_aligned[idx]
 
     avg_dist = 0
     for edge in graph.edges:
@@ -165,9 +168,6 @@ def vespr_refined_layout(graph,
     positions = {}
     for node_key, idx in atom_to_idx.items():
         positions[node_key] = pos_aligned[idx]
-
-#    # fix cis trans
-#    positions = check_and_fix_cis_trans(graph, positions)
 
     return positions
 
