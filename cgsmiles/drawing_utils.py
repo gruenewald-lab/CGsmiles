@@ -180,6 +180,8 @@ def make_node_pies(graph,
         dict of colors
     radius: float
         radius fo the pie
+    outline: bool
+        draw an outline for regular nodes
     linewidth: float
         outline width of the pie
     use_weights: bool
