@@ -235,11 +235,22 @@ def _optimize_geometry_2D(positions,
 
     Parameters
     ----------
-    pos: np.ndarray((n, 2))
+    positions: np.ndarray((n, 2))
         the inital positions
+    atom_to_idx: dict
+        dict mapping node keys to indices in the position
+        array
     interactions: dict[str, list(tuple)]
         a dict of interactions with key type and list of
         interaction tuples
+    inter_methods: dict
+        dict of interaction methods
+    neighbors:
+        (n x n) boolen array where direct neighbors
+        are False
+    lbfgs_options: dict
+        a dict taking all kwargs of the scipy lbfgs
+        minimizer
 
     Returns
     -------
