@@ -37,8 +37,8 @@ DEFAULT_COLOR = "orchid"
 
 def draw_molecule(graph,
                   ax=None,
+                  layout_method='vespr_refined',
                   pos=None,
-                  layout_method=None,
                   cg_mapping=True,
                   colors=None,
                   labels=None,
@@ -87,10 +87,11 @@ def draw_molecule(graph,
     ----------
     ax: :class:`matplotlib.pyplot.axis`
         mpl axis object
-    pos: dict
-        a dict mapping nodes to 2D positions
     layout_method:
         choice of vespr, vespr_refined, circular
+        (default: 'vespr_refined')
+    pos: dict
+        a dict mapping nodes to 2D positions
     cg_mapping: bool
         draw outline for the CG mapping (default: True)
     colors: dict
@@ -127,9 +128,6 @@ def draw_molecule(graph,
         a dict of positions
     """
     # check input args
-    if pos and layout_method:
-        msg = "You cannot provide both positions and a layout method."
-        raise ValueError(msg)
     if pos is None and layout_method is None:
         msg = "You need to provide either positions or a layout method."
         raise ValueError(msg)
