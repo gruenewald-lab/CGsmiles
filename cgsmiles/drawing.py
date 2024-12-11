@@ -43,15 +43,20 @@ def draw_molecule(graph,
                   colors=None,
                   labels=None,
                   scale=2,
-                  outline=False,
+                  outline=None,
                   use_weights=False,
                   align_with='diag',
                   fontsize=10,
                   text_color='black',
                   edge_widths=3,
+                  edge_spacing=0.1,
+                  edge_separation=0.2,
                   mapped_edge_width=20,
                   default_bond=1,
-                  layout_kwargs={}):
+                  radius=None,
+                  piezorder=3,
+                  layout_kwargs={},
+                  piekwargs={}):
     """
     Draw the graph of a molecule optionally with a coarse-grained
     projection if `cg_mapping` is set to True. The membership of
@@ -183,7 +188,10 @@ def draw_molecule(graph,
 
 
     # generate starting and stop positions for edges
-    edges, arom_edges, plain_edges = make_graph_edges(graph, pos)
+    edges, arom_edges, plain_edges = make_graph_edges(graph,
+                                                      pos,
+                                                      edge_spacing,
+                                                      edge_separation)
 
     # draw the edges
     ax.add_collection(LineCollection(edges,
@@ -207,17 +215,21 @@ def draw_molecule(graph,
                                              alpha=0.5))
 
     # now we draw nodes
+    if radius is None:
+        radius = default_bond/3.
+    node_counter = list(graph.nodes)
+    node_counter.reverse()
     for slices, pie_kwargs in make_node_pies(graph,
                                              pos,
                                              cg_mapping,
                                              colors,
                                              outline=outline,
-                                             radius=default_bond/3.,
-                                             use_weights=use_weights,
-                                             linewidth=edge_widths):
+                                             radius=radius,
+                                             use_weights=use_weights):
+        pie_kwargs.update(pie_kwargs.get(node_counter.pop(), {}))
         p, _ = ax.pie(slices, **pie_kwargs)
         for pie in p:
-            pie.set_zorder(3)
+            pie.set_zorder(piezorder)
 
     # add node texts
     zorder=4

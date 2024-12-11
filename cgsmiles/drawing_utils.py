@@ -159,9 +159,8 @@ def make_node_pies(graph,
                    pos,
                    cgmapping,
                    colors,
-                   outline=False,
+                   outline=None,
                    radius=0.2,
-                   linewidth=0.2,
                    use_weights=False):
     """
     Generate the slices for the matplotlip pies used to draw nodes.
@@ -178,10 +177,10 @@ def make_node_pies(graph,
         otherwise node keys are used
     colors: dict
         dict of colors
+    outline: float
+        outline width of the pie
     radius: float
         radius fo the pie
-    linewidth: float
-        outline width of the pie
     use_weights: bool
         use the weight attribute when drawing node pies
 
@@ -191,6 +190,14 @@ def make_node_pies(graph,
         array slices and keyword arguments to be given
         to mpl.Pie class
     """
+    # there are some cases where you will get an outline
+    # even if you did not ask for it. This is the case for
+    # nodes that have weight 0 for example and belong to
+    # more than a single fragid
+    if outline is None:
+        outline = False
+        linewidth = 0.2
+
     for node in graph.nodes:
         position = pos[node]
         fragids = graph.nodes[node].get('fragid', None)
@@ -272,5 +279,7 @@ def make_node_pies(graph,
 
         if wedgeprops:
             pie_kwargs['wedgeprops'] = wedgeprops
+        else:
+            pie_kwargs['wedgeprops'] = {}
 
         yield slices, pie_kwargs
