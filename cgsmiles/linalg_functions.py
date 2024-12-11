@@ -69,7 +69,7 @@ def rotate_degrees(position, angle, origin=np.array([0,0])):
     angle = np.deg2rad(angle)
     return rotate(position, angle, origin)
 
-def rotate_to_axis(positions, align_with, diagonal=None):
+def rotate_to_axis(positions, align_with):
     """
     Rotate position array to aling with one of the principle axis
     or the diagonal.
@@ -80,14 +80,8 @@ def rotate_to_axis(positions, align_with, diagonal=None):
     pair = unravel_index(distances.argmax(), distances.shape)
     # get vector
     vector = positions[pair[0]] - positions[pair[1]]
-    # compute angle
-    if align_with == 'diag':
-        diagonal = np.array(diagonal)
-    elif align_with == 'x':
-        diagonal = np.array([1,0])
-    elif align_with == 'y':
-        diagonal = np.array([0, 1])
 
-    angle = np.arctan2(diagonal[1], diagonal[0]) - np.arctan2(vector[1], vector[0])
+
+    angle = np.arctan2(align_with[1], align_with[0]) - np.arctan2(vector[1], vector[0])
     rotated_positions = rotate(positions, angle)
     return rotated_positions

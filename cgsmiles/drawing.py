@@ -1,6 +1,7 @@
 """
 Utilities for drawing molecules and cgsmiles graphs.
 """
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import networkx as nx
@@ -105,8 +106,9 @@ def draw_molecule(graph,
         draw an outline around each node
     use_weights: bool
         color nodes according to weight attribute (default: False)
-    align_with: str
+    align_with: str or np.ndarray
         align the longest distance in molecule with one of x, y, diag
+        or a custom axis as numpy 2D array
     fontsize: float
         fontsize of labels
     text_color: str
@@ -163,6 +165,14 @@ def draw_molecule(graph,
     elif colors is None:
         colors = {node: ELE_TO_COLOR.get(ele, DEFAULT_COLOR) for node, ele in nx.get_node_attributes(graph, 'element').items()}
 
+    # compute angle for axis alignment
+    if align_with == 'diag':
+        align_with = np.array(diagonal)
+    elif align_with == 'x':
+        align_with = np.array([1,0])
+    elif align_with == 'y':
+        align_with = np.array([0, 1])
+
     # if no positions are given generate layout
     bbox = ax.get_position(True)
 
@@ -175,7 +185,6 @@ def draw_molecule(graph,
     if not pos:
         pos = LAYOUT_METHODS[layout_method](graph,
                                             default_bond=default_bond,
-                                            bounding_box=[w, h],
                                             align_with=align_with,
                                             **layout_kwargs)
 

@@ -8,7 +8,7 @@ import networkx as nx
 from .graph_layout_utils import _force_minimize, _generate_circle_coordinates, check_and_fix_cis_trans
 from .linalg_functions import rotate_to_axis
 
-def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
+def vespr_layout(graph, default_bond=1, align_with=None):
     """
     Generate VSEPR-like layout for a molecule graph.
 
@@ -18,10 +18,8 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
         the molecule to draw
     default_bond: float
         the default bond length
-    align_with: str
-        aling the longest axis with choice diag, x, y
-    bounding_box: tuple(float, float)
-        max extension in x, y
+    align_with: np.ndarray
+        axis to align longest axis with
 
     Returns
     -------
@@ -53,11 +51,10 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
 
     pos = check_and_fix_cis_trans(graph, pos)
     # rotate molecule to fit into bounding box
-    if align_with:
+    if not align_with is None:
         pos_arr = np.array(list(pos.values()))
         pos_aligned = rotate_to_axis(pos_arr,
-                                     align_with,
-                                     bounding_box)
+                                     align_with)
         for idx, node in enumerate(pos):
             pos[node] = pos_aligned[idx]
 
@@ -70,7 +67,7 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
         pos[node] *= default_bond / avg_dist
     return pos
 
-def circular_layout(graph, radius):
+def circular_layout(graph, radius, align_with=None):
     """
     Generate circular layout for a molecule graph.
 
@@ -80,10 +77,8 @@ def circular_layout(graph, radius):
         the molecule to draw
     radius: float
         the radius of the circle
-    align_with: str
-        aling the longest axis with choice diag, x, y
-    bounding_box: tuple(float, float)
-        max extension in x, y
+    align_with: np.ndarray
+        axis to align longest axis with
 
     Returns
     -------
@@ -94,10 +89,9 @@ def circular_layout(graph, radius):
                                             num_points=len(graph))
 
     # rotate molecule to fit into bounding box
-    if align_with:
+    if not align_with is None:
         pos_aligned = rotate_to_axis(pos,
-                                     align_with,
-                                     bounding_box)
+                                     align_with)
     pos = {}
     start = list(graph.nodes)[0]
     for idx, (node, _) in enumerate(nx.find_cycle(graph, source=start)):
@@ -106,8 +100,7 @@ def circular_layout(graph, radius):
 
 def vespr_refined_layout(graph,
                          default_bond=1,
-                         align_with='diag',
-                         bounding_box=None,
+                         align_with=None,
                          default_angle=120,
                          target_energy=100000,
                          lbfgs_options={}):
@@ -127,10 +120,8 @@ def vespr_refined_layout(graph,
         the molecule to draw
     default_bond: float
         the default bond length
-    align_with: str
-        aling the longest axis with choice diag, x, y
-    bounding_box: tuple(float, float)
-        max extension in x, y
+    align_with: np.ndarray
+        axis to align longest axis with
     default_angle: float
         the default angle in degrees
     target_energy: float
@@ -159,10 +150,9 @@ def vespr_refined_layout(graph,
         counter += 1
 
     # rotate molecule to fit into bounding box
-    if align_with:
+    if not align_with is None:
         pos_aligned = rotate_to_axis(pos,
-                                     align_with,
-                                     bounding_box)
+                                     align_with)
     else:
         pos_aligned = pos
 
