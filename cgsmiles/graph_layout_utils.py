@@ -325,11 +325,7 @@ def _force_minimize(graph,
     angles = assign_angles(graph, default_angle)
     dihedrals = assing_dihedral_angles(graph)
     interactions = {'bonds': bonds, 'angles': angles, 'dihedrals': dihedrals}
-    neighbors = np.zeros((n_atoms, n_atoms))
-    for edge in graph.edges:
-        neighbors[atom_to_idx[edge[0]], atom_to_idx[edge[1]]] = True
-        neighbors[atom_to_idx[edge[1]], atom_to_idx[edge[0]]] = True
-    neighbors = neighbors.astype(bool)
+    neighbors = nx.to_numpy_array(graph, weight=None, dtype=bool)
     neighbors = neighbors[np.triu_indices_from(neighbors, k=1)].ravel()
     pos, energy = _optimize_geometry_2D(pos,
                                         atom_to_idx,

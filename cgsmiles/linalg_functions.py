@@ -37,7 +37,7 @@ def vector_angle_degrees(v1, v2):
 
 def dihedral_angle_between(a1, a2, a3, a4):
     """
-    Compute dihedral angle between positions.
+    Compute dihedral angle between planes (a1, a2, a3) and (a2, a3, a4).
     """
     r1 = a1 - a2
     r2 = a3 - a2

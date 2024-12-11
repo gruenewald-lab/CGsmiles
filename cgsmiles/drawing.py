@@ -55,16 +55,16 @@ def draw_molecule(graph,
     """
     Draw the graph of a molecule optionally with a coarse-grained
     projection if `cg_mapping` is set to True. The membership of
-    atoms to the CG projection is taken from the 'fragid' attribute.
+    atoms to the CG projection is taken from the 'fragid' node attribute.
 
-    Positions or one of three layout methods mus be specified. The
+    Positions or one of three layout methods must be specified. The
     layout options are vespr_refined, vespr, and circular. Note
     that the vespr_refined is slow but yields the best quality results.
     For a quick look vespr is recommended. The drawing function also
     accepts a layout_kwarg dictionary specifiying options to be given
-    to the three layout methods. See also `cgsmiles.graph_layout`.
+    to the chosen layout method. See also `cgsmiles.graph_layout`.
 
-    For example to draw Benzen using the Martini 3 mapping:
+    For example to draw Benzene using the Martini 3 mapping:
 
     >>> import matplotlib.pyplot as plt
     >>> from cgsmiles import MoleculeResolver

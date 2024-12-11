@@ -10,7 +10,7 @@ from .linalg_functions import rotate_to_axis
 
 def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
     """
-    Generate VESPR like layout for a molecule graph.
+    Generate VSEPR-like layout for a molecule graph.
 
     Parameters
     ----------
@@ -132,7 +132,7 @@ def vespr_refined_layout(graph,
     bounding_box: tuple(float, float)
         max extension in x, y
     default_angle: float
-        the default angle
+        the default angle in degrees
     target_energy: float
         a target energy until which to minimize
     lbfgs_options:

@@ -127,12 +127,12 @@ def make_mapped_edges(graph, plain_edges):
     graph: nx.Graph
         graph of the molecule with 'fragid' attribute
     plain_edges: dict[frozenset([abc.hashable])]
-        dict of edge coordintes indexed by node keys
+        dict of edge coordinates indexed by node keys
 
     Returns
     -------
     dict[list]
-        dict of edges belonging to a paticular fragid
+        dict of edges belonging to a particular fragid
     """
     mapped_edges = defaultdict(list)
     for idx, jdx in graph.edges:
