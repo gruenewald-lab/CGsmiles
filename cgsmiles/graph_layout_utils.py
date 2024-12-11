@@ -94,15 +94,13 @@ def find_triplets(graph):
         the central node is the common one.
     """
     triplets = set()
-    for edge1 in graph.edges:
-        for edge2 in graph.edges:
-            if edge1 != edge2:
-                common_node = set(edge1).intersection(edge2)
-                if common_node:
-                    common_node = common_node.pop()  # Extract the common node
-                    remaining_nodes = list(set(edge1 + edge2) - {common_node})
-                    triplet = (remaining_nodes[0], common_node, remaining_nodes[1])
-                    triplets.add(triplet)
+    for node in graph:
+        if graph.degree(node) < 2: 
+            continue
+        neighbours = graph[node]
+        for idx, jdx in itertools.combinations(neighbours, r=2):
+            triplets.add((idx, node, jdx))  # Maybe yield instead?
+        
     return triplets
 
 
