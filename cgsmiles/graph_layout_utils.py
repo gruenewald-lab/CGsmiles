@@ -222,48 +222,6 @@ def _nonbonded_potential(positions, neighbors):
     energy = np.sum(np.power(dist_matrix, -8))
     return energy
 
-
-def _optimize_geometry_2D(positions,
-                          atom_to_idx,
-                          interactions,
-                          inter_methods,
-                          neighbors):
-    """
-    Given a position array of shape (n, 2) and a dict of
-    interactions, optimize the positions to minimize the
-    energy.
-
-    Parameters
-    ----------
-    pos: np.ndarray((n, 2))
-        the inital positions
-    interactions: dict[str, list(tuple)]
-        a dict of interactions with key type and list of
-        interaction tuples
-
-    Returns
-    -------
-    np.ndarray((n, 2)), float
-        the optimized positions and final energy
-    """
-    def target_function(positions):
-        energy = 0
-        positions = positions.reshape((-1, 2))
-        for inter_type, inters in interactions.items():
-            for inter in inters:
-                atom_pos = [positions[atom_to_idx[ndx]] for ndx in inter[:-1]]
-                energy += inter_methods[inter_type](atom_pos, inter[-1])
-        energy += _nonbonded_potential(positions, neighbors=neighbors)
-        return energy
-
-    opt_result = scipy.optimize.minimize(target_function,
-                                         positions,
-                                         method='L-BFGS-B',
-                                         options={'epsilon': 0.2, 'ftol':0.01, 'maxiter':5000})
-
-    positions = opt_result['x'].reshape((-1, 2))
-    return positions, opt_result['fun']
-
 def _optimize_geometry_2D(positions,
                           atom_to_idx,
                           interactions,
