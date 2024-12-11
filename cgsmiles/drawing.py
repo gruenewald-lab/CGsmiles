@@ -135,7 +135,8 @@ def draw_molecule(graph,
         raise ValueError(msg)
 
     # scaling cannot be negative
-    assert scale > 0
+    if scale < 0:
+        raise ValueError('scale should not be negative')
 
     # generate figure in case we don't get one
     if not ax:
