@@ -1,3 +1,4 @@
+import itertools
 from collections import OrderedDict
 import numpy as np
 import scipy.ndimage
@@ -162,6 +163,8 @@ def assign_bonds(graph, pos, default_bond=None):
     ----------
     graph: nx.Graph
     pos: np.ndarray((n,2))
+    default_bond: float
+        default bond distance
 
     Returns
     -------
