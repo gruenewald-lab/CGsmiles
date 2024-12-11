@@ -38,6 +38,8 @@ def vespr_layout(graph, default_bond=1, align_with=None, bounding_box=None):
             else:  # even
                 dest_d[dest] =  d / 2 * math.sqrt(3)
     # do we need this try except????
+    # the spring layout helps to disentangle large molecules
+    # for which KK otherwise produces a less optimal layout
     try:
         p0 = nx.fruchterman_reingold_layout(graph, iterations=100)
     except nx.NetworkXException:

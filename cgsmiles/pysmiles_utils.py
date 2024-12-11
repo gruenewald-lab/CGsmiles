@@ -101,7 +101,7 @@ def rebuild_h_atoms(mol_graph,
             for attr in copy_attrs:
                 if attr in mol_graph.nodes[node]:
                     continue
-                value = mol_graph.nodes[anchor][attr]
+                value = mol_graph.nodes[anchor].get(attr, None)
                 mol_graph.nodes[node][attr] = value
 
 def annotate_ez_isomers_cgsmiles(molecule):

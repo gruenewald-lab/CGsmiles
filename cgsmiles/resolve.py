@@ -258,6 +258,8 @@ class MoleculeResolver:
                 attrs = copy.deepcopy(self.molecule.nodes[new_node])
                 graph_frag.add_node(correspondence[node], **attrs)
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
+                graph_frag.nodes[new_node]['mapping'] = [(fragname, node)]
+                self.molecule.nodes[new_node]['mapping'] = [(fragname, node)]
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -342,6 +344,7 @@ class MoleculeResolver:
 
             # add the fragment id of the sequashed node
             self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
 
     def resolve(self):
         """
