@@ -9,7 +9,7 @@ from .graph_utils import (merge_graphs,
                           annotate_fragments,
                           set_atom_names_atomistic)
 from .pysmiles_utils import (rebuild_h_atoms,
-                             annotate_ez_isomers)
+                             annotate_ez_isomers_cgsmiles)
 
 def compatible(left, right, legacy=False):
     """
@@ -258,6 +258,8 @@ class MoleculeResolver:
                 attrs = copy.deepcopy(self.molecule.nodes[new_node])
                 graph_frag.add_node(correspondence[node], **attrs)
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
+                graph_frag.nodes[new_node]['mapping'] = [(fragname, node)]
+                self.molecule.nodes[new_node]['mapping'] = [(fragname, node)]
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -287,7 +289,10 @@ class MoleculeResolver:
             if the high resolution level graph has all-atom resolution
             default: False
         """
-        for prev_node, node in self.meta_graph.edges:
+        edges = list(self.meta_graph.edges)
+        #import random
+        #random.shuffle(edges)
+        for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
                 node_graph = self.meta_graph.nodes[node]['graph']
@@ -339,6 +344,7 @@ class MoleculeResolver:
 
             # add the fragment id of the sequashed node
             self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
 
     def resolve(self):
         """
@@ -377,7 +383,7 @@ class MoleculeResolver:
         self.molecule = sort_nodes_by_attr(self.molecule, sort_attr=("fragid"))
 
         if all_atom:
-            annotate_ez_isomers(self.molecule)
+            annotate_ez_isomers_cgsmiles(self.molecule)
 
         # and redo the meta molecule
         self.meta_graph = annotate_fragments(self.meta_graph,
