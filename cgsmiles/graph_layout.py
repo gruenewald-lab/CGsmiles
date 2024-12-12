@@ -51,7 +51,7 @@ def vespr_layout(graph, default_bond=1, align_with=None):
 
     pos = check_and_fix_cis_trans(graph, pos)
     # rotate molecule to fit into bounding box
-    if not align_with is None:
+    if align_with is not None:
         pos_arr = np.array(list(pos.values()))
         pos_aligned = rotate_to_axis(pos_arr,
                                      align_with)
@@ -89,7 +89,7 @@ def circular_layout(graph, radius, align_with=None):
                                             num_points=len(graph))
 
     # rotate molecule to fit into bounding box
-    if not align_with is None:
+    if align_with is not None:
         pos_aligned = rotate_to_axis(pos,
                                      align_with)
     pos = {}
@@ -150,7 +150,7 @@ def vespr_refined_layout(graph,
         counter += 1
 
     # rotate molecule to fit into bounding box
-    if not align_with is None:
+    if align_with is not None:
         pos_aligned = rotate_to_axis(pos,
                                      align_with)
     else:
