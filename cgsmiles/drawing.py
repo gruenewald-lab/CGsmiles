@@ -165,14 +165,6 @@ def draw_molecule(graph,
     elif colors is None:
         colors = {node: ELE_TO_COLOR.get(ele, DEFAULT_COLOR) for node, ele in nx.get_node_attributes(graph, 'element').items()}
 
-    # compute angle for axis alignment
-    if align_with == 'diag':
-        align_with = np.array(diagonal)
-    elif align_with == 'x':
-        align_with = np.array([1,0])
-    elif align_with == 'y':
-        align_with = np.array([0, 1])
-
     # if no positions are given generate layout
     bbox = ax.get_position(True)
 
@@ -180,6 +172,13 @@ def draw_molecule(graph,
     fig_width_inch, fig_height_inch = ax.figure.get_size_inches()
     w = bbox.width*fig_width_inch/scale
     h = bbox.height*fig_height_inch/scale
+
+    # compute angle for axis alignment
+    _keyword_to_axis = {'diag': np.array([w, h]),
+                        'x': np.array([1, 0]),
+                        'y': np.array([0, 1])}
+    if type(align_with) == str:
+        align_with = _keyword_to_axis[align_with]
 
     # generate inital positions
     if not pos:
