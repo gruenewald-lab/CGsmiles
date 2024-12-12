@@ -247,7 +247,7 @@ def _optimize_geometry_2D(positions,
         dict of interaction methods
     neighbors:
         (n x n) boolen array where direct neighbors
-        are False
+        are True
     lbfgs_options: dict
         a dict taking all kwargs of the scipy lbfgs
         minimizer
