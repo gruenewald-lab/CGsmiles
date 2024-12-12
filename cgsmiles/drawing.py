@@ -177,7 +177,7 @@ def draw_molecule(graph,
     _keyword_to_axis = {'diag': np.array([w, h]),
                         'x': np.array([1, 0]),
                         'y': np.array([0, 1])}
-    if type(align_with) == str:
+    if isinstance(align_with, str):
         align_with = _keyword_to_axis[align_with]
 
     # generate inital positions
