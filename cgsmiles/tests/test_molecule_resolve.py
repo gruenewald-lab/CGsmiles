@@ -185,6 +185,13 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (0, 2), (0, 3), (0, 4), (1, 5),
                          (1, 7), (5, 9), (5, 6), (7, 13), (7, 8),
                          (9, 11), (9, 10), (11, 13), (11, 12), (13, 14)], {}, {}, {}),
+                        # multiple squashes on one atom
+                        ("{[#A]([#B])[#B]}.{#A=OC[!][!],#B=[!]CC}",
+                        [('A', 'O H C H'), ('B', 'C H C H H H'), ('B', 'C H C H H H')],
+                        #0 1 2 3 4 5 6 7 8 9 10 11
+                        'O H C H C H H H C H H H',
+                        [(0, 1), (0, 2), (2, 3), (2, 4), (4, 5),
+                         (4, 6), (4, 7), (2, 8), (8, 9), (8, 10), (8, 11)], {}, {}, {}),
                          # simple chirality assigment with rings
                          # (3R,4S,5S,6R)-6-(hydroxymethyl)oxane-2,3,4,5-tetrol (cyclic form)
                          ("{[#GLC]}.{#GLC=[CH;x=R]([CH;x=S]1[CH;x=S]([C;x=R](C(C(O1)O)O)O)O)O}",

@@ -331,12 +331,14 @@ class MoleculeResolver:
         node.
         """
         bondings = nx.get_edge_attributes(self.molecule, 'bonding')
-        squashed = False
+        squashed = {}
         for edge, bonding in bondings.items():
             if not bonding[0].startswith('!'):
                 continue
             # let's squash two nodes
-            node_to_keep, node_to_remove = edge
+            node_to_keep = squashed.get(edge[0], edge[0])
+            node_to_remove = squashed.get(edge[1], edge[1])
+            squashed[node_to_remove] = node_to_keep
             self.molecule = nx.contracted_nodes(self.molecule,
                                                 node_to_keep,
                                                 node_to_remove,
