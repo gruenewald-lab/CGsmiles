@@ -63,7 +63,7 @@ jobs:
     needs: [build, lint]
     runs-on: ubuntu-latest
     environment:
-      name: deploy
+      name: testpypi
       url: https://test.pypi.org/p/cgsmiles
     permissions:
       id-token: write
