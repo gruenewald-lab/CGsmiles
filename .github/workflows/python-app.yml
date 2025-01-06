@@ -60,7 +60,7 @@ jobs:
          pylint --disable=fixme --fail-under=8.0 cgsmiles
 
   deploy:
-    needs: [build, lint, docs]
+    needs: [build, lint]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
