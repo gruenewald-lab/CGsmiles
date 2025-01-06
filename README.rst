@@ -5,22 +5,65 @@ Coarse-Grained SMILES (CGsmiles)
 Overview
 ========
 
-CGSmiles is a line notation syntax to describe arbitrarily complex
-graphs - usually molecules - using a line notation. In contrast to
-existing (add link to BigSmiles, CurlySmiles ...) line notations it
-applies to any resolution (e.g. coarse-grained models) and allows to
-connect multiple resolutions. Therefore, it serves as a short, 
-easy-to-read, and efficient notation for molecules and describes 
-transformations between resolutions. In addition it's syntax borrows
-some features from the BigSmiles notation that makes expressing large
-polymeric molecules simpler.
+The CGSmiles line notation encodes arbitrary resolutions of molecules and
+defines the conversion between these resolutions unambiguously. For example,
+in coarse-grained (CG) simulations multiple atoms are represented as one large
+pseudo-atom often called bead. The conversion from the atomic resolution to
+the CG resolution can be described using the CGSmiles notation. In the
+`Martini 3 force field <https://cgmartini.nl>`__, Benzene is represented
+as three particles. The CGSmiles string would be:
 
-The CGSmiles Python package is created around this notation to read and
-resolve molecules yielding networkx graphs, which represent the
-different resolutions expressed in the CGSmiles string.
+.. code::
 
-CGSmiles are also implemented in the polyply package, which allows
-users to generate coordinates of complex polymers using CGsmiles.
+    "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}"
+
+Additionally, multiple resolutions may be layered together so that a hirachical
+description between one or more CG resolutions becomes possible. Especially,
+expressing large polymeric molecules becomes simpler when using multiple
+resolution. For instance consider the copolymer
+`Styreic-Melic Acid <https://en.wikipedia.org/wiki/Styrene_maleic_anhydride>`__.
+It is an almost perfectly alternating polymer of maleic anhydrade and styrene.
+In CGSmiles, we can thus write 100 repeat units of this polymer by using three
+resolutions each contained in curly braces:
+
+.. code::
+
+    "{[#SMA]|100}.{#SMA=[#PS][#MAH]}.{#PS=[>]CC[<]c1ccccc1,#MHA=[<]C1C(=O)CC(=O)C1[>]}"
+
+The CGSmiles Python package is created around this notation to read, write, and
+further process the resulting graphs. Reading and resolving provides the all the
+molecule information in form of `NetworkX graphs <https://networkx.org>`__,
+providing an easy way to interface with other python libraries.
+
+There are a number of other packages and libraries, which use CGSmiles. They are
+mostly used for coarse-grained modelling with the Martini force field or atomic
+resolution molecular dynamics simulations. More informtion about the syntax and
+the different use cases can be found in this documentation. If you are here from
+one of the packages using CGSmiles check out the GettingStarted section to learn
+the syntax.
+
+Examples
+========
+
+The CGSmiles python package is designed to read and resolve these smiles
+into networkx graphs that can be used for further tasks, for example drawing
+the relation between two resolutions (i.e. the mapping).
+
+Martini 3 Benzene
+
+.. code:: python
+
+    import cgsmiles
+    from cgsmiles.drawing import draw_molecule
+
+    # Martini 3 Benzene
+    cgsmiles_str = "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}"
+
+    # Resolve molecule into networkx graphs
+    res_graph, mol_graph = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+
+    # Draw molecule at different resolutions
+    ax, pos = draw_molecule(mol_graph)
 
 Resources
 =========
@@ -30,58 +73,20 @@ Resources
 Related Tools
 =============
 
+- `pysmiles <https://github.com/pckroon/pysmiles>`__:
+  Lightweight python library for reading and writing SMILES. CGSmiles runs
+  pysmiles in the background for interpreting atomic resolution fragments.
+
 - `polyply <https://github.com/marrink-lab/polyply_1.0>`__:
-Generate topology files and coordinates for molecular dynamics (MD)
-from CGSmiles notation.
+  Generate topology files and coordinates for molecular dynamics (MD)
+  from CGSmiles notation. It takes CGSmiles as input to generate all-atom or
+  coarse-grained topologies and input parameters.
 
 - `fast_forward <https://github.com/fgrunewald/fast_forward>`__:
-Forward map trajectories from a high to lower resolution using
-CGSmiles.
+  Forward map molecular dynamics trajectories from a high to lower resolution using
+  CGSmiles.
 
 Citation
 ========
 
 When using **cgsmiles** to for your publication, please:
-
-
-Installation
-============
-
-The easiest ways to install **cgsmiles** are using pip:
-
-.. code:: bash
-
-   pip install cgsmiles
-
-Alternatively install the master branch directly from GitHub:
-
-.. code:: bash
-
-   pip install git+https://github.com/gruenewald-lab/CGsmiles.git
-
-Examples
-========
-
-The cgsmiles python package is designed to read and resolve these smiles
-into networkx graphs that can be used for further operations.
-
-.. code:: python
-
-   import matplotlib.pyplot as plt
-   import networkx as nx
-   import cgsmiles
-
-   # Express 5 units of Polystyrene in CGSmiles
-   cgsmiles_str = "{[#PS]|5}.{#PS=[$]CC[$](c1ccccc1)}"
-
-   # Resolve molecule into networkx graphs
-   res_graph, mol_graph = cgsmiles.MoleculeResolver(cgsmiles_str).resolve()
-
-   # Draw molecule at different resolutions
-   for g in [res_graph, mol_graph]:
-      nx.draw_networkx(g)
-      plt.show()
-
-   # Get fragment corresponding to first residue
-   fragment_1 = res_graph.nodes[0]['graph']
-
