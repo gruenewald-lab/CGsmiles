@@ -84,11 +84,10 @@ jobs:
         --sdist
         --wheel
         --outdir dist/
-        
-    - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1 
-      with:
-       repository-url: https://test.pypi.org/legacy/
-       attestations: false
-       user: __token__
-       password: ${{ secrets.PYPI_TEST_API_TOKEN }}
+
+    - name: Publish to PyPI or Test PyPI
+      env:
+          TWINE_USERNAME: __token__  # PyPI uses "__token__" as the username for API tokens
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}  # Store your API token in GitHub Secrets
+        run: |
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/* 
