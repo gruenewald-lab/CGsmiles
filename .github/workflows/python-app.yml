@@ -19,9 +19,9 @@ jobs:
        py_version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.py_version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.py_version }}
     - name: Install dependencies
@@ -45,9 +45,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
     - name: Install dependencies
@@ -91,6 +91,6 @@ jobs:
     - name: Build a binary wheel and a source tarball
       run: python3 -m build --sdist --wheel --outdir dist/
     - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@release/v2
       with:
         repository-url: https://test.pypi.org/legacy/
