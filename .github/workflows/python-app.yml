@@ -89,5 +89,6 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1 
       with:
        repository-url: https://test.pypi.org/legacy/
+       attestations: false
        user: __token__
        password: ${{ secrets.PYPI_TEST_API_TOKEN }}
