@@ -60,7 +60,7 @@ jobs:
          pylint --disable=fixme --fail-under=8.0 cgsmiles
 
   deploy:
-    needs: test
+    needs: [ lint, build ]
     runs-on: ubuntu-latest
 
     steps:
