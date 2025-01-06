@@ -160,7 +160,7 @@ class MoleculeResolver:
                  molecule_graph,
                  fragment_dicts,
                  last_all_atom=True,
-                 legacy=False):
+                 legacy=True):
 
         """
         Parameters
