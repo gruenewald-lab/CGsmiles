@@ -1,4 +1,3 @@
 pbr
 numpy
 networkx >= 2.0
-pysmiles @ git+https://github.com/pckroon/pysmiles.git@master
