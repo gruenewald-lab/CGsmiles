@@ -72,11 +72,8 @@ jobs:
 
     - name: Install pypa/build
       run: >-
-        python -m
-        pip install
-        build
-        --user
-        pip install pbr
+        python -m pip install build
+        python -m pip install pbr
 
     - name: Build a binary wheel and a source tarball
       run: >-
