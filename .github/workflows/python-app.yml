@@ -81,5 +81,5 @@ jobs:
 
       - name: Run docs
         run: |
-          mkdir -p doc/source/_static
-          sphinx-build -EnW -b html doc/source/ doc/build/html
+          mkdir -p docs/source/_static
+          sphinx-build -EnW -b html docs/source/ docs/build/html
