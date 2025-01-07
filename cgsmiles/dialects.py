@@ -36,9 +36,9 @@ def _parse_dialect_string(string_iterable,
 
     Parameters
     ----------
-    string_iterable: iter
+    string_iterable: :type data: iter
         the string or iter object that contains the string
-    dialect_signature: cls.inspec.Signature
+    dialect_signature: inspect.Signature
         a signature defineing args, kwargs, default values
         and types
     arg_to_fullname: dict

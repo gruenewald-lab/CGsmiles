@@ -86,9 +86,9 @@ def draw_molecule(graph,
 
     Parameters
     ----------
-    ax: :class:`matplotlib.pyplot.axis`
+    ax: matplotlib.axes.Axes
         mpl axis object
-    layout_method:
+    layout_method: str
         choice of vespr, vespr_refined, circular
         (default: 'vespr_refined')
     pos: dict
@@ -106,7 +106,7 @@ def draw_molecule(graph,
         draw an outline around each node
     use_weights: bool
         color nodes according to weight attribute (default: False)
-    align_with: str or np.ndarray
+    align_with: str or :class:`numpy.ndarray`
         align the longest distance in molecule with one of x, y, diag
         or a custom axis as numpy 2D array
     fontsize: float
@@ -124,7 +124,7 @@ def draw_molecule(graph,
 
     Returns
     -------
-    :class:`matplotlib.pyplot.axis`
+    matplotlib.axes.Axes
         the updated axis object
     dict
         a dict of positions

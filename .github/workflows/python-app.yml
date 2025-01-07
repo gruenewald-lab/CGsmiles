@@ -82,4 +82,4 @@ jobs:
       - name: Run docs
         run: |
           mkdir -p docs/source/_static
-          sphinx-build -E -b html docs/source/ docs/build/html
+          sphinx-build -WnE -b html docs/source/ docs/build/html

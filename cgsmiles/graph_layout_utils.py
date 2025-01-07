@@ -24,11 +24,11 @@ def rotate_subgraph(graph, anchor, reference, target, points, angle=120):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         the graph
-    target: tuple(abc.hashable, abc.hashable)
+    target: tuple(collections.abc.Hashable, collections.abc.Hashable)
         the target edge
-    points: dict[abc.hashable: np.array]
+    points: dict[collections.abc.Hashable: :class:`numpy.ndarray`]
         the dict of 2D positions
     angle: float
         the angle to rotate by
@@ -86,11 +86,11 @@ def find_triplets(graph):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
 
     Returns
     -------
-    tuple([abc.hashable,abc.hashable,abc.hashable])
+    tuple([collections.abc.Hashable,collections.abc.Hashable,collections.abc.Hashable])
         the node keys corresponding to the triplet
         the central node is the common one.
     """
@@ -115,11 +115,11 @@ def assign_angles(graph, default_angle=120):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
 
     Returns
     -------
-    tuple([[abc.hashable,abc.hashable,abc.hashable,int])
+    tuple([[collections.abc.Hashable,collections.abc.Hashable,collections.abc.Hashable,int])
         tuple with node keys corresponding to the angle
         and the reference angle value
     """
@@ -161,14 +161,14 @@ def assign_bonds(graph, pos, default_bond=None):
 
     Parameters
     ----------
-    graph: nx.Graph
-    pos: np.ndarray((n,2))
+    graph: networkx.Graph
+    pos: :class:`numpy.ndarray` of shape ((n,2))
     default_bond: float
         default bond distance
 
     Returns
     -------
-    tuple([abc.hashable, abc.hashable, float])
+    tuple([collections.abc.Hashable, collections.abc.Hashable, float])
         tuple of node keys and distance
     """
     bonds = []
@@ -235,7 +235,7 @@ def _optimize_geometry_2D(positions,
 
     Parameters
     ----------
-    positions: np.ndarray((n, 2))
+    positions: :class:`numpy.ndarray` of shape ((n, 2))
         the inital positions
     atom_to_idx: dict
         dict mapping node keys to indices in the position
@@ -254,7 +254,7 @@ def _optimize_geometry_2D(positions,
 
     Returns
     -------
-    np.ndarray((n, 2)), float
+    :class:`numpy.ndarray` of shape ((n, 2)), float
         the optimized positions and final energy
     """
     def target_function(positions):
@@ -319,7 +319,7 @@ def _generate_circle_coordinates(radius, num_points, center=(0, 0)):
 
     Returns
     -------
-    np.ndarray((num_points, 2))
+    :class:`numpy.ndarray` of shape ((num_points, 2))
         array of the point coordinates
     """
     # Generate angles in clockwise order (start at 0 and go to -2π)

@@ -16,8 +16,8 @@ def format_node(molecule, current):
 
     Parameters
     ----------
-    molecule: nx.Graph
-    current: abc.hashbale
+    molecule: networkx.Graph
+    current: collections.abc.Hashable
 
     Returns
     -------
@@ -60,7 +60,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
 
     Parameters
     ----------
-    molecule : nx.Graph
+    molecule : networkx.Graph
         The molecule for which a CGsmiles string should be generated.
     smiles_format:
         If the nodes are written using the OpenSmiles standard format.
@@ -166,7 +166,7 @@ def write_cgsmiles_graph(molecule):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         a molecule where each node as a fragname attribute
         that is used as name in the CGSmiles string.
 
@@ -188,7 +188,7 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
 
     Parameters
     ----------
-    fragment_dict: dict[str, nx.Graph]
+    fragment_dict: dict[str, networkx.Graph]
         a dict of fragment graphs
     smiles_format: bool
         write all atom SMILES if True (default) otherwise
@@ -213,8 +213,8 @@ def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
 
     Parameters
     ----------
-    molecule_graph: nx.Graph
-    fragments: list[dict[nx.Graph]]
+    molecule_graph: networkx.Graph
+    fragments: list[dict[networkx.Graph]]
         a list of fragment dicts
     last_all_atom: bool
         if the last set of fragments is at the all_atom level

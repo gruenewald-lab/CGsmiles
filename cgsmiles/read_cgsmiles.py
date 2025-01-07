@@ -23,13 +23,13 @@ def _expand_branch(mol_graph, current, anchor, recipe):
 
     Parameters
     ----------
-    mol_graph: :class:`nx.Graph`
+    mol_graph: networkx.Graph
         the starting graph of the molecule
 
-    current: abc.hashable
+    current: collections.abc.Hashable
         first node to be added to new graph
 
-    anchor: abc.hashable
+    anchor: collections.abc.Hashable
         anchor to which to connect current node
 
     recipe: list[(str, int, dict, int)]
@@ -39,7 +39,7 @@ def _expand_branch(mol_graph, current, anchor, recipe):
 
     Returns
     -------
-    nx.Graph
+    networkx.Graph
     """
     prev_node = anchor
     for bdx, (n_mon, attributes, order) in enumerate(recipe):
@@ -57,7 +57,7 @@ def _expand_branch(mol_graph, current, anchor, recipe):
 
 def read_cgsmiles(pattern):
     """
-    Generate a :class:`nx.Graph` from a pattern string according to the
+    Generate a networkx.Graph from a pattern string according to the
     CGsmiles line notation.
 
     The syntax scheme consists of two curly braces enclosing the graph
@@ -109,7 +109,7 @@ def read_cgsmiles(pattern):
 
     Returns
     -------
-    :class:`nx.Graph`
+    networkx.Graph
     """
 
     mol_graph = nx.Graph()
