@@ -71,7 +71,7 @@ jobs:
         python-version: 3.9
 
     - name: Install pypa/build
-      run:
+      run: |
         pip install build
         pip install pbr
 
