@@ -86,7 +86,7 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TEST_API_TOKEN }}
-        run: poetry publish --username __token__ --password $POETRY_PYPI_TOKEN_PYPI
+        run: poetry publish --username __token__ --password $POETRY_PYPI_TOKEN_PYPI --repository-url https://test.pypi.org/legacy/
 
 # deploy:
 #   needs: [ lint, build ]
