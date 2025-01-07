@@ -34,6 +34,7 @@ Table of Contents
    api/cgsmiles.read_fragments
    api/cgsmiles.graph_utils
    api/cgsmiles.pysmiles_utils
+   api/modules
 
 Indices and tables
 ==================

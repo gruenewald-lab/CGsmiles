@@ -212,6 +212,7 @@ intersphinx_mapping = {
     'networkx': ('https://networkx.github.io/documentation/latest', None),
     'numpy': ('http://docs.scipy.org/doc/numpy', None),
     'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
+    'matplotlib': ('https://matplotlib.org/stable', None),
 }
 
 
