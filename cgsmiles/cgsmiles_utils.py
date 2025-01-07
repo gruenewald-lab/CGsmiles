@@ -47,8 +47,8 @@ def find_open_bonds(molecule, target_nodes=None):
 
     Parameters
     ----------
-    molecule: nx.Graph
-    target_nodes: list[abc.hashable]
+    molecule: networkx.Graph
+    target_nodes: list[collections.abc.Hashable]
         a list of node keys matching molecule
 
     Return
@@ -85,7 +85,7 @@ def read_fragment_cgsmiles(cgsmiles_str,
 
     Returns
     -------
-    nx.Graph
+    networkx.Graph
         the graph of the molecular fragment
     """
     mol_graph = read_cgsmiles(cgsmiles_str)

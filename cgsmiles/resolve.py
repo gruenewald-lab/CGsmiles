@@ -54,9 +54,9 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=F
 
     Parameters
     ----------
-    source: :class:`nx.Graph`
-    target: :class:`nx.Graph`
-    bond_attribute: `abc.hashable`
+    source: networkx.Graph
+    target: networkx.Graph
+    bond_attribute: `collections.abc.Hashable`
         under which attribute are the bonding descriptors
         stored.
     legacy: bool
@@ -65,7 +65,7 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=F
 
     Returns
     -------
-    ((abc.hashable, abc.hashable), (str, str))
+    ((collections.abc.Hashable, collections.abc.Hashable), (str, str))
         the nodes as well as bonding descriptors
 
     Raises
@@ -87,7 +87,7 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=F
 
 class MoleculeResolver:
     """
-    Resolve the molecule(s) described by a CGSmiles string and return a nx.Graph
+    Resolve the molecule(s) described by a CGSmiles string and return a networkx.Graph
     of the molecule.
 
     First, this class has to be initiated using one of three class construction
@@ -163,11 +163,11 @@ class MoleculeResolver:
         """
         Parameters
         ----------
-        molecule_graph: `:class:nx.Graph`
+        molecule_graph: networkx.Graph
             a lower resolution molecule graph to be resolved to higher
             resolutions molecule graphs. Each node must have the fragname
             with a dict entry in the next fragment_dicts list.
-        fragment_dicts: list[dict[str, nx.Graph]]
+        fragment_dicts: list[dict[str, networkx.Graph]]
             a dict of fragment graphs per resolution. Each graph must have the
             same attributes as returned by the `cgsmiles.read_fragments`
             function.
@@ -214,7 +214,7 @@ class MoleculeResolver:
 
         Returns
         -------
-        list[dict[str, nx.Graph]]
+        list[dict[str, networkx.Graph]]
             a list of the fragment dicts composed of the fragment
             name and a nx.Graph describing the fragment
         """
@@ -234,7 +234,7 @@ class MoleculeResolver:
 
         Parameters
         ----------
-        fragment_dict: dict[str, nx.Graph]
+        fragment_dict: dict[str, networkx.Graph]
             a dict of fragment graphs
         """
         for meta_node in self.meta_graph.nodes:
@@ -430,7 +430,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the :func:`~resolve.MoleculeResolver.__init__` method.
+            found in the MoleculeResolver.__init__ method.
 
         Returns
         -------
@@ -458,7 +458,7 @@ class MoleculeResolver:
         Parameters
         ----------
         cgsmiles_str: str
-        meta_graph: nx.Graph
+        meta_graph: networkx.Graph
             a graph describing the lowest resolution. All nodes must have the
             fragname attribute set.
         last_all_atom: bool
@@ -467,7 +467,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the :func:`~resolve.MoleculeResolver.__init__` method.
+            found in the MoleculeResolver.__init__ method.
 
         Returns
         -------
@@ -498,7 +498,7 @@ class MoleculeResolver:
         Parameters
         ----------
         cgsmiles_str: str
-        fragment_dicts: list[dict[str, nx.Graph]]
+        fragment_dicts: list[dict[str, networkx.Graph]]
             a dict of fragment graphs per resolution. Each graph must have the
             same attributes as returned by the `cgsmiles.read_fragments`
             function.
@@ -508,7 +508,7 @@ class MoleculeResolver:
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
             adheres to CGSmiles convention. A more detailed explanation can be
-            found in the :func:`~resolve.MoleculeResolver.__init__` method.
+            found in the MoleculeResolver.__init__ method.
 
         Returns
         -------

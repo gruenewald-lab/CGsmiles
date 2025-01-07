@@ -177,7 +177,7 @@ class MoleculeSampler:
         """
         Parameters
         ----------
-        fragment_dict: dict[str, nx.Graph]
+        fragment_dict: dict[str, networkx.Graph]
             a dict of fragment graphs at one resolution. Each graph must have
             the same attributes as returned by the `cgsmiles.read_fragments`
             function.
@@ -258,9 +258,9 @@ class MoleculeSampler:
 
         Parameters
         ----------
-        molecule: nx.Graph
+        molecule: networkx.Graph
             the molecule to extend
-        open_bonds: dict[list[abc.hashable]]
+        open_bonds: dict[list[collections.abc.Hashable]]
             a dict of bonding active descriptors with list of nodes
             in molecule as value
         fragments: dict[list[str]]
@@ -275,7 +275,7 @@ class MoleculeSampler:
 
         Returns
         -------
-        nx.Graph
+        networkx.Graph
             the grown molecule
         str
             the fragment name of the added fragment
@@ -333,7 +333,7 @@ class MoleculeSampler:
 
         Returns
         -------
-        nx.Graph
+        networkx.Graph
             the graph of the molecule
         """
         molecule = nx.Graph()
@@ -385,7 +385,7 @@ class MoleculeSampler:
         ----------
         cgsmiles_str: str
         **kwargs:
-            same as :func:`~sampler.MoleculeSampler.__init__`
+            same as MoleculeSampler.__init__
 
         Returns
         -------

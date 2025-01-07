@@ -14,11 +14,11 @@ def vespr_layout(graph, default_bond=1, align_with=None):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         the molecule to draw
     default_bond: float
         the default bond length
-    align_with: np.ndarray
+    align_with: :class:`numpy.ndarray`
         axis to align longest axis with
 
     Returns
@@ -73,11 +73,11 @@ def circular_layout(graph, radius, align_with=None):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         the molecule to draw
     radius: float
         the radius of the circle
-    align_with: np.ndarray
+    align_with: :class:`numpy.ndarray`
         axis to align longest axis with
 
     Returns
@@ -116,11 +116,11 @@ def vespr_refined_layout(graph,
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         the molecule to draw
     default_bond: float
         the default bond length
-    align_with: np.ndarray
+    align_with: :class:`numpy.ndarray`
         axis to align longest axis with
     default_angle: float
         the default angle in degrees

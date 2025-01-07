@@ -13,7 +13,7 @@ def compute_mass(input_molecule):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         molecule which must have element specified per node
 
     Returns
@@ -61,9 +61,9 @@ def rebuild_h_atoms(mol_graph,
 
     Parameters
     ----------
-    mol_graph: :class:`nx.Graph`
+    mol_graph: networkx.Graph
         graph describing the full molecule without hydrogen atoms
-    copy_attrs: list[abc.hashable]
+    copy_attrs: list[collections.abc.Hashable]
         a list of attributes to copy from the parent node to the
         hydrogen atom
     keep_bonding: bool
@@ -110,7 +110,7 @@ def annotate_ez_isomers_cgsmiles(molecule):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         The molecule of interest, which must of ez_isomer_pairs
         and ez_isomer_class set as node attributes
     """
@@ -147,7 +147,7 @@ def read_fragment_smiles(smiles_str,
 
     Returns
     -------
-    nx.Graph
+    networkx.Graph
         the graph of the molecular fragment
     """
     if smiles_str == 'H':

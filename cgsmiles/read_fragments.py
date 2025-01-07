@@ -57,7 +57,7 @@ def collect_ring_number(smile_iter, token, node_count, rings):
 
     Parameters
     ----------
-    smile_iter: :class:PeekIter
+    smile_iter: :class:`PeekIter`
     token: str
     node_count: int
     rings: dict[list]
@@ -255,14 +255,14 @@ def fragment_iter(fragment_str, all_atom=True):
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):
     """
-    Collects the fragments defined in a CGBigSmile string
-    as :class:`cgsmiles.mol_graph` and returns a dict of them.
-    Bonding descriptors are annotated as node attribtues.
+    Collects the fragments defined in a CGSmiles fragment string
+    as networkx.Graph and returns a dict of them. Bonding descriptors
+    are annotated as node attribtues.
 
     Parameters
     ----------
     fragment_str: str
-        string using CGBigSmile fragment syntax
+        string using CGSmiles fragment syntax
 
     all_atom: bool
         If the fragment strings are all-atom following
