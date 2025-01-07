@@ -3,3 +3,5 @@ coverage
 pytest-cov
 pylint
 codecov
+scipy
+matplotlib
