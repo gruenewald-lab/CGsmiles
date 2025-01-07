@@ -60,42 +60,78 @@ jobs:
          pylint --disable=fixme --fail-under=8.0 cgsmiles
 
   deploy:
-    needs: [ lint, build ]
+    needs: [build, lint]
     runs-on: ubuntu-latest
-
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/cgsmiles
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@master
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
       with:
-        python-version: 3.9
-        
-    - name: Install pypa/build
-      run: >-
-        python -m
-        pip install
-        build
-        --user
-         
-    - name: Install twine
-      run: >-
-        python -m
-        pip install
-        twine
-        --user
-         
-    - name: Build a binary wheel and a source tarball
-      run: >-
-        python -m
-        build
-        --sdist
-        --wheel
-        --outdir dist/
-
-    - name: Publish to PyPI or Test PyPI
-      env:
-          TWINE_USERNAME: __token__  # PyPI uses "__token__" as the username for API tokens
-          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}  # Store your API token in GitHub Secrets
+        fetch-tags: true
+        fetch-depth: 0
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: pip
+        cache-dependency-path: |
+          **/setup.cfg
+          **/requirements-*.txt
+          **/pyproject.toml
+    - name: Install dependencies
       run: |
-          twine check dist/*  # Check metadata before upload
-          twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/* 
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
+    - name: Install pypa/build
+      run: |
+        python3 -m pip install build pbr --user
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build --sdist --wheel --outdir dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+# deploy:
+#   needs: [ lint, build ]
+#   runs-on: ubuntu-latest
+
+#   steps:
+#   - uses: actions/checkout@master
+#   - name: Set up Python 3.9
+#     uses: actions/setup-python@v4
+#     with:
+#       python-version: 3.9
+#       
+#   - name: Install pypa/build
+#     run: >-
+#       python -m
+#       pip install
+#       build
+#       --user
+#        
+#   - name: Install twine
+#     run: >-
+#       python -m
+#       pip install
+#       twine
+#       --user
+#        
+#   - name: Build a binary wheel and a source tarball
+#     run: >-
+#       python -m
+#       build
+#       --sdist
+#       --wheel
+#       --outdir dist/
+
+#   - name: Publish to PyPI or Test PyPI
+#     env:
+#         TWINE_USERNAME: __token__  # PyPI uses "__token__" as the username for API tokens
+#         TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN }}  # Store your API token in GitHub Secrets
+#     run: |
+#         twine check dist/*  # Check metadata before upload
+#         twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/* 

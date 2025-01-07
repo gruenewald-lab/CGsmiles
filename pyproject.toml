@@ -1,0 +1,17 @@
+[build-system]
+requires = [
+        "wheel",
+        "setuptools >= 30.3.0",
+        "pbr",
+    ]
+build-backend = "pbr.build"
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = ["cgsmiles/tests"]
+python_files = "test_*.py"
+
+[tool.coverage.run]
+branch = true
+omit = ["cgsmiles/tests/*"]
+source_pkgs = ["cgsmiles"]
