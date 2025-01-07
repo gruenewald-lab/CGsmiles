@@ -84,8 +84,9 @@ jobs:
         --outdir dist/
 
     - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
+       verbose: true
        repository-url: https://test.pypi.org/legacy/
        user: __token__
        password: ${{ secrets.PYPI_TEST_API_TOKEN }}
