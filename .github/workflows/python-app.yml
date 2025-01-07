@@ -60,37 +60,35 @@ jobs:
          pylint --disable=fixme --fail-under=8.0 cgsmiles
 
   deploy:
-    needs: [lint]
+    needs: lint
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/cgsmiles
-    permissions:
-      id-token: write
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@master
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
       with:
-        fetch-tags: true
-        fetch-depth: 0
-    - name: Set up Python 3
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: pip
-        cache-dependency-path: |
-          **/setup.cfg
-          **/requirements*.txt
-          **/pyproject.toml
-    - name: Install dependencies
-      run: |
-        pip install --upgrade setuptools pip
-        pip install --upgrade .
+        python-version: 3.7
+
     - name: Install pypa/build
-      run: |
-        python3 -m pip install build pbr --user
+      run: >-
+        python -m
+        pip install
+        build
+        --user
+        pip install pbr
+
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build --sdist --wheel --outdir dist/
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      run: >-
+        python -m
+        build
+        --sdist
+        --wheel
+        --outdir dist/
+
+    - name: Publish package to PyPI
+      uses: pypa/gh-action-pypi-publish@master
       with:
-        repository-url: https://test.pypi.org/legacy/
+       repository-url: https://test.pypi.org/legacy/
+       user: __token__
+       password: ${{ secrets.PYPI_API_TOKEN }}
