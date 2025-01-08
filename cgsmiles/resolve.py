@@ -14,7 +14,7 @@ from .pysmiles_utils import (rebuild_h_atoms,
 def compatible(left, right, legacy=False):
     """
     Check bonding descriptor compatibility according
-    to the CGSmiles syntax conventions. With legacy
+    to the CGsmiles syntax conventions. With legacy
     the BigSmiles convention can be used.
 
     Parameters
@@ -87,27 +87,27 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=F
 
 class MoleculeResolver:
     """
-    Resolve the molecule(s) described by a CGSmiles string and return a networkx.Graph
+    Resolve the molecule(s) described by a CGsmiles string and return a networkx.Graph
     of the molecule.
 
     First, this class has to be initiated using one of three class construction
-    methods. When trying to read a CGSmiles string always use the first method.
+    methods. When trying to read a CGsmiles string always use the first method.
     The other constructors can be used in case fragments or the lowest
     resolution molecule are defined by graphs that come from elsewhere.
 
     `self.from_string`:           use when fragments and lowest resolution are
-                                  described in one CGSmiles string.
-    `self.from_graph`:            use when fragments are described by CGSmiles
+                                  described in one CGsmiles string.
+    `self.from_graph`:            use when fragments are described by CGsmiles
                                   strings but the lowest resolution is given
                                   as nx.Graph
     `self.from_fragment_dicts`:   use when fragments are given as nx.Graphs
                                   and the lowest resolution is provided as
-                                  CGSmiles string
+                                  CGsmiles string
 
     Once the `MoleculeResolver` is initiated you can call the `resolve_iter` to
     loop over the different levels of resolution. The resolve iter will always
     return the previous lower resolution graph as well as the current higher
-    resolution graph. For example, if the CGSmiles string describes a monomer
+    resolution graph. For example, if the CGsmiles string describes a monomer
     sequence of a regular polymer, the lower resolution graph will be the graph
     of this monomer sequence and the higher resolution graph the full molecule.
 
@@ -137,7 +137,7 @@ class MoleculeResolver:
     >>> resolver = MoleculeResolver.from_graph(cgsmiles_str, block_graph)
 
     Finally, there is the option of having the fragments from elsewhere for
-    example a library. Then only the graph defined as CGSmiles string. In this
+    example a library. Then only the graph defined as CGsmiles string. In this
     case the `from_fragment_dicts` method can be used. Please note that the
     fragment graphs need to have the following attributes as a graph returned
     by the `cgsmiles.read_fragments` function.
@@ -178,11 +178,11 @@ class MoleculeResolver:
         legacy: bool
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
-            adheres to CGSmiles convention where bonding descriptors '$' match
+            adheres to CGsmiles convention where bonding descriptors '$' match
             with every '$' and every '<' matches every '>'. With the BigSmiles
             convention a alphanumeric string may be provided that distinguishes
             these connectors. For example, '$A' would not match '$B'. However,
-            such use cases should be rare and the CGSmiles convention facilitates
+            such use cases should be rare and the CGsmiles convention facilitates
             usage of bonding descriptors in the Sampler where the labels are used
             to assign different probabilities.
         """
@@ -199,7 +199,7 @@ class MoleculeResolver:
     @staticmethod
     def read_fragment_strings(fragment_strings, last_all_atom=True):
         """
-        Read a list of CGSmiles fragment_strings and return a list
+        Read a list of CGsmiles fragment_strings and return a list
         of dicts with the fragment graphs. If `last_all_atom` is
         True then pysmiles is used to read the last fragment string
         provided in the list.
@@ -207,7 +207,7 @@ class MoleculeResolver:
         Parameters
         ----------
         fragment_strings: list[str]
-            list of CGSmiles fragment strings
+            list of CGsmiles fragment strings
         last_all_atom: bool
             if the last string in the list is an all atom string
             and should be read using pysmiles.
@@ -348,7 +348,7 @@ class MoleculeResolver:
 
     def resolve(self):
         """
-        Resolve a CGSmiles string once and return the next resolution.
+        Resolve a CGsmiles string once and return the next resolution.
         """
         # check if this is an all-atom level resolution
         all_atom = (self.resolution_counter == self.resolutions - 1 and self.last_all_atom)
@@ -429,7 +429,7 @@ class MoleculeResolver:
         legacy: bool
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
-            adheres to CGSmiles convention. A more detailed explanation can be
+            adheres to CGsmiles convention. A more detailed explanation can be
             found in the MoleculeResolver.__init__ method.
 
         Returns
@@ -466,7 +466,7 @@ class MoleculeResolver:
         legacy: bool
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
-            adheres to CGSmiles convention. A more detailed explanation can be
+            adheres to CGsmiles convention. A more detailed explanation can be
             found in the MoleculeResolver.__init__ method.
 
         Returns
@@ -507,7 +507,7 @@ class MoleculeResolver:
         legacy: bool
             which syntax convention to use for matching the bonding descriptors.
             Legacy syntax adheres to the BigSmiles convention. Default syntax
-            adheres to CGSmiles convention. A more detailed explanation can be
+            adheres to CGsmiles convention. A more detailed explanation can be
             found in the MoleculeResolver.__init__ method.
 
         Returns

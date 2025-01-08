@@ -1,13 +1,13 @@
 Overview
 ========
-The API is designed to read, write, and interpret CGSmiles string.
+The API is designed to read, write, and interpret CGsmiles string.
 Detailed information can be found in the module documentation.
 This overview page provides some quick tutorial style explanation
 of the main functionalities.
 
-Reading CGSmiles
+Reading CGsmiles
 ----------------
-A CGSmiles string can contain a base-graph (see Syntax Rules) and
+A CGsmiles string can contain a base-graph (see Syntax Rules) and
 multiple enumerations of fragment graphs each corresonding to a
 different resolution. The base graph can be read using the
 ``read_cgsmiles`` function, while the fragments can be read using
@@ -44,7 +44,7 @@ take the molecule in Figure 3 of the main paper:
 .. code-block:: python
 
    from cgsmiles import MoleculeResolver
-   # CGSmiles string with 3 resolutions
+   # CGsmiles string with 3 resolutions
    cgsmiles_str = "{[#hphilic][#hdphob]|3[#hphilic]}.\
                    {#hphilic=[<][#PEO][>]|3,#hdphob=[<][#PMA][>]([#BUT])}.\
                    {#PEO=[<][#SN3r][>],#PMA=[<][#TC3][>][#SN4a][$],#BUT=[$][#SC3][$]}.\
@@ -60,9 +60,9 @@ take the molecule in Figure 3 of the main paper:
 Alternatively, we could just have gotten the final two pairs by calling
 ``.resolve_all()``.
 
-Drawing CGSmiles
+Drawing CGsmiles
 ----------------
-It is very easy to check the correctness of a CGSmiles string by
+It is very easy to check the correctness of a CGsmiles string by
 simply drawing the molecule and the mapping to the coarser level.
 Drawing molecules can be accomplished using the drawing module.
 
