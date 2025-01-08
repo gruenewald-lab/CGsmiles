@@ -9,7 +9,7 @@ Table of Contents
 
    gettingstarted/installation
    gettingstarted/syntax_examples
-   gettingstarted/api_examples
+   gettingstarted/tutorials/index.rst
 
 .. toctree::
    :maxdepth: 2
@@ -25,7 +25,6 @@ Table of Contents
    :maxdepth: 2
    :caption: API
 
-   api/overview.rst
    api/cgsmiles.resolve
    api/cgsmiles.drawing
    api/cgsmiles.sample
