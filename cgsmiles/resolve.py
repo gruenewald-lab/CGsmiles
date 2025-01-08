@@ -129,6 +129,7 @@ class MoleculeResolver:
     ---------------------
     Alternatively, one could have gotten the block level graph from somewhere
     else defined as `nx.Graph` in that case:
+
     >>> # the string only defines the fragments
     >>> cgsmiles_str = "{#B1=[#PEO]|4,#B2=[#PE]|2}.{#PEO=[>]COC[<],#PE=[>]CC[<]}"
     >>> block_graph = nx.Graph()
@@ -141,6 +142,7 @@ class MoleculeResolver:
     case the `from_fragment_dicts` method can be used. Please note that the
     fragment graphs need to have the following attributes as a graph returned
     by the `cgsmiles.read_fragments` function.
+
     >>> fragment_dicts = []
     >>> for frag_string in ["{#B1=[#PEO]|4,#B2=[#PE]|2}", "{#PEO=[>]COC[<],#PE=[>]CC[<]}"]:
     >>>     frag_dict = read_fragments(frag_string)
