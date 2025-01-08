@@ -3,11 +3,11 @@ General Graph Syntax
 
 Overview
 --------
-The first resolution of the CGSmiles notation captures the coarsest representation
+The first resolution of the CGsmiles notation captures the coarsest representation
 of a molecule. The syntax is adapted from the SMILES notation and can be used to
 represent arbitrary graphs. These graphs do not need to be molecules but the
 syntax is geared towards molecules. The basic syntax features are sufficient to
-write a CGSmiles string for any (connected) graph. The advanced syntax features
+write a CGsmiles string for any (connected) graph. The advanced syntax features
 can be used to reduce the verbosity through use of a multiplication operator,
 allow annotation of bond orders, which are important for atomic resolutions and
 resolving multiple resolutions, as well as a general annotation syntax that
@@ -15,7 +15,7 @@ permits writing of node labels.
 
 Basic Syntax Features
 -----------------------
-The basic structure of CGSmiles involves describing each node within a graph
+The basic structure of CGsmiles involves describing each node within a graph
 using a specific notation that identifies connections and relationships between
 nodes. Here’s how the nodes and their connections are represented:
 
@@ -63,7 +63,7 @@ connecting nodes A, B, and C would be written as ``[#A]1[#B][#C]1``.
 
 String Encapsulation
 ^^^^^^^^^^^^^^^^^^^^
-For clarity and to define boundaries, CGSmiles strings are enclosed in curly braces.
+For clarity and to define boundaries, CGsmiles strings are enclosed in curly braces.
 
 .. code-block:: none
 
@@ -117,7 +117,7 @@ Annotations
 ^^^^^^^^^^^
 Some important information are are not encoded by the graph representation
 of a molecule. Such information are for examples charges or chirality.
-CGSmiles supports a general annotation syntax, which allows users to store
+CGsmiles supports a general annotation syntax, which allows users to store
 this kind of information in the form of ``symbol=value`` pairs. Any node
 name may be followed by one or more of these ``symbol=value`` pairs separated by
 a semi-colon. For example, to specify that node a has a charge of 1 but node
@@ -151,7 +151,7 @@ symbols is named a `dialect` and can be specified using the functionality in
 the dialect module. Note that currently dialects are not easily accessible
 for modification.
 
-CGSmiles comes with two sets of predefined dialects. One is used for the coarse
+CGsmiles comes with two sets of predefined dialects. One is used for the coarse
 resolution fragments / graphs and the other for those which are of atomic
 resolution. The table below lists the specifications of those keywords. Note that
 it is always permissible to use the keyword explicitly.
@@ -175,7 +175,7 @@ Reserved Annotation Symbols
 Multiplication Operator
 ^^^^^^^^^^^^^^^^^^^^^^^
 To efficiently represent repeated units in large molecules, such as polymers,
-CGSmiles syntax includes a multiplication operator ``|``. This operator can be
+CGsmiles syntax includes a multiplication operator ``|``. This operator can be
 applied after a node or a branch to repeat it a specified number of times.
 
 - **Node Multiplication:** The multiplication operator is placed after a node
@@ -200,7 +200,7 @@ applied after a node or a branch to repeat it a specified number of times.
 Syntax Features Lookup Table
 ----------------------------
 Below is the updated quick reference table for the essential features of
-CGSmiles syntax:
+CGsmiles syntax:
 
 +----------------+----------------------------------------------+------------------------------------------------+
 | Feature        | Description                                  | Example                                        |

@@ -2,7 +2,7 @@ API Examples
 ============
 
 The following tutorials illustrate how to use read,
-draw, and manipulate CGSmiles using the package API.
+draw, and manipulate CGsmiles using the package API.
 For more detailed information on the syntax please
 consult the examples and Syntax documentation.
 
@@ -10,7 +10,7 @@ Read and draw CGSmile of Polystyrene
 ------------------------------------
 
 If one just seeks to describe a graph at abitrary level of
-complexity CGSmiles notation can be used.
+complexity CGsmiles notation can be used.
 
 .. code:: python
 
@@ -18,7 +18,7 @@ complexity CGSmiles notation can be used.
    import networkx as nx
    import cgsmiles
 
-   # Express 5 units of Polystyrene in CGSmiles
+   # Express 5 units of Polystyrene in CGsmiles
    cgsmiles_str = "{[#PS]|5}.{#PS=[$]CC[$](c1ccccc1)}"
 
    # Resolve molecule into networkx graphs
@@ -48,7 +48,7 @@ BENZ.pdb from this repository.
    # Read pdb of Benzen
    mol = vermouth.pdb.read_pdb("BENZ.pdb")
 
-   # Express the mapping as CGSmiles string
+   # Express the mapping as CGsmiles string
    cgsmiles_str = "{[#R]1[#R][#R]1}.{#R=[$]cc[$]}"
 
    # Resolve molecule into networkx graphs
@@ -73,4 +73,4 @@ Searching the Martini databse of small molecules
 ------------------------------------------------
 
 Here goes some example on how to lookup molecules from the Martini
-Database using CGSmiles
+Database using CGsmiles
