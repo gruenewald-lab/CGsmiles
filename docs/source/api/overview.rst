@@ -1,23 +1,23 @@
 Overview
 ========
-The API is designed to read, write, and interpret CGsmiles string.
+The API is designed to read, write, and interpret CGsmiles strings.
 Detailed information can be found in the module documentation.
-This overview page provides some quick tutorial style explanation
-of the main functionalities.
+This page provides some quick tutorial style explanation of the
+main functionalities.
 
 Reading CGsmiles
 ----------------
 A CGsmiles string can contain a base-graph (see Syntax Rules) and
-multiple enumerations of fragment graphs each corresonding to a
+multiple enumerations of fragment graphs each corresponding to a
 different resolution. The base graph can be read using the
 ``read_cgsmiles`` function, while the fragments can be read using
 the ``read_fragments`` function. However, most user will find it
-convienient to directly read the entire string and resolve the
+convenient to directly read the entire string and resolve the
 different resolutions. This is done using the ``MoleculeResolver``
 class.
 
-First we need to import the ``MoleculeResolver`` and initate it
-using the ``from_string`` or one of the other initator methods.
+First we need to import the ``MoleculeResolver`` and initiate it
+using the ``from_string`` or one of the other initiator methods.
 Note that we can specify if the last resolution is at the atomic
 level by providing ``last_all_atom=True`` argument.
 
@@ -121,10 +121,10 @@ illustrates this for poly(ethylene) glycol.
     ax, pos = draw_molecule(mol_graph, labels=labels, scale=1)
     ax.set_frame_on('True')
 
-Likley you will see that not the entire molecule fits in the bounding box as
+Likely, you will see that not the entire molecule fits in the bounding box as
 indicated by the frame. The reason is that the drawing function does not
 automatically scale the image. You have two choices now. You can use the scale
-keywod to shrink the molecule image until it fits (e.g. ``scale=0.5``) or you
+keyword to shrink the molecule image until it fits (e.g. ``scale=0.5``) or you
 can provide a larger canvas.
 
 .. code:: python
@@ -142,8 +142,8 @@ terms of labels, bonds, and atoms. Thus you only have to find a visually pleasin
 canvas size once and can draw a large collection of molecules.
 
 One added bonus feature of the drawing utility is that it will draw cis/trans
-isomers correctly accoding to the cgsmiles string the user has provided. You
-can see a simple exmaple below.
+isomers correctly according to the cgsmiles string the user has provided. You
+can see a simple example below.
 
 .. code:: python
 
@@ -154,10 +154,10 @@ can see a simple exmaple below.
   fig, axes = plt.subplots(1,2, figsize=(6, 6))
 
   # trans butene
-  cgsmiles_str_tans = "{[#A][#B]}.{#A=c\c[$],#B=[$]c\c}"
+  cgsmiles_str_tans = "{[#A][#B]}.{#A=C\C=[$],#B=[$]=C\C}"
 
   # cis butene
-  cgsmiles_str_cis = "{[#A][#B]}.{#A=c\c[$],#B=[$]c/c}"
+  cgsmiles_str_cis = "{[#A][#B]}.{#A=C\C=[$],#B=[$]=C/C}"
 
   # Resolve molecule into networkx graphs
   for ax, cgstr in zip(axes, [cgsmiles_str_tans, cgsmiles_str_cis]):
