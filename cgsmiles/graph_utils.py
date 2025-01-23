@@ -180,3 +180,47 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
             molecule.nodes[node]['atomname'] = atomname
             if meta_graph:
                 meta_graph.nodes[meta_node]['graph'].nodes[node]['atomname'] = atomname
+
+def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
+    """
+    Given a finer resolution graph extract the higher resolution graph
+    by looking at the attributes and connectivity.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        the finer resolution graph
+    unique_attr: abc.hashable
+        the attribute by which to get the coarse resolution
+    copy_attrs: list[[abc.hashable]
+        a list of attributes to copy over
+
+    Returns
+    -------
+    netwokrx.Graph
+    """
+    meta_graph = nx.Graph()
+    fragments = defaultdict(list)
+    node_to_unique_value = {}
+    node_counter = 0
+    for node in molecule.nodes:
+        unique_values = molecule.nodes[node][unique_attr]
+        for unique_val in unique_values:
+            if unique_val in fragments:
+                fragments[unique_val].append(node)
+            else:
+                fragments[unique_val].append(node)
+                new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
+                new_attrs[unique_attr] = unique_val
+                meta_graph.add_node(node_counter, **new_attrs)
+                node_to_unique_value[unique_val] = node_counter
+                node_counter += 1
+
+    for e1, e2 in molecule.edges:
+        uvalues_e1 = molecule.nodes[e1][unique_attr]
+        uvalues_e2 = molecule.nodes[e2][unique_attr]
+        for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
+            if u1 != u2:
+                meta_graph.add_edge(node_to_unique_value[u1], node_to_unique_value[u2])
+
+    return meta_graph
