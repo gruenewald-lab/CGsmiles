@@ -218,11 +218,13 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
         uvalues_e2 = molecule.nodes[e2][unique_attr]
-        for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
+        for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
+            u1 = node_to_unique_value[n1]
+            u2 = node_to_unique_value[n2]
             if u1 != u2 and meta_graph.has_edge(u1, u2):
                 meta_graph.edges[(u1, u2)]['order'] += 1
             elif u1 != u2:
-                meta_graph.add_edge(node_to_unique_value[u1], node_to_unique_value[u2], order=1)
+                meta_graph.add_edge(u1, u2, order=1)
 
     return meta_graph
 
@@ -259,7 +261,6 @@ def annotate_bonding_operators(molecule, label='fragid'):
 def satisfy_isomorphism(target, other_frag):
 
     def _edge_match(e1, e2):
-        print(e1, e2)
         if e1['order'] != e2['order']:
             return False
         return True
@@ -267,7 +268,6 @@ def satisfy_isomorphism(target, other_frag):
     def _node_match(n1, n2):
         for attr in ['element', 'charge', 'rs_isomerism', 'ez_isomerism']:
             if n1.get(attr, None) != n2.get(attr, None):
-                print(n1, n2)
                 return False
 
         bond1 = n1.get('bonding', None)
@@ -275,10 +275,8 @@ def satisfy_isomorphism(target, other_frag):
         for b1, b2 in zip(bond1, bond2):
             if b1 and b2:
                 if b1[0] != b2[0] or b1[-1] != b2[-1]:
-                    print('a', b1, b2)
                     return False
         if (bond1 and bond2) and (len(bond1) != len(bond2)):
-            print(b1, b2)
             return False
         return True
 
@@ -312,7 +310,6 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
     # if a fragment is subgraph isomorphic with one or more
     # fragments in the list & all the neighboring fragments
     # are the same we can savely assume they are the same
-    print(fragname_to_meta_node)
     fragment_dict = {}
     bonding_op_convert = {}
     for fragname, fraglist in pre_fragment_dict.items():
