@@ -120,6 +120,10 @@ def annotate_fragments(meta_graph, molecule):
     the lower resolution graph nodes.
     """
     node_to_fragids = nx.get_node_attributes(molecule, 'fragid')
+    node_to_fragids_meta = nx.get_node_attributes(meta_graph, 'fragid')
+    if len(node_to_fragids_meta) == 0:
+        node_to_fragids_meta = {node: node for node in meta_graph.nodes}
+    fragid_to_meta_node = {value: key for key, value in node_to_fragids_meta.items()}
 
     fragid_to_node = defaultdict(list)
     for node, fragids in node_to_fragids.items():
@@ -129,14 +133,14 @@ def annotate_fragments(meta_graph, molecule):
     for meta_node in meta_graph.nodes:
         # adding node to the fragment graph
         graph_frag = nx.Graph()
-        for node in fragid_to_node[meta_node]:
+        for node in fragid_to_node[node_to_fragids_meta[meta_node]]:
             attrs = molecule.nodes[node]
             graph_frag.add_node(node, **attrs)
 
         # adding the edges
         # this is slow but OK; we always assume that the fragment
         # is much much smaller than the fullblown graph
-        combinations = itertools.combinations(fragid_to_node[meta_node], r=2)
+        combinations = itertools.combinations(fragid_to_node[node_to_fragids_meta[meta_node]], r=2)
         for a, b in combinations:
             if molecule.has_edge(a, b):
                 graph_frag.add_edge(a, b, **molecule.edges[(a, b)])
