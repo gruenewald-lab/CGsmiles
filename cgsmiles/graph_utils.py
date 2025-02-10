@@ -222,13 +222,20 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
         uvalues_e2 = molecule.nodes[e2][unique_attr]
-        for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
-            u1 = node_to_unique_value[n1]
-            u2 = node_to_unique_value[n2]
+        if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
+            u1 = node_to_unique_value[uvalues_e1[0]]
+            u2 = node_to_unique_value[uvalues_e2[0]]
             if u1 != u2 and meta_graph.has_edge(u1, u2):
                 meta_graph.edges[(u1, u2)]['order'] += 1
             elif u1 != u2:
                 meta_graph.add_edge(u1, u2, order=1)
+        # we have a squash and need to be careful
+        else:
+            for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
+                u1 = node_to_unique_value[n1]
+                u2 = node_to_unique_value[n2]
+                if u1 != u2:
+                    meta_graph.add_edge(u1, u2, order=1)
 
     return meta_graph
 
@@ -276,12 +283,20 @@ def satisfy_isomorphism(target, other_frag):
 
         bond1 = n1.get('bonding', None)
         bond2 = n2.get('bonding', None)
+        if bond1 is None and bond2 is None:
+            return True
+        elif bond1 is None:
+            return False
+        elif bond2 is None:
+            return False
+
         for b1, b2 in zip(bond1, bond2):
             if b1 and b2:
                 if b1[0] != b2[0] or b1[-1] != b2[-1]:
                     return False
         if (bond1 and bond2) and (len(bond1) != len(bond2)):
             return False
+
         return True
 
 
@@ -308,7 +323,6 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
         frag_label = meta_graph.nodes[node][label]
         pre_fragment_dict[frag_label].append(fgraph)
         meta_node_to_fragname[node] = (frag_label, len(pre_fragment_dict[frag_label])-1)
-
     fragname_to_meta_node = {value: key for key, value in meta_node_to_fragname.items()}
     # now we do some condensing of the fragments;
     # if a fragment is subgraph isomorphic with one or more
