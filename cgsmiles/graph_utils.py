@@ -283,6 +283,7 @@ def satisfy_isomorphism(target, other_frag):
 
         bond1 = n1.get('bonding', None)
         bond2 = n2.get('bonding', None)
+
         if bond1 is None and bond2 is None:
             return True
         elif bond1 is None:
@@ -294,11 +295,10 @@ def satisfy_isomorphism(target, other_frag):
             if b1 and b2:
                 if b1[0] != b2[0] or b1[-1] != b2[-1]:
                     return False
-        if (bond1 and bond2) and (len(bond1) != len(bond2)):
+        if len(bond1) != len(bond2):
             return False
 
         return True
-
 
     GM = nx.isomorphism.GraphMatcher(target,
                                      other_frag,
