@@ -206,18 +206,20 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     fragments = defaultdict(list)
     node_to_unique_value = {}
     node_counter = 0
+    ref_values = []
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
-        for unique_val in unique_values:
-            if unique_val in fragments:
+        if len(unique_values) == 1 and unique_values[0] not in ref_values:
+            fragments[unique_values[0]].append(node)
+            new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
+            new_attrs[unique_attr] = unique_values[0]
+            meta_graph.add_node(node_counter, **new_attrs)
+            node_to_unique_value[unique_values[0]] = node_counter
+            node_counter += 1
+            ref_values.append(unique_values[0])
+        else:
+            for unique_val in unique_values:
                 fragments[unique_val].append(node)
-            else:
-                fragments[unique_val].append(node)
-                new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
-                new_attrs[unique_attr] = unique_val
-                meta_graph.add_node(node_counter, **new_attrs)
-                node_to_unique_value[unique_val] = node_counter
-                node_counter += 1
 
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
