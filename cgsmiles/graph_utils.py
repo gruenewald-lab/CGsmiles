@@ -343,7 +343,7 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
                                                                other_frag.nodes[onode]['bonding']):
                                 bonding_op_convert[target_bond] = other_bond
 
-                    fragname_to_meta_node[(fragname, idx)] = meta_node
+                    meta_node = fragname_to_meta_node[(fragname, idx)]
                     meta_graph.nodes[meta_node][label] = other_fragname
                     break
             else:
