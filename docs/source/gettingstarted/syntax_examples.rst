@@ -78,14 +78,7 @@ CGSmiles with all-atom fragments
 
      "{[#PEO]1[#PEO]|4[#PEO]1}.{#PEO=[$]COC[$]}"
 
-- Martini 3 p-cresol with all-atom fragments
-
-  .. code::
-
-    "{[#A]1[#B]2[#C]1[#D]2}.{#A=cc...}"
-
 - mPEG acrylate with 5 residues
-
   .. code::
 
     "{[#PMA]([#PEO]|3)|5}.{#PMA=[>]CC[<](C(=O)OC[$]),#PEO=[$]COC[$]}"
