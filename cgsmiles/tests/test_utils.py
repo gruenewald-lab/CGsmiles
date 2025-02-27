@@ -6,7 +6,7 @@ err_msg_rebuild_h = ("Likely you are writing an aromatic molecule that does not 
                      "show delocalization-induced molecular equivalency and thus "
                      "is not considered aromatic. For example, 4-methyl imidazole "
                      "is often written as [nH]1cc(nc1)C, but should be written as "
-                     "[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
+                     "[NH]1C=C(N=C1)C. A corresponding CGsmiles string would be "
                      "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
 
 @pytest.mark.parametrize('frag_str, hatoms_ref, error_type, err_msg', (
