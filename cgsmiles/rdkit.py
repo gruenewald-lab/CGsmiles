@@ -20,7 +20,7 @@ def rdkit_to_networkx(rdkit_mol):
 
     Parameters
     ----------
-    rdkit_mol: :class:`rdkit.Chem.Mol`
+    rdkit_mol: rdkit.Chem.Mol
         an RDKit molecule
 
     Returns
@@ -68,7 +68,7 @@ def networkx_to_rdkit(mol_graph):
 
     Returns
     -------
-    :class:`rdkit.Chem.Mol`
+    rdkit.Chem.Mol
         the RDKit molecule
     """
     mol = Chem.RWMol()
