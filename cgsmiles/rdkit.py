@@ -96,7 +96,7 @@ def embed_3d_via_rdkit(mol_graph):
 
     Parameters
     ----------
-    mol_graph: netwrokx.Graph
+    mol_graph: networkx.Graph
     """
     # add explicit hydrogen atoms
     add_explicit_hydrogens(mol_graph)
