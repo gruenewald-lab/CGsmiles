@@ -7,3 +7,4 @@ numpy
 networkx ~= 2.0
 scipy
 matplotlib
+rdkit
