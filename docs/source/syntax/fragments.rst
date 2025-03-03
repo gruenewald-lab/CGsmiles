@@ -3,7 +3,7 @@ General Fragment Syntax
 
 Overview
 --------
-CGSmiles supports the representation of molecular structures at different
+CGsmiles supports the representation of molecular structures at different
 resolutions through a fragment replacement syntax. This allows users to specify
 more detailed molecular structures connected to a coarse graph representation.
 
@@ -23,7 +23,7 @@ syntax to define an atomic resolution fragment.
 Bond Operators
 ^^^^^^^^^^^^^^
 To define how two consecutive fragments at a finer resolution are connected,
-CGSmiles  builds upon the bonding connector syntax established in BigSMILES to
+CGsmiles  builds upon the bonding connector syntax established in BigSMILES to
 avoid ambiguity. Any node or atom that connects to a neighboring fragment is
 followed by one of four bonding connectors (‘$’, ‘>’, ‘<’, ‘!’) enclosed in
 square brackets. In addition, any operator may be combined with an alphanumeric
@@ -52,7 +52,7 @@ label to distinguish non-equivalent operators of the same type.
 
 - **Shared Bonding Operator !**
   To address a common scenario in CG force fields where an atom is distributed
-  between two finer resolution nodes, CGSmiles introduces the shared bonding
+  between two finer resolution nodes, CGsmiles introduces the shared bonding
   operator ‘!’. In the case of toluene represented at the Martini 3 level, some
   of the ring atoms are shared between the two CG beads. When two fragments are
   connected using the shared bonding operator, the atoms at the connection point
@@ -78,7 +78,7 @@ double bond between ethane and propane fragment.
 
 Updated Bonding Descriptors Lookup Table
 ----------------------------------------
-This table now includes the squash descriptor, summarizing all the bonding descriptors used in CGSmiles:
+This table now includes the squash descriptor, summarizing all the bonding descriptors used in CGsmiles:
 
 +----------------+---------------------------+--------------------------------------------------------------------+
 | Descriptor     | Symbol                    | Description                                                        |

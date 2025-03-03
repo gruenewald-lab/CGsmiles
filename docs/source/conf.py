@@ -25,7 +25,7 @@ os.environ['SPHINX_APIDOC_OPTIONS'] = 'members'
 
 # -- Project information -----------------------------------------------------
 
-project = 'CGSmiles'
+project = 'CGsmiles'
 copyright = '2024, Dr. F Gruenewald'
 author = 'F. Gruneewald and P. C. Kroon'
 
@@ -132,7 +132,7 @@ html_show_sourcelink = True
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'CGSmilesdoc'
+htmlhelp_basename = 'CGsmilesdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -159,7 +159,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'CGSmiles.tex', 'CGSmiles Documentation',
+    (master_doc, 'CGsmiles.tex', 'CGsmiles Documentation',
      author, 'manual'),
 ]
 
@@ -169,7 +169,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'cgsmiles', 'CGSmiles Documentation',
+    (master_doc, 'cgsmiles', 'CGsmiles Documentation',
      [author], 1)
 ]
 
@@ -180,8 +180,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'CGSmiles', 'CGSmiles Documentation',
-     author, 'CGSmiles', 'One line description of project.',
+    (master_doc, 'CGsmiles', 'CGsmiles Documentation',
+     author, 'CGsmiles', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -213,6 +213,7 @@ intersphinx_mapping = {
     'numpy': ('http://docs.scipy.org/doc/numpy', None),
     'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
     'matplotlib': ('https://matplotlib.org/stable', None),
+    'rdkit': ('https://www.rdkit.org/docs/', None)
 }
 
 

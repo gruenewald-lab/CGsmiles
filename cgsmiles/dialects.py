@@ -139,7 +139,7 @@ def create_dialect(default_attributes,
 #                   KNOWN DIALECTS                       #
 ##########################################################
 # this one is for global use
-# it is the base CGSmiles dialect
+# it is the base CGsmiles dialect
 CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": (None, str),
                                            "q": (0.0, float),
                                            "w": (1.0, float)})

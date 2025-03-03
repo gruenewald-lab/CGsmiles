@@ -1,7 +1,7 @@
 Introduction
 ============
 
-The CGSmiles line notation encodes arbitrary resolutions of molecules and
+The CGsmiles line notation encodes arbitrary resolutions of molecules and
 defines the conversion between these resolutions unambiguously. Each
 resolution is explicitly defined and multiple resolutions may be layered
 together using this notation.
@@ -12,7 +12,7 @@ polymer, which represent a coarser resolution compared to the next (all-atom)
 representation. Edges in the graph describe chemical connections between
 these (groups of) atoms.
 
-With this premise, the first resolution of the CGSmiles notation describes
+With this premise, the first resolution of the CGsmiles notation describes
 the molecule graph at the coarsest level. Subsequent resolutions define
 fragments that specify how each node is represented at the next finer
 resolution (e.g. residue to coarse-grained beads, or coarse-grained beads
@@ -25,6 +25,6 @@ below:
 
 In the remainder of this section we first explain the syntax to describe
 a general graph, which can represent a molecule at any resolution in
-CGSmiles. Subsequently, the description is extended to define fragments.
+CGsmiles. Subsequently, the description is extended to define fragments.
 Finally, it is show how to deal with special issues that can arise when
 converting a coarse resolution graph to atomic representation.

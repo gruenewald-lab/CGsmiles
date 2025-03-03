@@ -1,18 +1,18 @@
 Syntax Examples
 ===============
 
-This page collects examples of CGSmiles string of increasing
+This page collects examples of CGsmiles string of increasing
 complexity. They are seperated into the following categories:
 
-- CGSmiles without fragments
-- CGSmiles with all-atom fragments
-- CGSmiles with coarse-grained fragments
+- CGsmiles without fragments
+- CGsmiles with all-atom fragments
+- CGsmiles with coarse-grained fragments
 
-CGSmiles without fragments
+CGsmiles without fragments
 --------------------------
 
 If one just seeks to describe a graph at abitrary level of
-complexity CGSmiles notation can be used. Each of the smiles
+complexity CGsmiles notation can be used. Each of the smiles
 listed below can be read and converted using the `read_cgsmiles`
 function of the package:
 
@@ -57,7 +57,7 @@ function of the package:
      "{[#nodeA]([#nodeAB][#nodeAB])|5}"
 
 
-CGSmiles with all-atom fragments
+CGsmiles with all-atom fragments
 --------------------------------
 
 - simple linear graph describing PEO with two OH end-groups
@@ -78,14 +78,7 @@ CGSmiles with all-atom fragments
 
      "{[#PEO]1[#PEO]|4[#PEO]1}.{#PEO=[$]COC[$]}"
 
-- Martini 3 p-cresol with all-atom fragments
-
-  .. code::
-
-    "{[#A]1[#B]2[#C]1[#D]2}.{#A=cc...}"
-
 - mPEG acrylate with 5 residues
-
   .. code::
 
     "{[#PMA]([#PEO]|3)|5}.{#PMA=[>]CC[<](C(=O)OC[$]),#PEO=[$]COC[$]}"

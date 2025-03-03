@@ -77,7 +77,7 @@ def rebuild_h_atoms(mol_graph,
                "show delocalization-induced molecular equivalency and thus "
                "is not considered aromatic. For example, 4-methyl imidazole "
                "is often written as [nH]1cc(nc1)C, but should be written as "
-               "[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
+               "[NH]1C=C(N=C1)C. A corresponding CGsmiles string would be "
                "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
@@ -126,7 +126,7 @@ def read_fragment_smiles(smiles_str,
                          ez_isomers={},
                          attributes={}):
     """
-    Read a smiles_str corresponding to a CGSmiles fragment and
+    Read a smiles_str corresponding to a CGsmiles fragment and
     annotate bonding descriptors, isomers, as well as any other
     attributes.
 

@@ -22,15 +22,15 @@ from cgsmiles import MoleculeResolver
 ))
 def test_write_fragments(input_string):
     frag_dict = read_fragments(input_string)
-    for g in frag_dict.values():
-        print(g.nodes(data=True))
     out_string = write_cgsmiles_fragments(frag_dict, smiles_format=True)
     frag_dict_out = read_fragments(out_string)
-    for g in frag_dict_out.values():
-        print(g.nodes(data=True))
-    print(out_string)
     assert set(frag_dict_out) == set(frag_dict)
     for fragname in frag_dict:
+        for attr in ["_atom_str", "_pos"]:
+            nx.set_node_attributes(frag_dict_out[fragname], None, attr)
+            nx.set_node_attributes(frag_dict[fragname], None, attr)
+            nx.set_edge_attributes(frag_dict_out[fragname], None, attr)
+            nx.set_edge_attributes(frag_dict[fragname], None, attr)
         assertEqualGraphs(frag_dict_out[fragname], frag_dict[fragname])
 
 @pytest.mark.parametrize('input_string',(
@@ -63,16 +63,20 @@ def test_write_cgsmiles(input_string):
     fragment_dicts = resolver.fragment_dicts
     molecule = resolver.molecule
     output_string = write_cgsmiles(molecule, fragment_dicts)
-    print(output_string)
     out_resolver =  MoleculeResolver.from_string(output_string)
     out_mol = out_resolver.molecule
     assertEqualGraphs(molecule, out_mol)
-    print("fragments")
     out_fragments = out_resolver.fragment_dicts
     assert len(fragment_dicts) == len(out_fragments)
     for frag_dict, frag_dict_out in zip(fragment_dicts, out_fragments):
         assert set(frag_dict_out) == set(frag_dict)
         for fragname in frag_dict:
+            for attr in ["_atom_str", "_pos"]:
+                nx.set_node_attributes(frag_dict_out[fragname], None, attr)
+                nx.set_node_attributes(frag_dict[fragname], None, attr)
+                nx.set_edge_attributes(frag_dict_out[fragname], None, attr)
+                nx.set_edge_attributes(frag_dict[fragname], None, attr)
+
             # we cannot be sure that the atomnames are the same because they
             # will depend on the order
             nx.set_node_attributes(frag_dict_out[fragname], None, "atomname")

@@ -42,12 +42,12 @@ def _set_bond_order_defaults(bonding):
 
 class MoleculeSampler:
     """
-    Given a fragment string in CGSmiles format and probabilities for residues
+    Given a fragment string in CGsmiles format and probabilities for residues
     to occur, return a random molecule with target molecular weight.
 
     First, this class has to be initiated using the class construction
     method `from_string`, which makes sure to read and resolve the fragment
-    graphs provided in the CGSmiles string.
+    graphs provided in the CGsmiles string.
 
     Once the `MoleculeSampler` is initiated you can call the `sampler` method
     in order to generate a new random polymer molecule from the fragment string
@@ -124,7 +124,7 @@ class MoleculeSampler:
     can be provided.
 
     For example, To generate a bottle brush polymer that has PMA in the backbone
-    and PEG as side-chain terminated with an OH group the following CGSmiles string
+    and PEG as side-chain terminated with an OH group the following CGsmiles string
     in combination with the above mentioned probabilities can be provided.
 
     Note that in this case we declare '$A' and '$B' to be terminal bonding

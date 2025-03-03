@@ -11,7 +11,7 @@ order_to_symbol = {0: '.', 1: '-', 1.5: ':', 2: '=', 3: '#', 4: '$'}
 def format_node(molecule, current):
     """
     Format a node from a `molecule` graph according to
-    the CGSmiles syntax. The attribute fragname has to
+    the CGsmiles syntax. The attribute fragname has to
     be set for the `current` node.
 
     Parameters
@@ -68,7 +68,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     Returns
     -------
     str
-        The CGSmiles string describing `molecule`.
+        The CGsmiles string describing `molecule`.
     """
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
@@ -161,19 +161,19 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
 
 def write_cgsmiles_graph(molecule):
     """
-    Write a CGSmiles graph sans fragments at
+    Write a CGsmiles graph sans fragments at
     different resolution.
 
     Parameters
     ----------
     molecule: networkx.Graph
         a molecule where each node as a fragname attribute
-        that is used as name in the CGSmiles string.
+        that is used as name in the CGsmiles string.
 
     Returns
     -------
     str
-        the CGSmiles string
+        the CGsmiles string
     """
 
     cgsmiles_str = write_graph(molecule)
@@ -192,7 +192,7 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
         a dict of fragment graphs
     smiles_format: bool
         write all atom SMILES if True (default) otherwise
-        write CGSmiles
+        write CGsmiles
 
     Returns
     -------
@@ -208,7 +208,7 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
 
 def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
     """
-    Write a CGSmiles string given a low resolution molecule graph
+    Write a CGsmiles string given a low resolution molecule graph
     and any number of higher resolutions provided as fragment dicts.
 
     Parameters
@@ -222,7 +222,7 @@ def write_cgsmiles(molecule_graph, fragments, last_all_atom=True):
     Returns
     -------
     str
-        CGSmiles string
+        CGsmiles string
     """
     final_str = write_cgsmiles_graph(molecule_graph)
     for layer, fragment in enumerate(fragments):
