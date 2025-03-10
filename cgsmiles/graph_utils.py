@@ -218,8 +218,11 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             node_counter += 1
             ref_values.append(unique_values[0])
         else:
-            for unique_val in unique_values:
-                fragments[unique_val].append(node)
+            for u1, u2 in itertools.combinations(unique_values, r=2):
+                if meta_graph.has_edge(u1, u2):
+                    meta_graph.edges[(u1, u2)]['order'] += 1
+                else:
+                    meta_graph.add_edge(u1, u2, order=1)
 
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
@@ -232,12 +235,16 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             elif u1 != u2:
                 meta_graph.add_edge(u1, u2, order=1)
         # we have a squash and need to be careful
-        else:
-            for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
-                u1 = node_to_unique_value[n1]
-                u2 = node_to_unique_value[n2]
-                if u1 != u2:
-                    meta_graph.add_edge(u1, u2, order=1)
+       #else:
+       #    print(e1, e2)
+       #    for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
+       #        u1 = node_to_unique_value[n1]
+       #        u2 = node_to_unique_value[n2]
+       #        if meta_graph.has_edge(u1, u2):
+       #            meta_graph.edges[(u1, u2)]['order'] += 1
+       #            break
+       #        elif u1 != u2:
+       #            meta_graph.add_edge(u1, u2, order=1)
 
     return meta_graph
 
