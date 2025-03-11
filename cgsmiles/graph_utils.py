@@ -207,6 +207,8 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     node_to_unique_value = {}
     node_counter = 0
     ref_values = []
+    squash = []
+    # first we loop over all nodes that are not squashed
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
         if len(unique_values) == 1 and unique_values[0] not in ref_values:
@@ -218,34 +220,41 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             node_counter += 1
             ref_values.append(unique_values[0])
         else:
-            for u1, u2 in itertools.combinations(unique_values, r=2):
-                if meta_graph.has_edge(u1, u2):
-                    meta_graph.edges[(u1, u2)]['order'] += 1
-                else:
-                    meta_graph.add_edge(u1, u2, order=1)
+            squash.append(unique_values)
+    # now the squashed nodes are iterated
+    for unique_values in squash:
+        for u1, u2 in itertools.combinations(unique_values, r=2):
+            n1 = node_to_unique_value[u1]
+            n2 = node_to_unique_value[u2]
+            if meta_graph.has_edge(n1, n2):
+                meta_graph.edges[(n1, n2)]['order'] += 1
+            else:
+                meta_graph.add_edge(n1, n2, order=1)
 
+    # finally we make edges between all nodes
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
         uvalues_e2 = molecule.nodes[e2][unique_attr]
         if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
-            u1 = node_to_unique_value[uvalues_e1[0]]
-            u2 = node_to_unique_value[uvalues_e2[0]]
-            if u1 != u2 and meta_graph.has_edge(u1, u2):
-                meta_graph.edges[(u1, u2)]['order'] += 1
+            u1 = uvalues_e1[0]
+            u2 = uvalues_e2[0]
+            if u1 != u2 and meta_graph.has_edge(node_to_unique_value[u1], node_to_unique_value[u2]):
+                print(u1, u2)
+                meta_graph.edges[(node_to_unique_value[u1],
+                                  node_to_unique_value[u2])]['order'] += 1
             elif u1 != u2:
-                meta_graph.add_edge(u1, u2, order=1)
-        # we have a squash and need to be careful
-       #else:
-       #    print(e1, e2)
-       #    for n1, n2 in itertools.product(uvalues_e1, uvalues_e2):
-       #        u1 = node_to_unique_value[n1]
-       #        u2 = node_to_unique_value[n2]
-       #        if meta_graph.has_edge(u1, u2):
-       #            meta_graph.edges[(u1, u2)]['order'] += 1
-       #            break
-       #        elif u1 != u2:
-       #            meta_graph.add_edge(u1, u2, order=1)
-
+               meta_graph.add_edge(node_to_unique_value[u1],
+                                   node_to_unique_value[u2], order=1)
+        elif len(uvalues_e1) == 1 and uvalues_e1[0] not in uvalues_e2:
+           u1 = uvalues_e1[0]
+           for u2 in uvalues_e2:
+               meta_graph.add_edge(node_to_unique_value[u1],
+                                   node_to_unique_value[u2], order=1)
+        elif len(uvalues_e2) == 1 and uvalues_e2[0] not in uvalues_e1:
+           u2 = uvalues_e2[0]
+           for u1 in uvalues_e1:
+               meta_graph.add_edge(node_to_unique_value[u1],
+                                   node_to_unique_value[u2], order=1)
     return meta_graph
 
 def annotate_bonding_operators(molecule, label='fragid'):
