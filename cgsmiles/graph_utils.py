@@ -193,9 +193,9 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     ----------
     molecule: networkx.Graph
         the finer resolution graph
-    unique_attr: abc.hashable
+    unique_attr: collections.abc.Hashable
         the attribute by which to get the coarse resolution
-    copy_attrs: list[[abc.hashable]
+    copy_attrs: list[[collections.abc.Hashable]
         a list of attributes to copy over
 
     Returns
@@ -239,7 +239,6 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             u1 = uvalues_e1[0]
             u2 = uvalues_e2[0]
             if u1 != u2 and meta_graph.has_edge(node_to_unique_value[u1], node_to_unique_value[u2]):
-                print(u1, u2)
                 meta_graph.edges[(node_to_unique_value[u1],
                                   node_to_unique_value[u2])]['order'] += 1
             elif u1 != u2:
