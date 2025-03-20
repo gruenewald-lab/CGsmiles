@@ -367,6 +367,10 @@ class MoleculeResolver:
         new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
         nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
 
+        # adjust the fragids because at meta-graph level
+        new_fragids = {node: idx for idx, node in enumerate(self.meta_graph.nodes)}
+        nx.set_node_attributes(self.meta_graph, new_fragids, 'fragid')
+
         # create an empty molecule graph
         self.molecule = nx.Graph()
 
