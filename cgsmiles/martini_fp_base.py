@@ -137,23 +137,8 @@ class MartiniFingerPrinterBase:
         """
         pass
 
-    def generate_fingerprint(self, cgmol):
+    def generate_fingerprint(self, cgmol, targets=[]):
         """
-        Annotate features, aggergate them, and
-        turn these into a binary array that is the
-        fingerprint. Note that the aggregate_fetures
-        method must be provided.
-
-        Paramters
-        ---------
-        cgmol: networkx.Graph
-
-        Returns
-        -------
-        numpy.array
-            the binary array
+        Overwrite in subclass.
         """
-        self.annotate_features(cgmol)
-        feature_list = self.aggregate_features(cgmol)
-        fp = _features_to_binary(feature_list) 
-        return fp
+        pass
