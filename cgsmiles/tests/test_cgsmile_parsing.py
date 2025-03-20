@@ -340,6 +340,12 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {1: ["$a2", "$b2"]},
                         None,
                         None),
+                        # zero bond order
+                        ("CCO.[$]",
+                         "CCO",
+                        {2: ["$0"]},
+                        None,
+                        None),
                         # multiple non-one bonding l
                         ("CC[$a]=[$b]CC",
                          "CCCC",
