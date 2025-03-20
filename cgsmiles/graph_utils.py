@@ -207,7 +207,9 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     node_to_unique_value = {}
     node_counter = 0
     ref_values = []
-    squash = []
+    # a set because if we have hydrogen atoms one may overcount
+    # the number of squash atoms that are the same
+    squash = set()
     # first we loop over all nodes that are not squashed
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
@@ -220,9 +222,9 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             node_counter += 1
             ref_values.append(unique_values[0])
         else:
-            squash.append(unique_values)
+            squash.add(tuple(unique_values))
     # now the squashed nodes are iterated
-    for unique_values in squash:
+    for unique_values in set(squash):
         for u1, u2 in itertools.combinations(unique_values, r=2):
             n1 = node_to_unique_value[u1]
             n2 = node_to_unique_value[u2]
@@ -260,6 +262,18 @@ def annotate_bonding_operators(molecule, label='fragid'):
     """
     Given a labelled molecule figure out which bonds belong to
     two different fragments and assign a unique bonding operator.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        the target molecule
+    label: collections.abc.Hashable
+        a label by which residues are marked
+
+    Returns
+    -------
+    networkx.Graph
+        the annotated graph
     """
     # we unset all existing bonding operators
     nx.set_node_attributes(molecule, {n: [] for n in molecule.nodes}, 'bonding')
@@ -280,7 +294,7 @@ def annotate_bonding_operators(molecule, label='fragid'):
             op_counter += 1
     for node in molecule.nodes:
         # here we deal with a squash operator
-        if len(molecule.nodes[node][label]) > 1:
+        if len(molecule.nodes[node][label]) > 1 and molecule.nodes[node].get('element', '*') != 'H':
             operator = f"!{op_counter}1"
             molecule.nodes[node]['bonding'].append(operator)
             op_counter += 1
