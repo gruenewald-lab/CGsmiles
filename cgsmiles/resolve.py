@@ -11,7 +11,7 @@ from .graph_utils import (merge_graphs,
 from .pysmiles_utils import (rebuild_h_atoms,
                              annotate_ez_isomers_cgsmiles)
 
-def compatible(left, right, legacy=False):
+def compatible(left, right, legacy=True):
     """
     Check bonding descriptor compatibility according
     to the CGsmiles syntax conventions. With legacy
@@ -43,7 +43,7 @@ def compatible(left, right, legacy=False):
             return True
         return False
 
-def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=False):
+def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=True):
     """
     Given a source and a target graph, which have bonding
     descriptors stored as node attributes, find a pair of
@@ -273,7 +273,7 @@ class MoleculeResolver:
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
-    def edges_from_bonding_descrpt(self, all_atom=False):
+    def edges_from_bonding_descrpt(self, all_atom=True):
         """
         Makes edges according to the bonding descriptors stored
         in the node attributes of meta_molecule residue graph.
@@ -421,7 +421,7 @@ class MoleculeResolver:
         return meta_graph, graph
 
     @classmethod
-    def from_string(cls, cgsmiles_str, last_all_atom=True, legacy=False):
+    def from_string(cls, cgsmiles_str, last_all_atom=True, legacy=True):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string.
 
@@ -454,7 +454,7 @@ class MoleculeResolver:
         return resolver_obj
 
     @classmethod
-    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True, legacy=False):
+    def from_graph(cls, cgsmiles_str, meta_graph, last_all_atom=True, legacy=True):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string
         and a `meta_graph` that describes the lowest resolution.
@@ -494,7 +494,7 @@ class MoleculeResolver:
         return resolver_obj
 
     @classmethod
-    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True, legacy=False):
+    def from_fragment_dicts(cls, cgsmiles_str, fragment_dicts, last_all_atom=True, legacy=True):
         """
         Initiate a MoleculeResolver instance from a cgsmiles string, describing
         one molecule and fragment_dicts containing fragments for each resolution.
