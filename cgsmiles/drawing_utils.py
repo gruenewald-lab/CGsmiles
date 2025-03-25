@@ -207,7 +207,7 @@ def make_node_pies(graph,
         # thus we color the pie slices according to the fragment and rotate
         # the node such that the colors aling; this is only possible if we
         # have cgmapping
-        elif fragids and len(fragids) > 1:
+        elif fragids and type(fragids) == list and len(fragids) > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
             pie_colors = []
