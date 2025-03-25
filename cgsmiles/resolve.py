@@ -345,9 +345,22 @@ class MoleculeResolver:
                                                 node_to_keep,
                                                 node_to_remove,
                                                 self_loops=False)
+            target_id = self.molecule.nodes[node_to_keep]['fragid']
+            ref_id = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            # remove redundant hydrogen atoms
+            # ToDo: check their attributes and raise warning if not equal
+            hsquash = []
+            for neighbor in self.molecule.neighbors(node_to_keep):
+                if self.molecule.nodes[neighbor]['element'] == 'H'\
+                and self.molecule.nodes[neighbor]['fragid'] != target_id:
+                    hsquash.append(neighbor)
+                elif self.molecule.nodes[neighbor]['element'] == 'H':
+                    self.molecule.nodes[neighbor]['fragid'] += ref_id
+
+            self.molecule.remove_nodes_from(hsquash)
 
             # add the fragment id of the sequashed node
-            self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            self.molecule.nodes[node_to_keep]['fragid'] += ref_id
             self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
 
     def resolve(self):
