@@ -139,7 +139,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
                     marker = ring_idx_to_marker.pop(ring_idx)
                     new_marker = False
 
-                if smiles_format and _write_edge_symbol(molecule, *ring_bond) and new_marker:
+                if _write_edge_symbol(molecule, *ring_bond) and new_marker:
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
