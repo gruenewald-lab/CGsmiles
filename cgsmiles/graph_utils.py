@@ -209,7 +209,7 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     ref_values = []
     # a set because if we have hydrogen atoms one may overcount
     # the number of squash atoms that are the same
-    squash = set()
+    squash = []
     # first we loop over all nodes that are not squashed
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
@@ -222,9 +222,11 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             node_counter += 1
             ref_values.append(unique_values[0])
         else:
-            squash.add(tuple(unique_values))
+            if molecule.nodes[node].get('element', '*') != 'H':
+                squash.append(tuple(unique_values))
+
     # now the squashed nodes are iterated
-    for unique_values in set(squash):
+    for unique_values in squash:
         for u1, u2 in itertools.combinations(unique_values, r=2):
             n1 = node_to_unique_value[u1]
             n2 = node_to_unique_value[u2]
@@ -258,6 +260,20 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
                                    node_to_unique_value[u2], order=1)
     return meta_graph
 
+def _annotate_neighbors_as_hash(molecule):
+    """
+    For each node in meta_graph annotate the neighbouring
+    fragments as hashes.
+    """
+    for node in molecule.nodes:
+        neighbor_hashs = []
+        for neigh in molecule.neighbors(node):
+            neighbor_hashs.append(nx.weisfeiler_lehman_graph_hash(molecule.nodes[neigh]['graph'],
+                                                            node_attr='element',
+                                                            edge_attr='order'))
+        nhash = hash(tuple(neighbor_hashs))
+        nx.set_node_attributes(molecule.nodes[node]['graph'], nhash, 'nhash')
+
 def annotate_bonding_operators(molecule, label='fragid'):
     """
     Given a labelled molecule figure out which bonds belong to
@@ -288,9 +304,10 @@ def annotate_bonding_operators(molecule, label='fragid'):
         else:
             if order == 1.5:
                 order = 1
-            operator = f"${op_counter}{order}"
-            molecule.nodes[e1]['bonding'].append(operator)
-            molecule.nodes[e2]['bonding'].append(operator)
+            op1 = f">{op_counter}{order}"
+            op2 = f"<{op_counter}{order}"
+            molecule.nodes[e1]['bonding'].append(op2)
+            molecule.nodes[e2]['bonding'].append(op1)
             op_counter += 1
     for node in molecule.nodes:
         # here we deal with a squash operator
@@ -308,7 +325,7 @@ def satisfy_isomorphism(target, other_frag):
         return True
 
     def _node_match(n1, n2):
-        for attr in ['element', 'charge', 'rs_isomerism', 'ez_isomerism']:
+        for attr in ['nhash', 'element', 'charge', 'rs_isomerism', 'ez_isomerism']:
             if n1.get(attr, None) != n2.get(attr, None):
                 return False
 
@@ -335,11 +352,7 @@ def satisfy_isomorphism(target, other_frag):
                                      other_frag,
                                      node_match=_node_match,
                                      edge_match=_edge_match)
-    try:
-        match = next(GM.subgraph_isomorphisms_iter())
-    except StopIteration:
-        match = None
-    return match
+    return GM.subgraph_isomorphisms_iter()
 
 def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
     """
@@ -349,10 +362,12 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
     # first me make a list of all fragment graphs
     pre_fragment_dict = defaultdict(list)
     meta_node_to_fragname = defaultdict(list)
+    # annotate neighbors as hashes for later filtering
+    _annotate_neighbors_as_hash(meta_graph)
     for node in meta_graph.nodes:
         fgraph = meta_graph.nodes[node]['graph']
         frag_label = meta_graph.nodes[node][label]
-        pre_fragment_dict[frag_label].append(fgraph)
+        pre_fragment_dict[frag_label].append((fgraph, node))
         meta_node_to_fragname[node] = (frag_label, len(pre_fragment_dict[frag_label])-1)
     fragname_to_meta_node = {value: key for key, value in meta_node_to_fragname.items()}
     # now we do some condensing of the fragments;
@@ -361,36 +376,58 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
     # are the same we can savely assume they are the same
     fragment_dict = {}
     bonding_op_convert = {}
+    compl = {">": "<", "<": ">", "!": "!"}
     for fragname, fraglist in pre_fragment_dict.items():
         temp_frags = {}
         letters = list("ZYXWVUTSRQPONMLKJIHGFEDCBA ")
-        for idx, target in enumerate(fraglist):
-            for other_fragname, other_frag in temp_frags.items():
-                match = satisfy_isomorphism(target, other_frag)
-                if satisfy_isomorphism(target, other_frag):
+        for idx, (target, fnode) in enumerate(fraglist):
+            matching = False
+            for other_fragname, (other_frag, gnode) in temp_frags.items():
+                match_iter = list(satisfy_isomorphism(target, other_frag))
+                connected = meta_graph.has_edge(fnode, gnode)
+                squash_ref = None
+                # if we have a symmetric fragments with two asymmetric sqaush
+                # operators we need to distinguish them
+                tbonding = nx.get_node_attributes(target, 'bonding')
+                asymmetric_sqash = False
+                for bonds in tbonding.values():
+                    for bond in bonds:
+                        if any(["!" in b for b in bond]) and len(bond) > 1:
+                            asymmetric_sqash = True
+                if asymmetric_sqash:
+                    continue
+
+                for match in match_iter:
+                    matching = True
                     for tnode, onode in match.items():
                         if 'bonding' in target.nodes[tnode]:
                             for target_bond, other_bond in zip(target.nodes[tnode]['bonding'],
                                                                other_frag.nodes[onode]['bonding']):
-                                bonding_op_convert[target_bond] = other_bond
-
+                                    bonding_op_convert[target_bond] = bonding_op_convert.get(other_bond, other_bond)
+                                    compl_target_bond = compl[target_bond[0]]+target_bond[1:]
+                                    compl_other_bond = compl[other_bond[0]] + other_bond[1:]
+                                    bonding_op_convert[compl_target_bond] = bonding_op_convert.get(compl_other_bond, compl_other_bond)
                     meta_node = fragname_to_meta_node[(fragname, idx)]
                     meta_graph.nodes[meta_node][label] = other_fragname
+                if matching:
+                    matching = False
                     break
             else:
-                target_name = fragname + letters.pop()
-                target_name = target_name.strip()
-                temp_frags[target_name] = target
+                while True:
+                    target_name = fragname + letters.pop()
+                    target_name = target_name.strip()
+                    if idx == 0 or target_name not in pre_fragment_dict:
+                        break
+                temp_frags[target_name] = (target, fnode)
                 meta_node = fragname_to_meta_node[(fragname, idx)]
                 meta_graph.nodes[meta_node][label] = target_name
 
-        fragment_dict.update(temp_frags)
+        fragment_dict.update({fname: graph for fname, (graph,_) in temp_frags.items()})
     updates = {}
     for bond, replace in bonding_op_convert.items():
         if replace in bonding_op_convert:
             updates[bond] = bonding_op_convert[replace]
     bonding_op_convert.update(updates)
-
     for fragname, graph in fragment_dict.items():
         for node in graph.nodes:
             bonding = graph.nodes[node].get('bonding', None)
@@ -402,5 +439,4 @@ def get_fragment_dict_from_meta_graph(meta_graph, label='fragname'):
                     else:
                         new_bonds.append(bond)
                 graph.nodes[node]['bonding'] = new_bonds
-
     return meta_graph, fragment_dict
