@@ -200,7 +200,7 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
 
     Returns
     -------
-    netwokrx.Graph
+    networkx.Graph
     """
     meta_graph = nx.Graph()
     fragments = defaultdict(list)
