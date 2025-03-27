@@ -351,10 +351,10 @@ class MoleculeResolver:
             # ToDo: check their attributes and raise warning if not equal
             hsquash = []
             for neighbor in self.molecule.neighbors(node_to_keep):
-                if self.molecule.nodes[neighbor]['element'] == 'H'\
+                if self.molecule.nodes[neighbor].get('element', '*') == 'H'\
                 and self.molecule.nodes[neighbor]['fragid'] != target_id:
                     hsquash.append(neighbor)
-                elif self.molecule.nodes[neighbor]['element'] == 'H':
+                elif self.molecule.nodes[neighbor].get('element', '*') == 'H':
                     self.molecule.nodes[neighbor]['fragid'] += ref_id
 
             self.molecule.remove_nodes_from(hsquash)
