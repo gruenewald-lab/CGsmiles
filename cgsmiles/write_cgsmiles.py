@@ -49,7 +49,7 @@ def format_bonding(bonding):
         bond_order = bonding_descrpt[-1]
         order_symb = order_to_symbol[int(bond_order)]
         if order_symb != '-':
-            bond_str = order_symb
+            bond_str += order_symb
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
