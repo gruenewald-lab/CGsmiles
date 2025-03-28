@@ -19,7 +19,6 @@ def satisfy_isomorphism(target, other_frag):
 
         bond1 = n1.get('bonding', None)
         bond2 = n2.get('bonding', None)
-
         if bond1 is None and bond2 is None:
             return True
         if bond1 is None:
@@ -32,7 +31,7 @@ def satisfy_isomorphism(target, other_frag):
                 if b1[0] != b2[0] or b1[-1] != b2[-1]:
                     return False
         if len(bond1) != len(bond2):
-            return False
+           return False
 
         return True
 
@@ -154,6 +153,11 @@ class MoleculeFragmentExtractor():
             letters = list(self.letter_str)
             for idx, (target, fnode) in enumerate(fraglist):
                 for other_fragname, (other_frag, gnode) in temp_frags.items():
+                    # if both connect to a fragment with degree larger than 2
+                    # we need to separate them
+                    common = set(meta_graph.neighbors(gnode)) & set(meta_graph.neighbors(fnode))
+                    if any(meta_graph.degree(node) > 2 for node in common):
+                        continue
                     are_iso = self._are_isomorphic(target,
                                                    fragname,
                                                    idx,
