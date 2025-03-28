@@ -312,7 +312,7 @@ def annotate_bonding_operators(molecule, label='fragid'):
     op_counter = 0
     toggle = [('>', '<'), ('<', '>')]
     tdx = 0
-    for e1, e2 in sorted_edges:
+    for e1, e2 in nx.edge_dfs(molecule):
         order = molecule.edges[(e1, e2)]['order']
         # we have one intersection so the edge is in the same fragment
         if set(molecule.nodes[e1][label]) & set(molecule.nodes[e2][label]):
@@ -320,12 +320,15 @@ def annotate_bonding_operators(molecule, label='fragid'):
         else:
             if order == 1.5:
                 order = 1
-            op1 = f"{toggle[tdx][0]}{op_counter}{order}"
-            op2 = f"{toggle[tdx][1]}{op_counter}{order}"
+            #op1 = f"{toggle[tdx][0]}{op_counter}{order}"
+            #op2 = f"{toggle[tdx][1]}{op_counter}{order}"
+            op1 = f">{op_counter}{order}"
+            op2 = f"<{op_counter}{order}"
+
             molecule.nodes[e1]['bonding'].append(op2)
             molecule.nodes[e2]['bonding'].append(op1)
             op_counter += 1
-            tdx = (tdx+1)%2
+            #tdx = (tdx+1)%2
     for node in molecule.nodes:
         # here we deal with a squash operator
         if len(molecule.nodes[node][label]) > 1 and molecule.nodes[node].get('element', '*') != 'H':

@@ -68,7 +68,7 @@ def shuffle_fragids(G):
                          '{[#TC3][#TC5]1[#TC5][#TC5]1[#P5]}.{#TC5=[!][>]cc[>a]c[>][!],#TC3=[<]CC,#P5=[<a][S](=O)(=O)N}',
                          '{[#SN4a][#TC5]1[#TC5B]2([#TC5C][#TC5D]2)[#TC5A]1}.{#SN4a=CC([O][<0])=O,#TC5=[c][>0][<1][cH][<2],#TC5A=[cH][>2][cH][<3],#TC5B=[c][>3][<4][c][>1][>6],#TC5C=[cH][>4][cH][<5],#TC5D=[cH][>5][cH][<6]}',
                          '{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}',
-                         '{[#C1]|10}.{#C1=[$]CCCC[$]}'
+                         '{[#C1]|6}.{#C1=[$]CCCC[$]}'
 ))
 def test_extractor(cgs_ref):
     attrs_compare = ["charge", "element", "hcount"]

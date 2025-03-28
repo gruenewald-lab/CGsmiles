@@ -1,9 +1,29 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import networkx as nx
 from .graph_utils import (annotate_neighbors_as_hash,
                           annotate_fragments,
                           make_meta_graph,
                           annotate_bonding_operators)
+
+def _match_bonds(list1, list2):
+    """
+    """
+    # Keep track of used indices in list2
+    used_indices = set()
+    matches = []
+    for i, item1 in enumerate(list1):
+        # Find a matching index in list2 that hasn't been used before
+        match_found = False
+        for j, item2 in enumerate(list2):
+            if j not in used_indices and item1[0] == item2[0] and item1[-1] == item1[-1]:
+                matches.append((item1, item2))
+                used_indices.add(j)
+                match_found = True
+                break
+        # If no match found, return None
+        if not match_found:
+            return None
+    return matches
 
 def satisfy_isomorphism(target, other_frag):
 
@@ -17,21 +37,20 @@ def satisfy_isomorphism(target, other_frag):
             if n1.get(attr, None) != n2.get(attr, None):
                 return False
 
-        bond1 = n1.get('bonding', None)
-        bond2 = n2.get('bonding', None)
-        if bond1 is None and bond2 is None:
-            return True
+        bond1 = n1.get('bonding', [])
+        bond2 = n2.get('bonding', [])
         if bond1 is None:
-            return False
+            bond1 = []
         if bond2 is None:
-            return False
+            bond2 = []
 
-        for b1, b2 in zip(bond1, bond2):
-            if b1 and b2:
-                if b1[0] != b2[0] or b1[-1] != b2[-1]:
-                    return False
         if len(bond1) != len(bond2):
            return False
+
+        ops1 = [b[0]+b[-1] for b in bond1]
+        ops2 = [b[0]+b[-1] for b in bond2]
+        if Counter(ops1) != Counter(ops2):
+            return False
 
         return True
 
@@ -98,8 +117,8 @@ class MoleculeFragmentExtractor():
         for match in matches:
             for tnode, onode in match.items():
                 if 'bonding' in target.nodes[tnode]:
-                    for target_bond, other_bond in zip(target.nodes[tnode]['bonding'],
-                                                       other_frag.nodes[onode]['bonding']):
+                    for target_bond, other_bond in _match_bonds(target.nodes[tnode]['bonding'],
+                                                                other_frag.nodes[onode]['bonding']):
                         self.bonding_op_convert[target_bond] = self.bonding_op_convert.get(other_bond, other_bond)
                         compl_target_bond = compl[target_bond[0]]+target_bond[1:]
                         compl_other_bond = compl[other_bond[0]] + other_bond[1:]
