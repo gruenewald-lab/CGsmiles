@@ -248,16 +248,11 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             elif u1 != u2:
                meta_graph.add_edge(node_to_unique_value[u1],
                                    node_to_unique_value[u2], order=1)
-        elif len(uvalues_e1) == 1 and uvalues_e1[0] not in uvalues_e2:
-           u1 = uvalues_e1[0]
-           for u2 in uvalues_e2:
-               meta_graph.add_edge(node_to_unique_value[u1],
-                                   node_to_unique_value[u2], order=1)
-        elif len(uvalues_e2) == 1 and uvalues_e2[0] not in uvalues_e1:
-           u2 = uvalues_e2[0]
-           for u1 in uvalues_e1:
-               meta_graph.add_edge(node_to_unique_value[u1],
-                                   node_to_unique_value[u2], order=1)
+        else:
+            for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
+                if u1 != u2:
+                    meta_graph.add_edge(node_to_unique_value[u1],
+                                        node_to_unique_value[u2], order=1)
     return meta_graph
 
 def annotate_neighbors_as_hash(molecule):
