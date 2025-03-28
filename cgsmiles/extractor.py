@@ -172,9 +172,9 @@ class MoleculeFragmentExtractor():
             letters = list(self.letter_str)
             for idx, (target, fnode) in enumerate(fraglist):
                 for other_fragname, (other_frag, gnode) in temp_frags.items():
-                    # if both connect to a fragment with degree larger than 2
+                    # if any connect to a fragment with degree larger than 2
                     # we need to separate them
-                    common = set(meta_graph.neighbors(gnode)) & set(meta_graph.neighbors(fnode))
+                    common = set(meta_graph.neighbors(gnode)) | set(meta_graph.neighbors(fnode))
                     if any(meta_graph.degree(node) > 2 for node in common):
                         continue
                     are_iso = self._are_isomorphic(target,
