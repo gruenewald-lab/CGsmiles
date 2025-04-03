@@ -250,7 +250,9 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
                                    node_to_unique_value[u2], order=1)
         else:
             for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
-                if u1 != u2:
+                n1 = node_to_unique_value[u1]
+                n2 = node_to_unique_value[u2]
+                if u1 != u2 and not meta_graph.has_edge(n1, n2):
                     meta_graph.add_edge(node_to_unique_value[u1],
                                         node_to_unique_value[u2], order=1)
     return meta_graph
