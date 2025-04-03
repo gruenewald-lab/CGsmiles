@@ -52,6 +52,7 @@ def draw_molecule(graph,
                   edge_widths=3,
                   mapped_edge_width=20,
                   default_bond=1,
+                  spacing=0.15,
                   layout_kwargs={}):
     """
     Draw the graph of a molecule optionally with a coarse-grained
@@ -190,7 +191,9 @@ def draw_molecule(graph,
 
 
     # generate starting and stop positions for edges
-    edges, arom_edges, plain_edges = make_graph_edges(graph, pos)
+    edges, arom_edges, plain_edges = make_graph_edges(graph,
+                                                      pos,
+                                                      spacing=spacing)
 
     # draw the edges
     ax.add_collection(LineCollection(edges,

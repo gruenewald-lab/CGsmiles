@@ -20,7 +20,7 @@ def angle_of_interest(v1, v2):
 def rotate_2D(x, y, theta):
     return x*math.cos(theta) - y*math.sin(theta), x*math.sin(theta) + y*math.cos(theta)
 
-def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
+def make_edge(p0, p1, bond_order, spacing=0.2, sep=0.0):
     """
     Given two positions `p0` and `p1` as well as a bond_order
     generate a horizontal line or a double / triple line depending
@@ -66,7 +66,7 @@ def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
         out.append([[x0pp, y0pp], [x1pp, y1pp]])
     return out
 
-def make_graph_edges(graph, pos, spacing=0.1, sep=0.2):
+def make_graph_edges(graph, pos, spacing=0.2, sep=0.2):
     """
     Given a molecule graph generate starting and stop
     points for the edges taking into account the bond
@@ -146,11 +146,11 @@ def make_mapped_edges(graph, plain_edges):
         # edge on idx belongs to multiple fragments and at least one
         # fragment id is the same as in jdx e.g. [1,2] in [2] or
         # [1, 2] & [2, 3]
-        elif len(frag_idx) > 1 and any(fid in frag_idx for fid in frag_idx):
+        elif len(frag_idx) > 1 and any(fid in frag_jdx for fid in frag_idx):
             fragid = frag_jdx[0]
             mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
         # same as above
-        elif len(frag_jdx) > 1 and any(fid in frag_idx for fid in frag_idx):
+        elif len(frag_jdx) > 1 and any(fid in frag_idx for fid in frag_jdx):
             fragid = graph.nodes[idx]['fragid'][0]
             mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
     return mapped_edges
@@ -207,7 +207,7 @@ def make_node_pies(graph,
         # thus we color the pie slices according to the fragment and rotate
         # the node such that the colors aling; this is only possible if we
         # have cgmapping
-        elif fragids and len(fragids) > 1:
+        elif fragids and type(fragids) == list and len(fragids) > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
             pie_colors = []
@@ -222,8 +222,13 @@ def make_node_pies(graph,
                         angle += 360
                     angles.append(angle)
                     pie_colors.append(colors[graph.nodes[neigh]['fragid'][0]])
-            # compute the rotation to align the pie
-            startangle = angle_of_interest(edges[0], edges[1])
+
+            if len(edges) < 2:
+                startangle = 180
+            else:
+                # compute the rotation to align the pie
+                startangle = angle_of_interest(edges[0], edges[1])
+
             if startangle < 0:
                 startangle += 360
             # sort angles and pie colors
