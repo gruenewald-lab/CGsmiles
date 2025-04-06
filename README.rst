@@ -105,13 +105,14 @@ Citation
 
 When using **cgsmiles** to for your publication, please:
 
-```
-@article{Grunewald2025CGsmiles,
-  title={CGsmiles: A Versatile Line Notation for Molecular Representations across Multiple Resolutions},
-  author={Gr{\"u}newald, Fabian and Seute, Leif and Alessandri, Riccardo and K{\"o}nig, Melanie and Kroon, Peter C},
-  journal={Journal of Chemical Information and Modeling},
-  year={2025},
-  doi={https://doi.org/10.1021/acs.jcim.5c00064},
-  publisher={ACS Publications}
-}
-```
+.. code::
+
+    @article{Grunewald2025CGsmiles,
+      title={CGsmiles: A Versatile Line Notation for Molecular Representations across Multiple Resolutions},
+      author={Gr{\"u}newald, Fabian and Seute, Leif and Alessandri, Riccardo and K{\"o}nig, Melanie and Kroon, Peter C},
+      journal={Journal of Chemical Information and Modeling},
+      year={2025},
+      doi={https://doi.org/10.1021/acs.jcim.5c00064},
+      publisher={ACS Publications}
+    }
+
