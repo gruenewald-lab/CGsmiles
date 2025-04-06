@@ -103,7 +103,7 @@ Related Tools
 Citation
 ========
 
-When using **cgsmiles** to for your publication, please:
+When using **cgsmiles** for your publication, please cite:
 
 .. code::
 
