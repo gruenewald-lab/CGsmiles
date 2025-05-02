@@ -25,7 +25,8 @@ Martini 3 Benzene.
     res_graph, mol_graph = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
 
     # Draw molecule at different resolutions
-    ax, pos = draw_molecule(mol_graph)
+    fig, ax = plt.subplots(1, 1)
+    draw_molecule(mol_graph, ax=ax)
 
     # Display the drawing
     plt.show()
@@ -64,7 +65,8 @@ illustrates this for poly(ethylene) glycol.
         labels[node] = label
 
     # Draw molecule at different resolutions
-    ax, pos = draw_molecule(mol_graph, labels=labels, scale=1)
+    fig, ax = plt.subplots(1, 1)
+    draw_molecule(mol_graph, ax=ax, labels=labels, scale=1)
     ax.set_frame_on('True')
 
     # Display the drawing
