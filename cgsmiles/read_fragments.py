@@ -248,7 +248,9 @@ def fragment_iter(fragment_str, all_atom=True):
                                              attributes)
         # we deal with a CG resolution graph
         else:
-            mol_graph = read_fragment_cgsmiles(smiles_str,
+            # TODO improve the parser to not require the '{}'
+            # for accounting
+            mol_graph = read_fragment_cgsmiles("{"+smiles_str+"}",
                                                fragname,
                                                bonding_descrpt,
                                                attributes)
