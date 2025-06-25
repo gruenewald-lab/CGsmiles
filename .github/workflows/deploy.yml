@@ -1,0 +1,122 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: upload python package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+       py_version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.py_version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.py_version }}
+    - name: Install dependencies
+      run: |
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
+        pip install git+https://github.com/pckroon/pysmiles.git
+        pip install -r requirements-tests.txt
+
+    - name: Run pytest with codecoverage
+      run:  pytest --cov cgsmiles --cov-report=xml
+#    - name: Upload coverage codecov   
+#      uses: codecov/codecov-action@v3 
+#      with:
+#            token: ${{ secrets.CODECOV_TOKEN }}
+#            files: ./coverage.xml
+#            fail_ci_if_error: true
+#            verbose: true
+            
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        pip install --upgrade setuptools pip
+        pip install --upgrade .
+        pip install -r requirements-tests.txt
+    - name: Run pylint
+      run: |
+         pylint --disable=fixme --fail-under=8.0 cgsmiles
+
+  docs:
+      runs-on: ubuntu-latest
+
+      steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+           python-version: '3.x'
+           cache: pip
+           cache-dependency-path: |
+             **/setup.cfg
+             **/requirements-*.txt
+             **/pyproject.toml
+      - name: Install dependencies
+        run: |
+          pip install --upgrade setuptools pip
+          pip install --upgrade .
+          pip install -r requirements-docs.txt
+
+      - name: Run docs
+        run: |
+          mkdir -p docs/source/_static
+          sphinx-build -WnE -b html docs/source/ docs/build/html
+
+  deploy:
+      needs: [build, lint, docs]
+      runs-on: ubuntu-latest
+      environment:
+        name: deploy
+        url: https://test.pypi/p/cgsmiles
+      permissions:
+        id-token: write
+      steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            **/setup.cfg
+            **/requirements-*.txt
+            **/pyproject.toml
+      - name: Install dependencies
+        run: |
+          pip install --upgrade setuptools pip
+          pip install --upgrade .
+      - name: Install pypa/build
+        run: |
+          python3 -m pip install build pbr --user
+      - name: Build a binary wheel and a source tarball
+        run: python3 -m build --sdist --wheel --outdir dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+          user: __token__
+          password: ${{ secrets.PYPI_GENERAL_TOKEN }}
