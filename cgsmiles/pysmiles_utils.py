@@ -13,7 +13,7 @@ def compute_mass(input_molecule):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         molecule which must have element specified per node
 
     Returns
@@ -61,9 +61,9 @@ def rebuild_h_atoms(mol_graph,
 
     Parameters
     ----------
-    mol_graph: :class:`nx.Graph`
+    mol_graph: networkx.Graph
         graph describing the full molecule without hydrogen atoms
-    copy_attrs: list[abc.hashable]
+    copy_attrs: list[collections.abc.Hashable]
         a list of attributes to copy from the parent node to the
         hydrogen atom
     keep_bonding: bool
@@ -77,7 +77,7 @@ def rebuild_h_atoms(mol_graph,
                "show delocalization-induced molecular equivalency and thus "
                "is not considered aromatic. For example, 4-methyl imidazole "
                "is often written as [nH]1cc(nc1)C, but should be written as "
-               "[NH]1C=C(N=C1)C. A corresponding CGSmiles string would be "
+               "[NH]1C=C(N=C1)C. A corresponding CGsmiles string would be "
                "{[#A]1[#B][#C]1}.{#A=[>][<]N,#B=[$]N=C[>],#C=[$]C(C)=C[<]}")
         raise SyntaxError(msg)
     nx.set_node_attributes(mol_graph, 0, 'hcount')
@@ -110,7 +110,7 @@ def annotate_ez_isomers_cgsmiles(molecule):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         The molecule of interest, which must of ez_isomer_pairs
         and ez_isomer_class set as node attributes
     """
@@ -126,7 +126,7 @@ def read_fragment_smiles(smiles_str,
                          ez_isomers={},
                          attributes={}):
     """
-    Read a smiles_str corresponding to a CGSmiles fragment and
+    Read a smiles_str corresponding to a CGsmiles fragment and
     annotate bonding descriptors, isomers, as well as any other
     attributes.
 
@@ -147,7 +147,7 @@ def read_fragment_smiles(smiles_str,
 
     Returns
     -------
-    nx.Graph
+    networkx.Graph
         the graph of the molecular fragment
     """
     if smiles_str == 'H':

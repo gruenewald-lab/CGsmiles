@@ -57,7 +57,7 @@ def collect_ring_number(smile_iter, token, node_count, rings):
 
     Parameters
     ----------
-    smile_iter: :class:PeekIter
+    smile_iter: :class:`PeekIter`
     token: str
     node_count: int
     rings: dict[list]
@@ -104,21 +104,21 @@ def collect_ring_number(smile_iter, token, node_count, rings):
 
 def strip_bonding_descriptors(fragment_string):
     """
-    Processes a CGSmiles fragment string by
+    Processes a CGsmiles fragment string by
     stripping the bonding descriptors and storing
     them in a dict with reference to the atom they
-    refer to. Furthermore, a cleaned SMILES or CGSmiles
+    refer to. Furthermore, a cleaned SMILES or CGsmiles
     string is returned.
 
     Parameters
     ----------
     fragment_string: str
-        a CGSmiles fragment string
+        a CGsmiles fragment string
 
     Returns
     -------
     str:
-        a canonical SMILES or CGSmiles string
+        a canonical SMILES or CGsmiles string
     dict:
         a dict mapping bonding descriptors
         to the nodes within the string
@@ -255,19 +255,19 @@ def fragment_iter(fragment_str, all_atom=True):
 
 def read_fragments(fragment_str, all_atom=True, fragment_dict=None):
     """
-    Collects the fragments defined in a CGBigSmile string
-    as :class:`cgsmiles.mol_graph` and returns a dict of them.
-    Bonding descriptors are annotated as node attribtues.
+    Collects the fragments defined in a CGsmiles fragment string
+    as networkx.Graph and returns a dict of them. Bonding descriptors
+    are annotated as node attribtues.
 
     Parameters
     ----------
     fragment_str: str
-        string using CGBigSmile fragment syntax
+        string using CGsmiles fragment syntax
 
     all_atom: bool
         If the fragment strings are all-atom following
         the OpenSmiles syntax. Default is True but if
-        set to False fragments follow the CGSmiles
+        set to False fragments follow the CGsmiles
         syntax.
 
     fragment_dict: dict

@@ -1,7 +1,10 @@
-sphinx >= 1.8.0
+sphinx < 8.2.0
 sphinxcontrib-apidoc
 pbr
 setuptools >= 30.3.0
-
+furo
 numpy
 networkx ~= 2.0
+scipy
+matplotlib
+rdkit

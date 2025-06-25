@@ -8,11 +8,11 @@ def u_vect(vect):
 
     Parameters
     ----------
-    vect: np.array
+    vect: :class:`numpy.ndarray`
 
     Returns
     -----------
-    np.array
+    :class:`numpy.ndarray`
     """
     u_vect = vect/np.linalg.norm(vect)
     return u_vect
@@ -24,8 +24,8 @@ def vector_angle_degrees(v1, v2):
 
     Parameters
     ----------
-    v1: np.array
-    v2: np.array
+    v1: :class:`numpy.ndarray`
+    v2: :class:`numpy.ndarray`
 
     Returns
     ---------
