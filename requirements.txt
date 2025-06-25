@@ -1,4 +1,0 @@
-pbr
-numpy
-networkx
-pysmiles @ git+https://github.com/pckroon/pysmiles.git@master
