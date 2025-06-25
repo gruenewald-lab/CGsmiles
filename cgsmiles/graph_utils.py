@@ -17,7 +17,7 @@ def merge_graphs(source_graph, target_graph, max_node=None):
 
     Parameters
     ----------
-    molecule: Molecule
+    molecule: networkx.Graph
         The molecule to merge at the end.
 
     Returns
@@ -66,9 +66,9 @@ def sort_nodes_by_attr(graph,
 
     Parameters
     ----------
-    graph: :class:`nx.Graph`
+    graph: networkx.Graph
         the graph to sort nodes of
-    sort_attr: `abc.hashable`
+    sort_attr: collections.abc.Hashable
         the attribute to use for sorting
     relative_attr: tuple(str, bool)
         a list of attributes that are sensetive
@@ -80,7 +80,7 @@ def sort_nodes_by_attr(graph,
 
     Returns
     -------
-    nx.Graph
+    networkx.Graph
         graph with nodes sorted in correct order
     """
     fragids = nx.get_node_attributes(graph, sort_attr)
@@ -154,9 +154,9 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
 
     Parameters
     ----------
-    molecule: nx.Graph
+    molecule: networkx.Graph
         the molecule for which to adjust the atomnames
-    meta_graph: nx.Graph
+    meta_graph: networkx.Graph
         optional; get the fragments from the meta_graph
         attributes which is faster in some cases
     """

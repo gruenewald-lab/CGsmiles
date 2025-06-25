@@ -28,8 +28,8 @@ def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
 
     Parameters
     ----------
-    p0: np.ndarray(2)
-    p1: np.ndarray(2)
+    p0: :class:`numpy.ndarray` of shape 2
+    p1: :class:`numpy.ndarray` of shape 2
     bond_order: int
     spacing: float
     sep: float
@@ -74,9 +74,9 @@ def make_graph_edges(graph, pos, spacing=0.1, sep=0.2):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         Graph with bond oder attribute
-    pos: np.ndarray((2, len(graph)))
+    pos: :class:`numpy.ndarray` of shape ((2, len(graph)))
         2D positions for the nodes
     spacing: float
         distance between pos and start of edge
@@ -124,9 +124,9 @@ def make_mapped_edges(graph, plain_edges):
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         graph of the molecule with 'fragid' attribute
-    plain_edges: dict[frozenset([abc.hashable])]
+    plain_edges: dict[frozenset([collections.abc.Hashable])]
         dict of edge coordinates indexed by node keys
 
     Returns
@@ -168,9 +168,9 @@ def make_node_pies(graph,
 
     Parameters
     ----------
-    graph: nx.Graph
+    graph: networkx.Graph
         graph of the molecule
-    pos: dict[np.array]
+    pos: dict[:class:`numpy.ndarray`]
         dict of 2D node positions
     cgmapping: bool
         if the drawing includes a cgmapping;
@@ -189,7 +189,7 @@ def make_node_pies(graph,
 
     Yields
     ------
-    np.array, dict
+    :class:`numpy.ndarray`, dict
         array slices and keyword arguments to be given
         to mpl.Pie class
     """

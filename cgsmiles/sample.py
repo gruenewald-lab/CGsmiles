@@ -42,12 +42,12 @@ def _set_bond_order_defaults(bonding):
 
 class MoleculeSampler:
     """
-    Given a fragment string in CGSmiles format and probabilities for residues
+    Given a fragment string in CGsmiles format and probabilities for residues
     to occur, return a random molecule with target molecular weight.
 
     First, this class has to be initiated using the class construction
     method `from_string`, which makes sure to read and resolve the fragment
-    graphs provided in the CGSmiles string.
+    graphs provided in the CGsmiles string.
 
     Once the `MoleculeSampler` is initiated you can call the `sampler` method
     in order to generate a new random polymer molecule from the fragment string
@@ -124,7 +124,7 @@ class MoleculeSampler:
     can be provided.
 
     For example, To generate a bottle brush polymer that has PMA in the backbone
-    and PEG as side-chain terminated with an OH group the following CGSmiles string
+    and PEG as side-chain terminated with an OH group the following CGsmiles string
     in combination with the above mentioned probabilities can be provided.
 
     Note that in this case we declare '$A' and '$B' to be terminal bonding
@@ -177,7 +177,7 @@ class MoleculeSampler:
         """
         Parameters
         ----------
-        fragment_dict: dict[str, nx.Graph]
+        fragment_dict: dict[str, networkx.Graph]
             a dict of fragment graphs at one resolution. Each graph must have
             the same attributes as returned by the `cgsmiles.read_fragments`
             function.
@@ -258,9 +258,9 @@ class MoleculeSampler:
 
         Parameters
         ----------
-        molecule: nx.Graph
+        molecule: networkx.Graph
             the molecule to extend
-        open_bonds: dict[list[abc.hashable]]
+        open_bonds: dict[list[collections.abc.Hashable]]
             a dict of bonding active descriptors with list of nodes
             in molecule as value
         fragments: dict[list[str]]
@@ -275,7 +275,7 @@ class MoleculeSampler:
 
         Returns
         -------
-        nx.Graph
+        networkx.Graph
             the grown molecule
         str
             the fragment name of the added fragment
@@ -333,7 +333,7 @@ class MoleculeSampler:
 
         Returns
         -------
-        nx.Graph
+        networkx.Graph
             the graph of the molecule
         """
         molecule = nx.Graph()
@@ -385,7 +385,7 @@ class MoleculeSampler:
         ----------
         cgsmiles_str: str
         **kwargs:
-            same as :func:`~sampler.MoleculeSampler.__init__`
+            same as MoleculeSampler.__init__
 
         Returns
         -------

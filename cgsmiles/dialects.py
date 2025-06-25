@@ -36,9 +36,9 @@ def _parse_dialect_string(string_iterable,
 
     Parameters
     ----------
-    string_iterable: iter
+    string_iterable: :type data: iter
         the string or iter object that contains the string
-    dialect_signature: cls.inspec.Signature
+    dialect_signature: inspect.Signature
         a signature defineing args, kwargs, default values
         and types
     arg_to_fullname: dict
@@ -139,7 +139,7 @@ def create_dialect(default_attributes,
 #                   KNOWN DIALECTS                       #
 ##########################################################
 # this one is for global use
-# it is the base CGSmiles dialect
+# it is the base CGsmiles dialect
 CGSMILES_DEFAULT_DIALECT = create_dialect({"fragname": (None, str),
                                            "q": (0.0, float),
                                            "w": (1.0, float)})
