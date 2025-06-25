@@ -70,6 +70,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     str
         The CGsmiles string describing `molecule`.
     """
+    assert nx.is_connected(molecule)
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
