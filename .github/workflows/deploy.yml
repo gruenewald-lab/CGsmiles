@@ -26,7 +26,6 @@ jobs:
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
-        pip install git+https://github.com/pckroon/pysmiles.git
         pip install -r requirements-tests.txt
 
     - name: Run pytest with codecoverage
@@ -44,10 +43,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
+    - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9
+        python-version: 3.12
     - name: Install dependencies
       run: |
         pip install --upgrade setuptools pip
@@ -87,7 +86,7 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: deploy
-        url: https://test.pypi/p/cgsmiles
+        url: https://pypi.org/p/cgsmiles
       permissions:
         id-token: write
       steps:
@@ -98,7 +97,7 @@ jobs:
       - name: Set up Python 3
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: pip
           cache-dependency-path: |
             **/setup.cfg
@@ -116,7 +115,7 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository-url: https://pypi.org/p/cgsmiles
           verbose: true
           user: __token__
           password: ${{ secrets.PYPI_GENERAL_TOKEN }}
