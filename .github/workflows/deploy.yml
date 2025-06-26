@@ -86,7 +86,7 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: deploy
-        url: https://pypi.org/p/cgsmiles
+        url: https://pypi.org/p/cgsmiles/
       permissions:
         id-token: write
       steps:
@@ -115,7 +115,7 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://pypi.org/p/cgsmiles
+          repository-url: https://pypi.org/p/cgsmiles/
           verbose: true
           user: __token__
           password: ${{ secrets.PYPI_GENERAL_TOKEN }}
