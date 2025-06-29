@@ -146,7 +146,8 @@ def strip_bonding_descriptors(fragment_string):
                     peek = next(smile_iter)
                 if smile_iter.peek() in bond_to_order and node_count == 0:
                     order = bond_to_order[next(smile_iter)]
-                elif current_order:
+                    #print(order)
+                elif current_order is not None:
                     order = current_order
                     current_order = None
                     # we need to remove the symbol from the clean string
@@ -247,7 +248,9 @@ def fragment_iter(fragment_str, all_atom=True):
                                              attributes)
         # we deal with a CG resolution graph
         else:
-            mol_graph = read_fragment_cgsmiles(smiles_str,
+            # TODO improve the parser to not require the '{}'
+            # for accounting
+            mol_graph = read_fragment_cgsmiles("{"+smiles_str+"}",
                                                fragname,
                                                bonding_descrpt,
                                                attributes)
