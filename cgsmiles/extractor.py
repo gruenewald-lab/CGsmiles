@@ -132,7 +132,6 @@ class MoleculeFragmentExtractor():
         Across a dictionary of graph relabel all bonding attributes
         as specified in the bonding_op_convert dictionary.
         """
-        print( self.bonding_op_convert)
         updates = {}
         for bond, replace in self.bonding_op_convert.items():
             if replace in self.bonding_op_convert:
