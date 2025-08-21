@@ -35,6 +35,7 @@ FRAGID_TO_COLOR = {0: "tab:blue",
                    9: "tab:gray"}
 
 DEFAULT_COLOR = "orchid"
+DEFAULT_SHARED_COLOR = "gray"
 
 def draw_molecule(graph,
                   ax=None,
@@ -159,7 +160,7 @@ def draw_molecule(graph,
         for fragid in ids.values():
             id_set |= set(fragid)
 
-    # assing color defaults
+    # assign color defaults
     if colors is None and cg_mapping:
         colors = {fragid: FRAGID_TO_COLOR.get(fragid) for fragid in id_set}
     elif colors is None:
@@ -205,8 +206,11 @@ def draw_molecule(graph,
     # generate the edges from the mapping
     if cg_mapping:
         mapped_edges = make_mapped_edges(graph, plain_edges)
-        for fragid, frag_edges in mapped_edges.items():
-            color = colors[fragid]
+        for fragids, frag_edges in mapped_edges.items():
+            if len(fragids) == 1:
+                color = colors.get(*fragids)
+            else:
+                color = DEFAULT_SHARED_COLOR
             ax.add_collection(LineCollection(frag_edges,
                                              color=color,
                                              linewidths=mapped_edge_width,
