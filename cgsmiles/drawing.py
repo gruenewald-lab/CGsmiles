@@ -22,20 +22,20 @@ ELE_TO_COLOR = {"F": "lightblue",
                 "S": "yellow",
                 "Mg": "lightgreen"}
 
-# this dict sets the colors for CG fragments
-FRAGID_TO_COLOR = {0: "tab:blue",
-                   1: "tab:red",
-                   2: "tab:orange",
-                   3: "tab:pink",
-                   4: "tab:purple",
-                   5: "tab:cyan",
-                   6: "tab:green",
-                   7: "tab:olive",
-                   8: "tab:brown",
-                   9: "tab:gray"}
+# this list sets the colors for CG fragments. It will be cycled over.
+FRAGID_COLORS = ["tab:blue",
+                 "tab:red",
+                 "tab:orange",
+                 "tab:pink",
+                 "tab:purple",
+                 "tab:cyan",
+                 "tab:green",
+                 "tab:olive",
+                 "tab:brown",
+                 "tab:gray"]
 
 DEFAULT_COLOR = "orchid"
-DEFAULT_SHARED_COLOR = "gray"
+DEFAULT_SHARED_COLOR = "gainsboro"
 
 def draw_molecule(graph,
                   ax=None,
@@ -162,9 +162,11 @@ def draw_molecule(graph,
 
     # assign color defaults
     if colors is None and cg_mapping:
-        colors = {fragid: FRAGID_TO_COLOR.get(fragid) for fragid in id_set}
+        colors = {fragid: FRAGID_COLORS[fragid % len(FRAGID_COLORS)]
+                  for fragid in id_set}
     elif colors is None:
-        colors = {node: ELE_TO_COLOR.get(ele, DEFAULT_COLOR) for node, ele in nx.get_node_attributes(graph, 'element').items()}
+        colors = {node: ELE_TO_COLOR.get(ele, DEFAULT_COLOR)
+                  for node, ele in nx.get_node_attributes(graph, 'element').items()}
 
     # if no positions are given generate layout
     bbox = ax.get_position(True)
