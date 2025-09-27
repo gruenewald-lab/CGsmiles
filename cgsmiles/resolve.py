@@ -334,7 +334,7 @@ class MoleculeResolver:
                    self.molecule.nodes[edge[1]].get('aromatic', False):
                     order = 1.5
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
-                if all_atom:
+                if all_atom and not bonding[0].startswith("!"):
                     for edge_node in edge:
                         if self.molecule.nodes[edge_node]['element'] == 'H':
                             continue
