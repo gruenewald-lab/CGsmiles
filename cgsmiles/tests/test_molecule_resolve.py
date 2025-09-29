@@ -246,6 +246,13 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         [(0, 1), (1, 2), (0, 3), (0, 4),
                          (0, 5), (1, 7), (7, 6), (7, 8), (8, 9), (8, 10), (8, 11)],
                         {}, {2: [(2, 1, 6, 7, 'cis')], 7: [(7, 6, 1, 2, 'cis')]}, {}),
+                        # ez isomerism with squash operator
+                        ("{[#A]1[#A][#B]1[#C][#B]1[#A][#A]1}.{#A=[!]CCC[!],#B=[!]CCC[!]/[>],#C=[<]oo[<]}",
+                        [('B', 'C C C H H H H H H'), ('B', 'C C C H H H H H'), ('A', 'C C C H H H H H'), ('C', 'C C H H'),
+                        ('A', 'C C C H H H H H'), ('B', 'C C C H H H H H H'), ('B', 'C C C H H H H H'),],
+                        'C C C H H H H H H C C C H H H H H C C C H H H H H C C H H C C C H H H H H C C C H H H H H H C C C H H H H H'
+                         [(0, 1), (0, 2), (1, 2), (2, 3), (3, 4), (4, 5), (4, 6), (5, 6)],
+                          {}, {12: [(12, 17, 18, 27, 'trans')], 27: [(27, 18, 17, 12, 'trans')]}, {}),
                         # test skip virtual nodes
                         ("{[#SP4]1.2[#SP4].3[#SP1r]1.[#TC4]23}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
                         [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
