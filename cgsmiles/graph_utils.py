@@ -6,7 +6,7 @@ from collections import defaultdict
 import itertools
 import networkx as nx
 
-def merge_graphs(source_graph, target_graph, max_node=None):
+def merge_graphs(source_graph, target_graph, max_node=None, fragment_offset=None):
     """
     Add the atoms and the interactions of a molecule at the end of this
     one.
@@ -36,7 +36,8 @@ def merge_graphs(source_graph, target_graph, max_node=None):
         # We assume that the last id is always the largest.
         last_node_idx = max_node
         offset = last_node_idx
-        fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0])) + 1
+        if fragment_offset is None:
+            fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0])) + 1
 
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
@@ -124,13 +125,14 @@ def annotate_fragments(meta_graph, molecule):
     if len(node_to_fragids_meta) == 0:
         node_to_fragids_meta = {node: node for node in meta_graph.nodes}
     fragid_to_meta_node = {value: key for key, value in node_to_fragids_meta.items()}
-
     fragid_to_node = defaultdict(list)
     for node, fragids in node_to_fragids.items():
         for fragid in fragids:
             fragid_to_node[fragid].append(node)
 
     for meta_node in meta_graph.nodes:
+        if meta_graph.nodes[meta_node].get("_virtual", False):
+            continue
         # adding node to the fragment graph
         graph_frag = nx.Graph()
         for node in fragid_to_node[node_to_fragids_meta[meta_node]]:
@@ -184,7 +186,7 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
             if meta_graph:
                 meta_graph.nodes[meta_node]['graph'].nodes[node]['atomname'] = atomname
 
-def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
+def make_meta_graph(molecule, unique_attr='fragid', label_attr='fragname', copy_attrs=[]):
     """
     Given a finer resolution graph extract the higher resolution graph
     by looking at the attributes and connectivity.
@@ -203,10 +205,10 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     networkx.Graph
     """
     meta_graph = nx.Graph()
-    fragments = defaultdict(list)
     node_to_unique_value = {}
     node_counter = 0
     ref_values = []
+    ref_nodes = []
     # a set because if we have hydrogen atoms one may overcount
     # the number of squash atoms that are the same
     squash = []
@@ -214,27 +216,54 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
         if len(unique_values) == 1 and unique_values[0] not in ref_values:
-            fragments[unique_values[0]].append(node)
             new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
             new_attrs[unique_attr] = unique_values[0]
+            new_attrs[label_attr] = molecule.nodes[node][label_attr][0]
             meta_graph.add_node(node_counter, **new_attrs)
             node_to_unique_value[unique_values[0]] = node_counter
+            ref_nodes.append(node)
             node_counter += 1
             ref_values.append(unique_values[0])
-        else:
+        elif len(unique_values) > 1:
             if molecule.nodes[node].get('element', '*') != 'H':
                 squash.append(tuple(unique_values))
 
     # now the squashed nodes are iterated
+    ref_node_to_unique = nx.get_node_attributes(molecule, unique_attr)
+    vs_nodes = []
     for unique_values in squash:
+        anchor_nodes = []
+        for uval in unique_values:
+            # this must be a VS or a atom with VS on top
+            if uval not in node_to_unique_value:
+                for node, values in ref_node_to_unique.items():
+                    if uval in values:
+                        idx = values.index(uval)
+                        new_attrs = {label_attr: molecule.nodes[node][label_attr][idx]}
+                        break
+                new_attrs[unique_attr] = uval
+                if len(anchor_nodes) > 0:
+                    new_attrs["_virtual"] = True
+                    vs_nodes.append(node_counter)
+                else:
+                    ref_nodes.append(node)
+                    anchor_nodes.append(uval)
+                meta_graph.add_node(node_counter, **new_attrs)
+                node_to_unique_value[uval] = node_counter
+                node_counter += 1
+            else:
+                anchor_nodes.append(uval)
         for u1, u2 in itertools.combinations(unique_values, r=2):
             n1 = node_to_unique_value[u1]
             n2 = node_to_unique_value[u2]
-            if meta_graph.has_edge(n1, n2):
+            if meta_graph.has_edge(n1, n2) and n1 not in vs_nodes and n2 not in vs_nodes:
                 meta_graph.edges[(n1, n2)]['order'] += 1
+            elif n1 in vs_nodes or n2 in vs_nodes:
+                meta_graph.add_edge(n1, n2, order=0)
             else:
                 meta_graph.add_edge(n1, n2, order=1)
 
+    #print("VS", vs_nodes)
     # finally we make edges between all nodes
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
@@ -242,19 +271,29 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
         if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
             u1 = uvalues_e1[0]
             u2 = uvalues_e2[0]
+            order = 1
+            if u1 in vs_nodes or u2 in vs_nodes:
+                order =0
             if u1 != u2 and meta_graph.has_edge(node_to_unique_value[u1], node_to_unique_value[u2]):
                 meta_graph.edges[(node_to_unique_value[u1],
-                                  node_to_unique_value[u2])]['order'] += 1
+                                  node_to_unique_value[u2])]['order'] += order
             elif u1 != u2:
                meta_graph.add_edge(node_to_unique_value[u1],
-                                   node_to_unique_value[u2], order=1)
+                                   node_to_unique_value[u2], order=order)
         else:
+            if set(uvalues_e1) == set(uvalues_e2):
+                continue
+            #print(uvalues_e1, uvalues_e2)
             for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
                 n1 = node_to_unique_value[u1]
                 n2 = node_to_unique_value[u2]
-                if u1 != u2 and not meta_graph.has_edge(n1, n2):
+                if u1 != u2: # aand not meta_graph.has_edge(n1, n2):
+                    order = meta_graph.edges.get((n1, n2), {}).get('order', 0)
+                    order += 1
+                    if n1 in vs_nodes or n2 in vs_nodes:
+                        order = 0
                     meta_graph.add_edge(node_to_unique_value[u1],
-                                        node_to_unique_value[u2], order=1)
+                                        node_to_unique_value[u2], order=order)
     return meta_graph
 
 def annotate_neighbors_as_hash(molecule):
@@ -268,7 +307,11 @@ def annotate_neighbors_as_hash(molecule):
     """
     for node in molecule.nodes:
         neighbor_hashs = []
+        if molecule.nodes[node].get("_virtual", False):
+            continue
         for neigh in molecule.neighbors(node):
+            if molecule.nodes[neigh].get("_virtual", False):
+                continue
             neighbor_hashs.append(nx.weisfeiler_lehman_graph_hash(molecule.nodes[neigh]['graph'],
                                                                   node_attr='element',
                                                                   edge_attr='order'))
@@ -284,6 +327,8 @@ def annotate_bonding_operators(molecule, label='fragid'):
     ----------
     molecule: networkx.Graph
         the target molecule
+    meta_graph: networkx.Graph
+        the lower resolution graph
     label: collections.abc.Hashable
         a label by which residues are marked
 
@@ -314,6 +359,8 @@ def annotate_bonding_operators(molecule, label='fragid'):
         # we have one intersection so the edge is in the same fragment
         if set(molecule.nodes[e1][label]) & set(molecule.nodes[e2][label]):
             continue
+        if order == 0:
+            continue
         else:
             if order == 1.5:
                 order = 1
@@ -321,7 +368,6 @@ def annotate_bonding_operators(molecule, label='fragid'):
             #op2 = f"{toggle[tdx][1]}{op_counter}{order}"
             op1 = f">{op_counter}{order}"
             op2 = f"<{op_counter}{order}"
-
             molecule.nodes[e1]['bonding'].append(op2)
             molecule.nodes[e2]['bonding'].append(op1)
             op_counter += 1
