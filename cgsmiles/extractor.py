@@ -5,6 +5,17 @@ from .graph_utils import (annotate_neighbors_as_hash,
                           make_meta_graph,
                           annotate_bonding_operators)
 
+def remove_vs(meta_graph, molecule, label='fragid'):
+    vs_nodes = nx.get_node_attributes(meta_graph, "_virtual")
+    vs_ids = [meta_graph.nodes[node][label] for node, vs in vs_nodes.items() if vs]
+    for node in molecule.nodes:
+        labels = molecule.nodes[node][label]
+        for vs in vs_ids:
+            if vs in labels:
+                labels.remove(vs)
+        molecule.nodes[node][label]=labels
+    return molecule
+
 def _match_bonds(list1, list2):
     """
     """
@@ -160,6 +171,8 @@ class MoleculeFragmentExtractor():
         """
         meta_node_to_fragname = defaultdict(list)
         for node in meta_graph.nodes:
+            if meta_graph.nodes[node].get("_virtual"):
+                continue
             fgraph = meta_graph.nodes[node]['graph']
             label = meta_graph.nodes[node][self.frag_label]
             self.pre_fragment_dict[label].append((fgraph, node))
@@ -229,11 +242,14 @@ class MoleculeFragmentExtractor():
         is annotated using a fragment label, extract the
         fragment dict.
         """
-
-        molecule = annotate_bonding_operators(molecule)
         meta_graph = make_meta_graph(molecule,
                                      unique_attr='fragid',
                                      copy_attrs=['fragname'])
+        molecule = remove_vs(meta_graph, molecule)
+        molecule = annotate_bonding_operators(molecule)
         meta_graph = annotate_fragments(meta_graph, molecule)
+        for node in meta_graph.nodes:
+            if meta_graph.nodes[node].get('_virtual', False):
+                continue
         meta_graph, fragment_dict = self.get_fragment_dict_from_meta_graph(meta_graph)
         return meta_graph, fragment_dict
