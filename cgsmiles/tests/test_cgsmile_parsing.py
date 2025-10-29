@@ -388,6 +388,18 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         {0: ["$21"], 3: ["$11"], 6: ["$31"]},
                         None,
                         None),
+                        # bonding descriptor with expansion
+                        ("[#EO][<]|3[#TDI][>]",
+                         "[#EO]|3[#TDI]",
+                        {0: ["<1"], 3: [">1"]},
+                        None,
+                        None),
+                        # bonding descriptor with branch-expansion
+                        ("[<][#EO]([#PMA]|2)|5[#TDI][>]",
+                         "[#EO]([#PMA]|2)|5[#TDI]",
+                        {0: ["<1"], 15: [">1"]},
+                        None,
+                        None),
                         # left rigth bonding desciptors
                         ("[>]COC[<]",
                         "COC",
