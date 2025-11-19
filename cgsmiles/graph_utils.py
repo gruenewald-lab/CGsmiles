@@ -263,7 +263,6 @@ def make_meta_graph(molecule, unique_attr='fragid', label_attr='fragname', copy_
             else:
                 meta_graph.add_edge(n1, n2, order=1)
 
-    #print("VS", vs_nodes)
     # finally we make edges between all nodes
     for e1, e2 in molecule.edges:
         uvalues_e1 = molecule.nodes[e1][unique_attr]
@@ -271,19 +270,18 @@ def make_meta_graph(molecule, unique_attr='fragid', label_attr='fragname', copy_
         if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
             u1 = uvalues_e1[0]
             u2 = uvalues_e2[0]
+            n1 = node_to_unique_value[u1]
+            n2 = node_to_unique_value[u2]
             order = 1
-            if u1 in vs_nodes or u2 in vs_nodes:
+            if n1 in vs_nodes or n2 in vs_nodes:
                 order =0
-            if u1 != u2 and meta_graph.has_edge(node_to_unique_value[u1], node_to_unique_value[u2]):
-                meta_graph.edges[(node_to_unique_value[u1],
-                                  node_to_unique_value[u2])]['order'] += order
+            if u1 != u2 and meta_graph.has_edge(n1, n2):
+                meta_graph.edges[(n1, n2)]['order'] += order
             elif u1 != u2:
-               meta_graph.add_edge(node_to_unique_value[u1],
-                                   node_to_unique_value[u2], order=order)
+               meta_graph.add_edge(n1, n2, order=order)
         else:
             if set(uvalues_e1) == set(uvalues_e2):
                 continue
-            #print(uvalues_e1, uvalues_e2)
             for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
                 n1 = node_to_unique_value[u1]
                 n2 = node_to_unique_value[u2]
