@@ -62,7 +62,6 @@ def _fix_charges(mol):
         valances = valence(mol.nodes[node])
         target_val = sum([mol.edges[(idx, jdx)]['order'] for idx, jdx in mol.edges if idx == node or jdx == node])
         # exact match no charge
-        #print(target_val, valances)
         if target_val in valances:
             continue
         diffs = np.array(valances) - target_val
@@ -77,7 +76,6 @@ def read_mol2_file(filepath):
         record_atoms = False
         record_bonds = False
         for line in _file.readlines():
-         #   print(line)
             if len(line.strip()) == 0:
                 continue
             if "ATOM" in line:
@@ -153,15 +151,10 @@ def annotate_mapping(molecule, mapping, bead_to_idx, resname):
 
 def convert_mapfile_to_cgsmiles(ref_path, mapfiles, smiles=None):
     molecule = read_mol2_file(ref_path)
- #   molecule = read_itp_file(ref_path, smiles)
-    #else:
-    #    molecule = read_pbd_make_bonds(ref_structure, allow_names=True)
     for mapfile in mapfiles:
         mapping, bead_to_idx, resname = read_mapfile_minimal(mapfile)
         annotate_mapping(molecule, mapping, bead_to_idx, resname)
     extractor = MoleculeFragmentExtractor()
     cg_new, frags_new = extractor.get_fragment_dict_from_molecule(molecule)
-    #print(cg_new.edges(data='order'))
-    #print(cg_new.nodes(data='fragname'))
     cgs = write_cgsmiles(cg_new, [frags_new])
     return cgs
