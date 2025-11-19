@@ -216,7 +216,8 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
-                smiles += str(marker) if marker < 10 else '%{}'.format(marker)
+                #smiles += str(marker) if marker < 10 else '%{}'.format(marker)
+                smiles += '%{}'.format(marker)
 
         if current in dfs_successors:
             # Proceed to the next node in this branch
