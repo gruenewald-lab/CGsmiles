@@ -104,6 +104,23 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
                                 (bond_source, bond_target))
     raise LookupError
 
+def _adjust_hcount(molecule):
+    """
+    Given atoms in a molecule built from cgsmiles fragments, adjust
+    the hcount such that we substract the total number of newly formed
+    edges multuplied by their bond order. The 'hcount' attribute is
+    updated in place.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+    """
+    for node in molecule.nodes:
+        hcount = molecule.nodes[node]["_hcount"]
+        new_degree = sum([molecule.edges[edge]["order"] for edge in molecule.edges(node)])
+        init_degree = molecule.nodes[node]["_edge_orders"]
+        molecule.nodes[node]["hcount"] =  max([0, hcount - (new_degree - init_degree)])
+
 class MoleculeResolver:
     """
     Resolve the molecule(s) described by a CGsmiles string and return a networkx.Graph
@@ -117,7 +134,7 @@ class MoleculeResolver:
     `self.from_string`:           use when fragments and lowest resolution are
                                   described in one CGsmiles string.
     `self.from_graph`:            use when fragments are described by CGsmiles
-                                  strings but the lowest resolution is given
+other_hcount - total_edge_orders]                                  strings but the lowest resolution is given
                                   as nx.Graph
     `self.from_fragment_dicts`:   use when fragments are given as nx.Graphs
                                   and the lowest resolution is provided as
@@ -281,6 +298,11 @@ class MoleculeResolver:
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
                 graph_frag.nodes[new_node]['mapping'] = [(fragname, node)]
                 self.molecule.nodes[new_node]['mapping'] = [(fragname, node)]
+                if self.last_all_atom:
+                    # we need to keep some info about the original valances
+                    edge_orders = [self.molecule.edges[edge]["order"] for edge in self.molecule.edges(new_node)]
+                    self.molecule.nodes[new_node]["_edge_orders"] = sum(edge_orders)
+                    self.molecule.nodes[new_node]['_hcount'] = self.molecule.nodes[new_node].get('hcount', 0)
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -311,8 +333,6 @@ class MoleculeResolver:
             default: False
         """
         edges = list(self.meta_graph.edges)
-        #import random
-        #random.shuffle(edges)
         for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
@@ -334,16 +354,7 @@ class MoleculeResolver:
                    self.molecule.nodes[edge[1]].get('aromatic', False):
                     order = 1.5
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
-                if all_atom and not bonding[0].startswith("!"):
-                    for edge_node in edge:
-                        if self.molecule.nodes[edge_node]['element'] == 'H':
-                            continue
-                        hcount = self.molecule.nodes[edge_node]['hcount']
-                        if self.molecule.nodes[edge_node].get('aromatic', 'False'):
-                            hcount = max(0, hcount - 1.5)
-                        else:
-                            hcount = max(0, hcount - 1)
-                        self.molecule.nodes[edge_node]['hcount'] = hcount
+
     def squash_atoms(self):
         """
         Applies the squash operator by removing the duplicate node
@@ -403,9 +414,12 @@ class MoleculeResolver:
 
         # contract atoms with squash descriptors
         self.squash_atoms()
-
         # rebuild hydrogen in all-atom case
         if all_atom:
+            print(self.molecule.nodes(data='_hcount'))
+            print(self.molecule.nodes(data='element'))
+            _adjust_hcount(self.molecule)
+            print(self.molecule.nodes(data='_hcount'))
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms
