@@ -134,7 +134,7 @@ class MoleculeResolver:
     `self.from_string`:           use when fragments and lowest resolution are
                                   described in one CGsmiles string.
     `self.from_graph`:            use when fragments are described by CGsmiles
-other_hcount - total_edge_orders]                                  strings but the lowest resolution is given
+                                  strings but the lowest resolution is given
                                   as nx.Graph
     `self.from_fragment_dicts`:   use when fragments are given as nx.Graphs
                                   and the lowest resolution is provided as
