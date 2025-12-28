@@ -169,6 +169,13 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C H C H H H O H',
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)], {}, {}, {}),
+                        # test case by Thilo
+                        ("{[#TC5]1[#TC5][#TC5]1[#SN1a]}.{#TC5=[!]ccc[!][>],#SN1a=[<]N=N}",
+                        [('TC5', 'C H C H C H'), ('TC5', 'C H C H C'), ('TC5', 'C H C C H'), ('SN1a', 'N N H')],
+                        'C H C H C H C H C C H N N H',
+                        [(2, 0), (2, 6), (2, 3), (0, 4), (0, 1), (4, 9), (4, 5), (6, 8), (6, 7),
+                         (8, 9), (8, 11), (9, 10), (11, 12), (12, 13)], {}, {}, {},
+                        ),
                         # THF like test case with double edge and squash operator
                         ("{[#A]=[#B]}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
                         [('A', 'O C C H H H H'),
