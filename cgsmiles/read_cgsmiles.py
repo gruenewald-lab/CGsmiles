@@ -139,14 +139,15 @@ def read_cgsmiles(pattern):
         start, stop = match.span()
         # we start a new branch when the residue is preceded by '('
         # as in ... ([#PEO] ...
-        if pattern[start-1] == '(':
+        if pattern[start-1] == '(' or pattern[start-2] == '(':
             branching = True
             branch_anchor.append(prev_node)
             # the recipe for making the branch includes the anchor;
             # which is hence the first residue in the list
             # at this point the bond order is still 1 unless we have an expansion
             recipes[branch_anchor[-1]] = [(1, attributes, 1)]
-
+        if pattern[start-2] == '(' and pattern[start-1] in symbol_to_order:
+            prev_bond_order = symbol_to_order[pattern[start-1]]
         # here we check if the atom is followed by a cycle marker
         # in this case we have an open cycle and close it
         ring_marker = ""
