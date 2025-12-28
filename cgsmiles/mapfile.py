@@ -34,10 +34,9 @@ def read_pbd_make_bonds(ref_path, allow_name):
     ref_mol = assign_order(ref_sys.molecules[0])
     return ref_mol
 
-def read_itp_file(ref_path, smiles):
-    if smiles:
-        ref_g = pysmiles.read_smiles(smiles)
-
+def read_cg_itp_file(ref_path):
+    if ref_path is None:
+        return {}
     with open(ref_path, "r") as _file:
         lines= []
         record = False
@@ -50,11 +49,7 @@ def read_itp_file(ref_path, smiles):
     ff = ForceField("")
     read_itp(lines, ff)
     mol = list(ff.blocks.values())[0]
-    ele = {node: name[0] for node, name in mol.nodes(data='atomname')}
-    nx.set_node_attributes(mol, ele, 'element')
-    nx.set_node_attributes(mol, 0, 'charge')
     mol.make_edges_from_interaction_type('bonds')
-    mol = assign_order(mol)
     return mol
 
 def _fix_charges(mol):
@@ -149,12 +144,23 @@ def annotate_mapping(molecule, mapping, bead_to_idx, resname):
     if len(fragids) != len(molecule):
         raise IOError("Missing resids. Your mapping file is incomplete.")
 
-def convert_mapfile_to_cgsmiles(ref_path, mapfiles, smiles=None):
+def annotate_cg_info(cg_new, cg_mol_itp, copy=["atype"]):
+    atomnames = nx.get_node_attributes(cg_mol_itp, 'atomname')
+    name_to_node = {name: node for node, name in atomnames.items()}
+    for node in cg_new.nodes:
+        ref_node = name_to_node[cg_new.nodes[node]['fragname']]
+        for attr in copy:
+            cg_new.nodes[node][attr] = cg_mol_itp.nodes[ref_node][attr]
+
+def convert_mapfile_to_cgsmiles(ref_path, mapfiles, itppath=None, smiles=None):
     molecule = read_mol2_file(ref_path)
+    cg_mol_itp = read_cg_itp_file(itppath)
     for mapfile in mapfiles:
         mapping, bead_to_idx, resname = read_mapfile_minimal(mapfile)
         annotate_mapping(molecule, mapping, bead_to_idx, resname)
     extractor = MoleculeFragmentExtractor()
     cg_new, frags_new = extractor.get_fragment_dict_from_molecule(molecule)
+    if cg_mol_itp:
+        annotate_cg_info(cg_new, cg_mol_itp)
     cgs = write_cgsmiles(cg_new, [frags_new])
     return cgs

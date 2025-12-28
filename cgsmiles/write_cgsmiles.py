@@ -71,7 +71,7 @@ def format_atom(molecule, node_key, default_element='*', annotations=['weight', 
 
     fmt = '[{isotope}{name}{stereo}{hcount}{charge}{class_}'
     annotation_values = {}
-    default_annot = {"weight": 1, "chiral": 1}
+    default_annot = {"weight": 1, "chiral": 1, "atype": "NaN"}
     if annotations:
         for key in annotations:
             annotation_values[key] = node.get(key, 1)
@@ -81,7 +81,7 @@ def format_atom(molecule, node_key, default_element='*', annotations=['weight', 
     return fmt.format(isotope=isotope, name=name, stereo='', hcount=hcountstr,
                       charge=chargestr, class_=class_, **annotation_values)
 
-def format_node(molecule, current):
+def format_node(molecule, current, annotations=[]):
     """
     Format a node from a `molecule` graph according to
     the CGsmiles syntax. The attribute fragname has to
@@ -97,7 +97,15 @@ def format_node(molecule, current):
     str
         the formatted string
     """
-    node = "[#{}]".format(molecule.nodes[current]['fragname'])
+    attr_to_symbol = {"atype": "t"}
+    if annotations:
+        annot_str = ""
+        for key in annotations:
+            annotation_value = molecule.nodes[current][key]
+            annot_str += ";"+attr_to_symbol[key]+f"={annotation_value}"
+
+    node = "[#{fragname}{annotation}]".format(fragname=molecule.nodes[current]['fragname'],
+                                              annotation=annot_str)
     return node
 
 def format_bonding(bonding):
@@ -126,7 +134,7 @@ def format_bonding(bonding):
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
-def write_graph(molecule, smiles_format=False, default_element='*'):
+def write_graph(molecule, smiles_format=False, default_element='*', cg_annote=["atype"]):
     """
     Creates a CGsmiles string describing `molecule`.
     `molecule` should be a single connected component.
@@ -193,7 +201,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
         if smiles_format:
             smiles += format_atom(molecule, current, default_element)
         else:
-            smiles += format_node(molecule, current)
+            smiles += format_node(molecule, current, annotations=cg_annote)
 
         # we add the bonding descriptors if there are any
         if molecule.nodes[current].get('bonding', False):
