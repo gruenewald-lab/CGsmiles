@@ -368,6 +368,12 @@ class MoleculeResolver:
             # add the fragment id of the sequashed node
             self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
             self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
+            # add the isomer class of the squashed node
+            if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]:
+                if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
+                else:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
 
     def resolve(self):
         """
