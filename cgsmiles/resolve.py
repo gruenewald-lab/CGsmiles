@@ -364,9 +364,22 @@ class MoleculeResolver:
                                                 node_to_keep,
                                                 node_to_remove,
                                                 self_loops=False)
+            target_id = self.molecule.nodes[node_to_keep]['fragid']
+            ref_id = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            # remove redundant hydrogen atoms
+            # ToDo: check their attributes and raise warning if not equal
+            hsquash = []
+            for neighbor in self.molecule.neighbors(node_to_keep):
+                if self.molecule.nodes[neighbor].get('element', '*') == 'H'\
+                and self.molecule.nodes[neighbor]['fragid'] != target_id:
+                    hsquash.append(neighbor)
+                elif self.molecule.nodes[neighbor].get('element', '*') == 'H':
+                    self.molecule.nodes[neighbor]['fragid'] += ref_id
+
+            self.molecule.remove_nodes_from(hsquash)
 
             # add the fragment id of the sequashed node
-            self.molecule.nodes[node_to_keep]['fragid'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
+            self.molecule.nodes[node_to_keep]['fragid'] += ref_id
             self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
             # add the isomer class of the squashed node
             if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]:
@@ -391,6 +404,10 @@ class MoleculeResolver:
         # now we have to switch the node names and the fragment names
         new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
         nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
+
+        # adjust the fragids because at meta-graph level
+        new_fragids = {node: idx for idx, node in enumerate(self.meta_graph.nodes)}
+        nx.set_node_attributes(self.meta_graph, new_fragids, 'fragid')
 
         # create an empty molecule graph
         self.molecule = nx.Graph()

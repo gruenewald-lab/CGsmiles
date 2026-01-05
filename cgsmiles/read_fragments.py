@@ -147,7 +147,8 @@ def strip_bonding_descriptors(fragment_string):
                     peek = next(smile_iter)
                 if smile_iter.peek() in bond_to_order and node_count == 0:
                     order = bond_to_order[next(smile_iter)]
-                elif current_order:
+                    #print(order)
+                elif current_order is not None:
                     order = current_order
                     current_order = None
                     # we need to remove the symbol from the clean string

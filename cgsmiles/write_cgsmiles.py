@@ -49,7 +49,7 @@ def format_bonding(bonding):
         bond_order = bonding_descrpt[-1]
         order_symb = order_to_symbol[int(bond_order)]
         if order_symb != '-':
-            bond_str = order_symb
+            bond_str += order_symb
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
@@ -70,6 +70,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     str
         The CGsmiles string describing `molecule`.
     """
+    assert nx.is_connected(molecule)
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
@@ -139,7 +140,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
                     marker = ring_idx_to_marker.pop(ring_idx)
                     new_marker = False
 
-                if smiles_format and _write_edge_symbol(molecule, *ring_bond) and new_marker:
+                if _write_edge_symbol(molecule, *ring_bond) and new_marker:
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
