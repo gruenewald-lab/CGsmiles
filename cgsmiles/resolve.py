@@ -11,37 +11,52 @@ from .graph_utils import (merge_graphs,
 from .pysmiles_utils import (rebuild_h_atoms,
                              annotate_ez_isomers_cgsmiles)
 
-def compatible(left, right, legacy=True):
+def compatible(left, right, left_data={}, right_data={}, legacy=True):
     """
     Check bonding descriptor compatibility according
-    to the CGsmiles syntax conventions. With legacy
+    to the CGsmiles syntax conventions. With legacy,
     the BigSmiles convention can be used.
+
+    The dicts of left_data and right_data are only
+    used when compatibility-checking uses of the
+    squashing ([!]) operator.
 
     Parameters
     ----------
     left: str
     right: str
+    left_data: dict
+    right_data: dict
     legacy: bool
 
     Returns
     -------
     bool
     """
-    if legacy:
-        if left == right and left[0] not in '> <':
-            return True
-        l, r = left[0], right[0]
-        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
-            return left[1:] == right[1:]
-        return False
-    else:
-        if left[0] == right[0] == '$' or left[0] == right[0] == '!':
-            return True
 
-        l, r = left[0], right[0]
-        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
-            return True
+    # Non-legacy only checks the first character for compatibility
+    if not legacy:
+        left = left[0]
+        right = right[0]
+
+    # By flipping the <> for one of the binders, we no longer need special
+    #  case checking downstream
+    left = left[0].translate(str.maketrans('<>','><')) + left[1:]
+
+    if left != right:
         return False
+
+    if left[0] != '!':
+        return True
+
+    # Only the '!' compatibility control left
+    left_name = left_data.get('element', left_data.get('atomname'))
+    right_name = right_data.get('element', right_data.get('atomname'))
+    # Could there be nameless nodes? Anyway, not enough info to reject
+    #  so we accept if they're involved
+    return (left_name is None or
+            right_name is None or
+            (left_name == right_name))
 
 def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=True):
     """
@@ -75,14 +90,18 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
     """
     source_nodes = nx.get_node_attributes(source, bond_attribute)
     target_nodes = nx.get_node_attributes(target, bond_attribute)
-    for source_node in source_nodes:
-        for target_node in target_nodes:
-            bond_sources = source_nodes[source_node]
-            bond_targets = target_nodes[target_node]
+    for source_node, bond_sources in source_nodes.items():
+        source_node_data = source.nodes[source_node]
+        for target_node, bond_targets in target_nodes.items():
+            target_node_data = target.nodes[target_node]
             for bond_source in bond_sources:
                 for bond_target in bond_targets:
-                    if compatible(bond_source, bond_target, legacy=legacy):
-                        return ((source_node, target_node), (bond_source, bond_target))
+                    if compatible(bond_source, bond_target,
+                                  source_node_data,
+                                  target_node_data,
+                                  legacy=legacy):
+                        return ((source_node, target_node),
+                                (bond_source, bond_target))
     raise LookupError
 
 class MoleculeResolver:
@@ -273,7 +292,7 @@ class MoleculeResolver:
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
-    def edges_from_bonding_descrpt(self, all_atom=False):
+    def edges_from_bonding_descrpt(self, all_atom=True):
         """
         Makes edges according to the bonding descriptors stored
         in the node attributes of meta_molecule residue graph.
@@ -362,6 +381,12 @@ class MoleculeResolver:
             # add the fragment id of the sequashed node
             self.molecule.nodes[node_to_keep]['fragid'] += ref_id
             self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
+            # add the isomer class of the squashed node
+            if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]:
+                if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
+                else:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
 
     def resolve(self):
         """

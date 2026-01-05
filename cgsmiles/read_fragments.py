@@ -135,6 +135,7 @@ def strip_bonding_descriptors(fragment_string):
     prev_node = 0
     current_order = None
     anchor = []
+    branch_length = 1
     for token in smile_iter:
         if token == '[':
             peek = next(smile_iter)
@@ -183,6 +184,9 @@ def strip_bonding_descriptors(fragment_string):
         elif token == ')':
             prev_node = anchor.pop()
             smile += token
+            # we are having a branch expansion
+            if smile_iter.peek() == "|":
+                branch_length = node_count - prev_node
         elif token in bond_to_order:
             current_order = bond_to_order[token]
             smile += token
@@ -199,6 +203,16 @@ def strip_bonding_descriptors(fragment_string):
         elif token in '/ \\':
             ez_isomer_atoms[node_count] = token
             ez_isomer_atoms[prev_node] = token
+        # deal with expansion
+        elif token == "|":
+            smile += token
+            peek = smile_iter.peek()
+            count = ""
+            while peek.isdigit():
+                count += next(smile_iter)
+                peek = smile_iter.peek()
+            smile += count
+            node_count += branch_length * int(count) - branch_length
         else:
             if smile_iter.peek() and token + smile_iter.peek() in ['Cl', 'Br', 'Si', 'Mg', 'Na']:
                 smile += (token + next(smile_iter))

@@ -138,21 +138,9 @@ def make_mapped_edges(graph, plain_edges):
     for idx, jdx in graph.edges:
         frag_idx = graph.nodes[idx]['fragid']
         frag_jdx = graph.nodes[jdx]['fragid']
-        # edge belongs to the same fragment
-        # e.g. [0] == [0]
-        if frag_idx == frag_jdx:
-            frag_id = frag_idx[0]
-            mapped_edges[frag_id].extend(plain_edges[frozenset([idx, jdx])])
-        # edge on idx belongs to multiple fragments and at least one
-        # fragment id is the same as in jdx e.g. [1,2] in [2] or
-        # [1, 2] & [2, 3]
-        elif len(frag_idx) > 1 and any(fid in frag_jdx for fid in frag_idx):
-            fragid = frag_jdx[0]
-            mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
-        # same as above
-        elif len(frag_jdx) > 1 and any(fid in frag_idx for fid in frag_jdx):
-            fragid = graph.nodes[idx]['fragid'][0]
-            mapped_edges[fragid].extend(plain_edges[frozenset([idx, jdx])])
+        common_fragids = frozenset(frag_idx).intersection(frag_jdx)
+        if common_fragids:
+            mapped_edges[common_fragids].extend(plain_edges[frozenset([idx, jdx])])
     return mapped_edges
 
 def make_node_pies(graph,
@@ -205,32 +193,51 @@ def make_node_pies(graph,
             pie_colors = ['white', 'white']
         # in this case we have one node that belongs to multiple fragids
         # thus we color the pie slices according to the fragment and rotate
-        # the node such that the colors aling; this is only possible if we
+        # the node such that the colors align; this is only possible if we
         # have cgmapping
         elif fragids and type(fragids) == list and len(fragids) > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
             pie_colors = []
             edges = []
+            shared_edges = []
             angles = []
+            shared_angles = []
             for neigh in neighbors:
-                if graph.nodes[neigh]['fragid'][0] in fragids:
+                common_fragids = [fragid for fragid in graph.nodes[neigh]['fragid']
+                                  if fragid in fragids]
+                edgelist = edges
+                anglelist = angles
+                if sorted(common_fragids) == sorted(fragids):
+                    # We have multiple atoms shared over the same multiple
+                    # fragments
+                    edgelist = shared_edges
+                    anglelist = shared_angles
+                if common_fragids:
                     edge = pos[neigh] - pos[node]
-                    edges.append(edge)
+                    edgelist.append(edge)
                     angle = rotation_from_x_axis(edge)
                     if angle < 0:
                         angle += 360
-                    angles.append(angle)
-                    pie_colors.append(colors[graph.nodes[neigh]['fragid'][0]])
-
-            if len(edges) < 2:
-                startangle = 180
-            else:
-                # compute the rotation to align the pie
+                    anglelist.append(angle)
+                    pie_colors.append(colors[common_fragids[0]])
+            # compute the rotation to align the pie
+            try:
                 startangle = angle_of_interest(edges[0], edges[1])
-
-            if startangle < 0:
-                startangle += 360
+                if startangle < 0:
+                    startangle += 360
+            except IndexError:
+                # We fall here if there is only one edge; probably an H bound
+                # to a shared heavy atom
+                startangle = shared_angles[0]
+                pie_colors = [colors[fragid] for fragid in fragids]
+                angles = []
+                slice_ang = 360/len(fragids)
+                for ang_idx in range(len(fragids)):
+                    ang = startangle + slice_ang * (ang_idx + 0.5)
+                    if ang > 360:
+                        ang -= 360
+                    angles.append(ang)
             # sort angles and pie colors
             pre_pie_colors = [x for _, x in sorted(zip(angles, pie_colors), reverse=True)]
             angles = np.array(sorted(angles))

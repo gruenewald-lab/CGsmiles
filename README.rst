@@ -17,12 +17,12 @@ as three particles. The CGSmiles string would be:
 
     "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}"
 
-Additionally, multiple resolutions may be layered together so that a hirachical
+Additionally, multiple resolutions may be layered together so that a hierarchical
 description between one or more CG resolutions becomes possible. Especially,
 expressing large polymeric molecules becomes simpler when using multiple
-resolution. For instance consider the copolymer
-`Styreic-Melic Acid <https://en.wikipedia.org/wiki/Styrene_maleic_anhydride>`__.
-It is an almost perfectly alternating polymer of maleic anhydrade and styrene.
+resolutions. For instance consider the copolymer
+`Styrene-Maleic Acid <https://en.wikipedia.org/wiki/Styrene_maleic_anhydride>`__.
+It is an almost perfectly alternating polymer of maleic anhydride and styrene.
 In CGSmiles, we can thus write 100 repeat units of this polymer by using three
 resolutions each contained in curly braces:
 
@@ -103,4 +103,16 @@ Related Tools
 Citation
 ========
 
-When using **cgsmiles** to for your publication, please:
+When using **cgsmiles** for your publication, please cite:
+
+.. code::
+
+    @article{Grunewald2025CGsmiles,
+      title={CGsmiles: A Versatile Line Notation for Molecular Representations across Multiple Resolutions},
+      author={Gr{\"u}newald, Fabian and Seute, Leif and Alessandri, Riccardo and K{\"o}nig, Melanie and Kroon, Peter C},
+      journal={Journal of Chemical Information and Modeling},
+      year={2025},
+      doi={https://doi.org/10.1021/acs.jcim.5c00064},
+      publisher={ACS Publications}
+    }
+
