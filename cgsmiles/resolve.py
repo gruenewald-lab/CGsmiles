@@ -108,7 +108,7 @@ def _adjust_hcount(molecule):
     """
     Given atoms in a molecule built from cgsmiles fragments, adjust
     the hcount such that we substract the total number of newly formed
-    edges multuplied by their bond order. The 'hcount' attribute is
+    edges multiplied by their bond order. The 'hcount' attribute is
     updated in place.
 
     Parameters
@@ -416,10 +416,7 @@ class MoleculeResolver:
         self.squash_atoms()
         # rebuild hydrogen in all-atom case
         if all_atom:
-            print(self.molecule.nodes(data='_hcount'))
-            print(self.molecule.nodes(data='element'))
             _adjust_hcount(self.molecule)
-            print(self.molecule.nodes(data='_hcount'))
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms
