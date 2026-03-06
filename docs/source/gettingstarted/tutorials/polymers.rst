@@ -33,7 +33,7 @@ CGSmiles string and draw the polymer graphs.
 
   # Draw graph at the atomic resolution
   pysmiles.remove_explicit_hydrogens(mol_graph)
-  ax, pos = draw_molecule(mol_graph, scale=0.7
+  ax, pos = draw_molecule(mol_graph, scale=0.7)
 
 Graft Polymer mPEG Acrylate
 ---------------------------
