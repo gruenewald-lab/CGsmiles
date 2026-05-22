@@ -266,6 +266,16 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         # test skip virtual nodes
                         ("{[#SP4]1.2[#SP4].3[#SP1r]1.[#TC4]23}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
                         [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
+                         ('SP1r', 'O C C O H H H H'), ('TC4', '')],
+                        'O C C O H H H H O C C O H H H H O C C O H H H H',
+                        [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
+                         (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
+                         (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
+                         (18, 21), (18, 22), (19, 23)],
+                        {},{}, {}),
+                        # test skip virtual nodes with VS in the middle
+                        ("{[#SP4]1.2[#SP4].([#TC4].2.3)[#SP1r]1.3}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
+                        [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'), ('TC4', ''),
                          ('SP1r', 'O C C O H H H H')],
                         'O C C O H H H H O C C O H H H H O C C O H H H H',
                         [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
