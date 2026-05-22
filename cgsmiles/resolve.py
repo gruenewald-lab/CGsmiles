@@ -287,7 +287,7 @@ class MoleculeResolver:
                 continue
 
             fragment = fragment_dict[fragname]
-            correspondence = merge_graphs(self.molecule, fragment)
+            correspondence = merge_graphs(self.molecule, fragment, fragid=meta_node)
 
             graph_frag = nx.Graph()
 
