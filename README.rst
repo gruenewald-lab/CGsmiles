@@ -9,7 +9,7 @@ Coarse-Grained SMILES (CGsmiles)
    <p><strong>A line notation for representing molecules using multiple resolutions </strong></p>
 
    <p>
-     <a href="https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yaml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yaml?style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
+     <a href="https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
      <a href="https://anaconda.org/conda-forge/cgsmiles"><img alt="Conda Version" src="https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge"></a>
      <a href="https://pypi.org/project/cgsmiles/"><img alt="PyPI" src="https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI"></a>
      <a href="https://pypi.org/project/cgsmiles/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white"></a>
