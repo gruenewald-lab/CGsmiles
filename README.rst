@@ -2,6 +2,38 @@
 Coarse-Grained SMILES (CGsmiles)
 ================================
 
+.. image:: https://img.shields.io/conda/vn/conda-forge/cgsmiles.svg
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Version
+
+.. image:: https://img.shields.io/conda/pn/conda-forge/cgsmiles.svg
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Platforms
+
+.. image:: https://img.shields.io/conda/dn/conda-forge/cgsmiles.svg
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Downloads
+
+.. image:: https://img.shields.io/conda/l/cgsmiles.svg
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: License
+
+.. image:: https://readthedocs.org/projects/cgsmiles/badge/?version=latest
+   :target: https://cgsmiles.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+.. image:: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/tests.yml
+   :alt: CI Status
+
+.. image:: https://img.shields.io/pypi/v/cgsmiles.svg
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: PyPI Version
+
+.. image:: https://img.shields.io/pypi/pyversions/cgsmiles.svg
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: Python Versions
+
 Overview
 ========
 
