@@ -26,4 +26,7 @@ python:
  install:
    - method: pip
      path: .
-   - requirements: requirements-docs.txt
+
+jobs:
+  post_install:
+    - uv sync --group docs
