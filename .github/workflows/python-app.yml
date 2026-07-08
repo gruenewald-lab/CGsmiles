@@ -53,7 +53,7 @@ jobs:
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
-        pip install --group test
+        pip install --group tests
     - name: Run pylint
       run: |
          pylint --disable=fixme --fail-under=8.0 cgsmiles
@@ -83,7 +83,7 @@ jobs:
           mkdir -p docs/source/_static
           sphinx-build -WnE -b html docs/source/ docs/build/html
 
- deploy:
+  deploy:
       needs: [build, lint, docs]
       runs-on: ubuntu-latest
       environment:
