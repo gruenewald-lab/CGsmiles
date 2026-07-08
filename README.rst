@@ -6,8 +6,6 @@ Coarse-Grained SMILES (CGsmiles)
 
    <div align="center">
 
-   <h1>CGsmiles</h1>
-
    <p><strong>A line notation for representing molecules using multiple resolutions </strong></p>
 
    <p>
