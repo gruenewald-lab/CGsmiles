@@ -10,10 +10,11 @@ Coarse-Grained SMILES (CGsmiles)
 
    <p>
      <a href="https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
-     <a href="https://anaconda.org/conda-forge/cgsmiles"><img alt="Conda Version" src="https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge"></a>
-     <a href="https://pypi.org/project/cgsmiles/"><img alt="PyPI" src="https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI"></a>
-     <a href="https://pypi.org/project/cgsmiles/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white"></a>
-     <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-18432B?style=flat-square"></a>
+     <a href="https://codecov.io/gh/gruenewald-lab/CGsmiles"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/gruenewald-lab/CGsmiles?style=flat-square&logo=codecov&logoColor=white&label=coverage&color=F9A03F"></a>
+     <a href="https://anaconda.org/conda-forge/cgsmiles"><img alt="Conda Version" src="https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833"></a>
+     <a href="https://pypi.org/project/cgsmiles/"><img alt="PyPI" src="https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=306998"></a>
+     <a href="https://pypi.org/project/cgsmiles/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white&color=FFD43B&labelColor=306998"></a>
+     <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-2E86AB?style=flat-square"></a>
    </p>
 
    <p>
