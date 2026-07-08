@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cgsmiles"
+dynamic = ["version"]
+description = "Coarse-Grained SMILES (CGsmiles): a versatile line notation for molecular representations across multiple resolutions"
+readme = { file = "README.rst", content-type = "text/x-rst" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Fabian Grunewald", email = "fgrunewald.science@gmail.com" },
+]
+requires-python = ">=3.8"
+keywords = [
+    "smiles",
+    "bigsmiles",
+    "coarse-grained",
+    "graphs",
+    "line notation",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy",
+    "networkx>=2.0",
+    "pysmiles",
+]
+
+[project.optional-dependencies]
+drawing = [
+    "scipy",
+    "matplotlib",
+]
+rdkit = ["rdkit"]
+test = [
+    "pytest",
+    "coverage",
+    "pytest-cov",
+    "pylint",
+    "codecov",
+    "scipy",
+    "matplotlib",
+    "rdkit",
+]
+
+[project.urls]
+Homepage = "https://github.com/gruenewald-lab/CGsmiles"
+Documentation = "https://cgsmiles.readthedocs.io/en/latest/"
+Repository = "https://github.com/gruenewald-lab/CGsmiles"
+Issues = "https://github.com/gruenewald-lab/CGsmiles/issues"
+
+[tool.setuptools.packages.find]
+include = ["cgsmiles*"]
+exclude = ["tests*"]
+
+[tool.setuptools_scm]
+# Replaces pbr's git-tag-based versioning.
+# Writes the resolved version to this file at build time (add it to .gitignore).
+write_to = "cgsmiles/_version.py"
