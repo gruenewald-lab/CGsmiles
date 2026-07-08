@@ -46,7 +46,7 @@ drawing = [
     "matplotlib",
 ]
 rdkit = ["rdkit"]
-test = [
+tests = [
     "pytest",
     "coverage",
     "pytest-cov",
@@ -56,6 +56,16 @@ test = [
     "matplotlib",
     "rdkit",
 ]
+docs = [
+    "sphinx < 8.2.0",
+    "sphinxcontrib-apidoc",
+    "setuptools >= 30.3.0",
+    "furo",
+    "numpy",
+    "networkx ~= 2.0",
+    "scipy",
+    "matplotlib",
+    "rdkit"]
 
 [project.urls]
 Homepage = "https://github.com/gruenewald-lab/CGsmiles"
