@@ -7,7 +7,7 @@ name = "cgsmiles"
 dynamic = ["version"]
 description = "Coarse-Grained SMILES (CGsmiles): a versatile line notation for molecular representations across multiple resolutions"
 readme = { file = "README.rst", content-type = "text/x-rst" }
-license = { file = "LICENSE" }
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
     { name = "Fabian Grunewald", email = "fgrunewald.science@gmail.com" },
