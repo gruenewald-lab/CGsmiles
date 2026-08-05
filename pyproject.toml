@@ -75,7 +75,7 @@ Documentation = "https://cgsmiles.readthedocs.io/en/latest/"
 Repository = "https://github.com/gruenewald-lab/CGsmiles"
 Issues = "https://github.com/gruenewald-lab/CGsmiles/issues"
 
-[tool.setuptools_scm]
+#[tool.setuptools_scm]
 # Replaces pbr's git-tag-based versioning.
 # Writes the resolved version to this file at build time (add it to .gitignore).
-write_to = "cgsmiles/_version.py"
+#write_to = "cgsmiles/_version.py"
