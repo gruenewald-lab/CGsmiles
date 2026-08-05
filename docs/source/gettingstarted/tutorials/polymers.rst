@@ -66,7 +66,7 @@ in multiple equivalent ways.
   res_graph_three, _ = cgsmiles.MoleculeResolver.from_string(cgsmiles_str_three).resolve_all()
 
   # Let's make a custom coluring function that colors by fragment name
-  def custom_colors_names(graph):
+  def custom_colors(graph):
     fragname_colors = {"PMA": "tab:blue", "PEG": "tab:red"}
     fragnames = nx.get_node_attributes(graph, "fragname")
     colors = {node: fragname_colors[fragname] for node, fragname in fragnames.items()}
