@@ -2,28 +2,36 @@
 Coarse-Grained SMILES (CGsmiles)
 ================================
 
-.. raw:: html
+A line notation for representing molecules using multiple resolutions
+=======================================================================
 
-   <div align="center">
+|CI| |Coverage| |Conda Version| |PyPI| |Python Version| |License|
 
-   <p><strong>A line notation for representing molecules using multiple resolutions </strong></p>
+`Documentation <https://cgsmiles.readthedocs.io/en/latest/>`__ · `Installation <#installation>`__ · `Quick start <#quick-start>`__
 
-   <p>
-     <a href="https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI"></a>
-     <a href="https://codecov.io/gh/gruenewald-lab/CGsmiles"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/gruenewald-lab/CGsmiles?style=flat-square&logo=codecov&logoColor=white&label=coverage&color=F9A03F"></a>
-     <a href="https://anaconda.org/conda-forge/cgsmiles"><img alt="Conda Version" src="https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833"></a>
-     <a href="https://pypi.org/project/cgsmiles/"><img alt="PyPI" src="https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=306998"></a>
-     <a href="https://pypi.org/project/cgsmiles/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white&color=FFD43B&labelColor=306998"></a>
-     <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-2E86AB?style=flat-square"></a>
-   </p>
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI
+   :target: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml
+   :alt: CI
 
-   <p>
-     <a href="https://cgsmiles.readthedocs.io/en/latest/"><b>Documentation</b></a> &nbsp;&middot;&nbsp;
-     <a href="#installation"><b>Installation</b></a> &nbsp;&middot;&nbsp;
-     <a href="#quick-start"><b>Quick start</b></a>
-   </p>
+.. |Coverage| image:: https://img.shields.io/codecov/c/github/gruenewald-lab/CGsmiles?style=flat-square&logo=codecov&logoColor=white&label=coverage&color=F9A03F
+   :target: https://codecov.io/gh/gruenewald-lab/CGsmiles
+   :alt: Coverage
 
-   </div>
+.. |Conda Version| image:: https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Version
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: PyPI
+
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white&color=FFD43B&labelColor=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: Python Version
+
+.. |License| image:: https://img.shields.io/badge/license-Apache--2.0-2E86AB?style=flat-square
+   :target: ./LICENSE
+   :alt: License
 
 Overview
 ========
