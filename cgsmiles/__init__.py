@@ -4,7 +4,7 @@ CGsmiles: Coarse-Grained Smiles (CGsmiles) for representing abitrarily complex m
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version('vermouth')
+    __version__ = version('cgsmiles')
 except PackageNotFoundError:
     __version__ = '0+unknown'
 
