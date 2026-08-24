@@ -405,8 +405,28 @@ class MoleculeResolver:
         new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
         nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
 
-        # adjust the fragids because at meta-graph level
-        new_fragids = {node: idx for idx, node in enumerate(self.meta_graph.nodes)}
+        # adjust the fragids because at meta-graph level; virtual nodes
+        # (fragname absent from fragment_dict) never get atoms merged into
+        # self.molecule by resolve_disconnected_molecule/merge_graphs, whose
+        # own atom-level fragid counter only advances for real fragments. If
+        # we numbered every meta_graph node here -- virtual ones included --
+        # the two numbering schemes would disagree as soon as a virtual node
+        # precedes a real one, and graph_utils.annotate_fragments (which
+        # maps atoms back to meta nodes via this attribute) would attach
+        # atoms to the wrong meta node. So mirror that counting exactly:
+        # real fragments get the same dense 0..N-1 index merge_graphs will
+        # assign their atoms, and virtual nodes get distinct negative
+        # sentinels that can never collide with a real fragid.
+        new_fragids = {}
+        fragid_counter = 0
+        virtual_fragid_counter = -1
+        for node in self.meta_graph.nodes:
+            if self.meta_graph.nodes[node]['fragname'] in fragment_dict:
+                new_fragids[node] = fragid_counter
+                fragid_counter += 1
+            else:
+                new_fragids[node] = virtual_fragid_counter
+                virtual_fragid_counter -= 1
         nx.set_node_attributes(self.meta_graph, new_fragids, 'fragid')
 
         # create an empty molecule graph

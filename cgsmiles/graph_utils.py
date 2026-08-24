@@ -223,20 +223,18 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     meta_graph = nx.Graph()
     node_to_unique_value = {}
     meta_node_idx = 0
-    ref_values = []
     # a set because if we have hydrogen atoms one may overcount
     # the number of squash atoms that are the same
     squash = []
     # first we loop over all nodes that are not squashed
     for node in molecule.nodes:
         unique_values = molecule.nodes[node][unique_attr]
-        if len(unique_values) == 1 and unique_values[0] not in ref_values:
+        if len(unique_values) == 1 and unique_values[0] not in node_to_unique_value:
             new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
             new_attrs[unique_attr] = unique_values[0]
             meta_graph.add_node(meta_node_idx, **new_attrs)
             node_to_unique_value[unique_values[0]] = meta_node_idx
             meta_node_idx += 1
-            ref_values.append(unique_values[0])
         elif len(unique_values) == 1:
             # another atom belonging to a fragment we already created a
             # meta node for; make sure it agrees on the copied attributes
@@ -311,20 +309,9 @@ def annotate_bonding_operators(molecule, label='fragid'):
     # we unset all existing bonding operators
     nx.set_node_attributes(molecule, {n: [] for n in molecule.nodes}, 'bonding')
 
-    # we presort the edges sucht that we first go over the ones in the
-    # same fragment, which is required for the compression
-    nodes_fid = molecule.nodes(data='fragid')
-    sorted_nodes = [x[0] for x in sorted(nodes_fid, key=lambda x: min(x[1]) if x[1] else float('inf'))]
-    # now we sort the edges
-    edges = list(molecule.edges)
-    index_map = {val: idx for idx, val in enumerate(sorted_nodes)}
-    # Sort the current list based on the mapped indices
-    sorted_edges = sorted(edges, key=lambda x: (index_map[x[0]], index_map[x[1]]))
     # next we loop over each edge in the meta_graph and see how.
     # the connect in the real graph
     op_counter = 0
-    toggle = [('>', '<'), ('<', '>')]
-    tdx = 0
     for e1, e2 in nx.edge_dfs(molecule):
         order = molecule.edges[(e1, e2)]['order']
         # we have one intersection so the edge is in the same fragment
@@ -333,15 +320,12 @@ def annotate_bonding_operators(molecule, label='fragid'):
         else:
             if order == 1.5:
                 order = 1
-            #op1 = f"{toggle[tdx][0]}{op_counter}{order}"
-            #op2 = f"{toggle[tdx][1]}{op_counter}{order}"
             op1 = f">{op_counter}{order}"
             op2 = f"<{op_counter}{order}"
 
             molecule.nodes[e1]['bonding'].append(op2)
             molecule.nodes[e2]['bonding'].append(op1)
             op_counter += 1
-            #tdx = (tdx+1)%2
     for node in molecule.nodes:
         # here we deal with a squash operator
         if len(molecule.nodes[node][label]) > 1 and molecule.nodes[node].get('element', '*') != 'H':

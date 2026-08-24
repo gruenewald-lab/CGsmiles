@@ -1,4 +1,6 @@
 from collections import defaultdict, Counter
+import itertools
+import string
 import networkx as nx
 from .graph_utils import (annotate_neighbors_as_hash,
                           annotate_fragments,
@@ -15,7 +17,7 @@ def _match_bonds(list1, list2):
         # Find a matching index in list2 that hasn't been used before
         match_found = False
         for j, item2 in enumerate(list2):
-            if j not in used_indices and item1[0] == item2[0] and item1[-1] == item1[-1]:
+            if j not in used_indices and item1[0] == item2[0] and item1[-1] == item2[-1]:
                 matches.append((item1, item2))
                 used_indices.add(j)
                 match_found = True
@@ -24,6 +26,20 @@ def _match_bonds(list1, list2):
         if not match_found:
             return None
     return matches
+
+def _suffix_generator():
+    """
+    Yield an unbounded sequence of upper-case letter suffixes used to
+    disambiguate multiple non-isomorphic fragments that share a base
+    fragname: "A", "B", ..., "Z", "AA", "AB", ..., the same spreadsheet-
+    column scheme, with no fixed cap on how many fragments can share a
+    name.
+    """
+    length = 1
+    while True:
+        for combo in itertools.product(string.ascii_uppercase, repeat=length):
+            yield "".join(combo)
+        length += 1
 
 def satisfy_isomorphism(target, other_frag):
 
@@ -75,7 +91,6 @@ class MoleculeFragmentExtractor():
             the name by which fragments are labeled
         """
         self.frag_label = frag_label
-        self.letter_str = "ZYXWVUTSRQPONMLKJIHGFEDCBA "
         # dynamic variables
         self.fragment_dict = {}
         self.pre_fragment_dict = defaultdict(list)
@@ -108,17 +123,21 @@ class MoleculeFragmentExtractor():
         # operators we need to distinguish them
         tbonding = nx.get_node_attributes(target, 'bonding')
         for bonds in tbonding.values():
-            for bond in bonds:
-                if any(["!" in b for b in bond]) and len(bond) > 1:
-                    return False
+            if any("!" in b for b in bonds) and len(bonds) > 1:
+                return False
         # the fragments are isomorphic and in this case we want
         # to iterate over all alignments and make sure that the
         # bonding operators get the same label.
         for match in matches:
             for tnode, onode in match.items():
                 if 'bonding' in target.nodes[tnode]:
-                    for target_bond, other_bond in _match_bonds(target.nodes[tnode]['bonding'],
-                                                                other_frag.nodes[onode]['bonding']):
+                    matched_bonds = _match_bonds(target.nodes[tnode]['bonding'],
+                                                 other_frag.nodes[onode]['bonding'])
+                    # target/other are already confirmed isomorphic with
+                    # matching per-node bonding-descriptor multisets (see
+                    # _node_match), so a pairing always exists here
+                    assert matched_bonds is not None
+                    for target_bond, other_bond in matched_bonds:
                         self.bonding_op_convert[target_bond] = self.bonding_op_convert.get(other_bond, other_bond)
                         compl_target_bond = compl[target_bond[0]]+target_bond[1:]
                         compl_other_bond = compl[other_bond[0]] + other_bond[1:]
@@ -169,7 +188,7 @@ class MoleculeFragmentExtractor():
     def condense_fragments(self, meta_graph):
         for fragname, fraglist in self.pre_fragment_dict.items():
             temp_frags = {}
-            letters = list(self.letter_str)
+            suffixes = _suffix_generator()
             for idx, (target, fnode) in enumerate(fraglist):
                 for other_fragname, (other_frag, gnode) in temp_frags.items():
                     # if any connect to a fragment with degree larger than 2
@@ -186,14 +205,17 @@ class MoleculeFragmentExtractor():
                     if are_iso:
                         break
                 else:
-                    # we have to make sure that the fragname letter combo
-                    # is not present in the list unless it is the first
-                    # fragment with that fragname we add
-                    while True:
-                        target_name = fragname + letters.pop()
-                        target_name = target_name.strip()
-                        if idx == 0 or target_name not in self.pre_fragment_dict:
-                            break
+                    # the first fragment with this fragname keeps the bare
+                    # name; every later, non-isomorphic one gets a letter
+                    # suffix, skipping any suffix that happens to collide
+                    # with a distinct fragname already present elsewhere
+                    if idx == 0:
+                        target_name = fragname
+                    else:
+                        while True:
+                            target_name = fragname + next(suffixes)
+                            if target_name not in self.pre_fragment_dict:
+                                break
                     temp_frags[target_name] = (target, fnode)
                     meta_node = self.fragname_to_meta_node[(fragname, idx)]
                     meta_graph.nodes[meta_node][self.frag_label] = target_name
