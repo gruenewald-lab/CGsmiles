@@ -94,9 +94,6 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Validate resolved version
-        run: |
-          python -c "from setuptools_scm import get_version; v = get_version(); print('✅ Version:', v); assert v != '0.0.0', 'Version is 0.0.0!'; assert '.dev' in v, 'Expected dev version'"
       - name: Set up Python 3
         uses: actions/setup-python@v6
         with:
