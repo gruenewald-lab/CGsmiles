@@ -124,7 +124,7 @@ jobs:
 
       - name: Install pypa/build
         run: |
-          python3 -m pip install build --user
+          python3 -m pip install build setuptools_scm --user
 
       - name: Build a binary wheel and a source tarball
         run: python3 -m build --sdist --wheel --outdir dist/
