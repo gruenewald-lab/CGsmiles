@@ -106,14 +106,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade setuptools pip wheel
-          pip install --no-build-isolation .  # ← builds in isolation-friendly way
+          pip install --upgrade setuptools pip
+          pip install --upgrade .
 
       - name: Install pypa/build
-        run: python -m pip install build --user
+        run: |
+          python3 -m pip install build --user
 
-      - name: Build distributions
-        run: python -m build --sdist --wheel --outdir dist/
+      - name: Build a binary wheel and a source tarball
+        run: python3 -m build --sdist --wheel --outdir dist/
 
       - name: Publish to TestPyPI 📦
         uses: pypa/gh-action-pypi-publish@release/v1
