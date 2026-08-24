@@ -104,6 +104,23 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
                                 (bond_source, bond_target))
     raise LookupError
 
+def _adjust_hcount(molecule):
+    """
+    Given atoms in a molecule built from cgsmiles fragments, adjust
+    the hcount such that we substract the total number of newly formed
+    edges multiplied by their bond order. The 'hcount' attribute is
+    updated in place.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+    """
+    for node in molecule.nodes:
+        hcount = molecule.nodes[node]["_hcount"]
+        new_degree = sum([molecule.edges[edge]["order"] for edge in molecule.edges(node)])
+        init_degree = molecule.nodes[node]["_edge_orders"]
+        molecule.nodes[node]["hcount"] =  max([0, hcount - (new_degree - init_degree)])
+
 class MoleculeResolver:
     """
     Resolve the molecule(s) described by a CGsmiles string and return a networkx.Graph
@@ -270,7 +287,7 @@ class MoleculeResolver:
                 continue
 
             fragment = fragment_dict[fragname]
-            correspondence = merge_graphs(self.molecule, fragment)
+            correspondence = merge_graphs(self.molecule, fragment, fragid=meta_node)
 
             graph_frag = nx.Graph()
 
@@ -281,6 +298,11 @@ class MoleculeResolver:
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
                 graph_frag.nodes[new_node]['mapping'] = [(fragname, node)]
                 self.molecule.nodes[new_node]['mapping'] = [(fragname, node)]
+                if self.last_all_atom:
+                    # we need to keep some info about the original valances
+                    edge_orders = [self.molecule.edges[edge]["order"] for edge in self.molecule.edges(new_node)]
+                    self.molecule.nodes[new_node]["_edge_orders"] = sum(edge_orders)
+                    self.molecule.nodes[new_node]['_hcount'] = self.molecule.nodes[new_node].get('hcount', 0)
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -311,8 +333,6 @@ class MoleculeResolver:
             default: False
         """
         edges = list(self.meta_graph.edges)
-        #import random
-        #random.shuffle(edges)
         for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
@@ -334,16 +354,7 @@ class MoleculeResolver:
                    self.molecule.nodes[edge[1]].get('aromatic', False):
                     order = 1.5
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
-                if all_atom:
-                    for edge_node in edge:
-                        if self.molecule.nodes[edge_node]['element'] == 'H':
-                            continue
-                        hcount = self.molecule.nodes[edge_node]['hcount']
-                        if self.molecule.nodes[edge_node].get('aromatic', 'False'):
-                            hcount = max(0, hcount - 1.5)
-                        else:
-                            hcount = max(0, hcount - 1)
-                        self.molecule.nodes[edge_node]['hcount'] = hcount
+
     def squash_atoms(self):
         """
         Applies the squash operator by removing the duplicate node
@@ -405,30 +416,6 @@ class MoleculeResolver:
         new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
         nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
 
-        # adjust the fragids because at meta-graph level; virtual nodes
-        # (fragname absent from fragment_dict) never get atoms merged into
-        # self.molecule by resolve_disconnected_molecule/merge_graphs, whose
-        # own atom-level fragid counter only advances for real fragments. If
-        # we numbered every meta_graph node here -- virtual ones included --
-        # the two numbering schemes would disagree as soon as a virtual node
-        # precedes a real one, and graph_utils.annotate_fragments (which
-        # maps atoms back to meta nodes via this attribute) would attach
-        # atoms to the wrong meta node. So mirror that counting exactly:
-        # real fragments get the same dense 0..N-1 index merge_graphs will
-        # assign their atoms, and virtual nodes get distinct negative
-        # sentinels that can never collide with a real fragid.
-        new_fragids = {}
-        fragid_counter = 0
-        virtual_fragid_counter = -1
-        for node in self.meta_graph.nodes:
-            if self.meta_graph.nodes[node]['fragname'] in fragment_dict:
-                new_fragids[node] = fragid_counter
-                fragid_counter += 1
-            else:
-                new_fragids[node] = virtual_fragid_counter
-                virtual_fragid_counter -= 1
-        nx.set_node_attributes(self.meta_graph, new_fragids, 'fragid')
-
         # create an empty molecule graph
         self.molecule = nx.Graph()
 
@@ -440,9 +427,9 @@ class MoleculeResolver:
 
         # contract atoms with squash descriptors
         self.squash_atoms()
-
         # rebuild hydrogen in all-atom case
         if all_atom:
+            _adjust_hcount(self.molecule)
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms

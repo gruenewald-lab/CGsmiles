@@ -169,6 +169,13 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         'O H C H C H H H O H',
                         [(0, 1), (0, 2), (2, 3), (2, 4),
                          (4, 5), (4, 6), (4, 7), (2, 8), (8, 9)], {}, {}, {}),
+                        # test case by Thilo
+                        ("{[#TC5]1[#TC5][#TC5]1[#SN1a]}.{#TC5=[!]ccc[!][>],#SN1a=[<]N=N}",
+                        [('TC5', 'C H C H C H'), ('TC5', 'C H C H C'), ('TC5', 'C H C C H'), ('SN1a', 'N N H')],
+                        'C H C H C H C H C C H N N H',
+                        [(2, 0), (2, 6), (2, 3), (0, 4), (0, 1), (4, 9), (4, 5), (6, 8), (6, 7),
+                         (8, 9), (8, 11), (9, 10), (11, 12), (12, 13)], {}, {}, {},
+                        ),
                         # THF like test case with double edge and squash operator
                         ("{[#A]=[#B]}.{#A=[!]COC[!],#B=[!]CCCC[!]}",
                         [('A', 'O C C H H H H'),
@@ -259,6 +266,16 @@ def test_match_bonding_descriptors(bonds_source, bonds_target, edge, btypes):
                         # test skip virtual nodes
                         ("{[#SP4]1.2[#SP4].3[#SP1r]1.[#TC4]23}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
                         [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'),
+                         ('SP1r', 'O C C O H H H H'), ('TC4', '')],
+                        'O C C O H H H H O C C O H H H H O C C O H H H H',
+                        [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),
+                         (3, 7), (8, 9), (8, 12), (9, 10), (9, 13), (10, 11), (10, 17),
+                         (10, 14), (11, 15), (16, 17), (17, 18), (17, 20), (18, 19),
+                         (18, 21), (18, 22), (19, 23)],
+                        {},{}, {}),
+                        # test skip virtual nodes with VS in the middle
+                        ("{[#SP4]1.2[#SP4].([#TC4].2.3)[#SP1r]1.3}.{#SP4=OC[$]C[$]O,#SP1r=[$]OC[$]CO}",
+                        [('SP4', 'O C C O H H H H'), ('SP4', 'O C C O H H H H'), ('TC4', ''),
                          ('SP1r', 'O C C O H H H H')],
                         'O C C O H H H H O C C O H H H H O C C O H H H H',
                         [(0, 1), (0, 4), (1, 2), (1, 9), (1, 5), (2, 3), (2, 16), (2, 6),

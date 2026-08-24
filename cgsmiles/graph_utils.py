@@ -6,18 +6,22 @@ from collections import defaultdict
 import itertools
 import networkx as nx
 
-def merge_graphs(source_graph, target_graph, max_node=None):
+def merge_graphs(source_graph, target_graph, fragid=None, max_node=None):
     """
-    Add the atoms and the interactions of a molecule at the end of this
-    one.
-
-    Atom and residue index of the new atoms are offset to follow the last
-    atom of this molecule.
+    Merge the `target_graph` into `source_graph`. Atom and residue index
+    of the newly added nodes are offset to follow the last node of `source_graph`,
+    unless the fragid and/or max_node are explicitly provided.
 
     Parameters
     ----------
-    molecule: networkx.Graph
-        The molecule to merge at the end.
+    source_graph: networkx.Graph
+        the graph into which to merge
+    target_graph: networkx.Graph
+        the graph to be merged into source graph
+    fragid: int
+        the fragid to be used on all newly added nodes
+    max_node: int
+        the maxmimum node from which to start adding the new nodes
 
     Returns
     -------
@@ -42,7 +46,10 @@ def merge_graphs(source_graph, target_graph, max_node=None):
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
         correspondence[node] = idx
         new_atom = copy.deepcopy(target_graph.nodes[node])
-        new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
+        if fragid:
+            new_atom['fragid'] = [fragid]
+        else:
+            new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
         # make sure to propagate the ez isomers
         if 'ez_isomer_atoms' in new_atom:
             new_atom['ez_isomer_atoms'] = (new_atom['ez_isomer_atoms'][0]+offset+1,
@@ -120,10 +127,6 @@ def annotate_fragments(meta_graph, molecule):
     the lower resolution graph nodes.
     """
     node_to_fragids = nx.get_node_attributes(molecule, 'fragid')
-    node_to_fragids_meta = nx.get_node_attributes(meta_graph, 'fragid')
-    if len(node_to_fragids_meta) == 0:
-        node_to_fragids_meta = {node: node for node in meta_graph.nodes}
-    fragid_to_meta_node = {value: key for key, value in node_to_fragids_meta.items()}
 
     fragid_to_node = defaultdict(list)
     for node, fragids in node_to_fragids.items():
@@ -133,14 +136,14 @@ def annotate_fragments(meta_graph, molecule):
     for meta_node in meta_graph.nodes:
         # adding node to the fragment graph
         graph_frag = nx.Graph()
-        for node in fragid_to_node[node_to_fragids_meta[meta_node]]:
+        for node in fragid_to_node[meta_node]:
             attrs = molecule.nodes[node]
             graph_frag.add_node(node, **attrs)
 
         # adding the edges
         # this is slow but OK; we always assume that the fragment
         # is much much smaller than the fullblown graph
-        combinations = itertools.combinations(fragid_to_node[node_to_fragids_meta[meta_node]], r=2)
+        combinations = itertools.combinations(fragid_to_node[meta_node], r=2)
         for a, b in combinations:
             if molecule.has_edge(a, b):
                 graph_frag.add_edge(a, b, **molecule.edges[(a, b)])
@@ -222,7 +225,6 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
     """
     meta_graph = nx.Graph()
     node_to_unique_value = {}
-    meta_node_idx = 0
     # a set because if we have hydrogen atoms one may overcount
     # the number of squash atoms that are the same
     squash = []
@@ -232,9 +234,13 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
         if len(unique_values) == 1 and unique_values[0] not in node_to_unique_value:
             new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
             new_attrs[unique_attr] = unique_values[0]
-            meta_graph.add_node(meta_node_idx, **new_attrs)
-            node_to_unique_value[unique_values[0]] = meta_node_idx
-            meta_node_idx += 1
+            # the meta node's own key IS the fragid value (not a freshly
+            # assigned counter) so that annotate_fragments can map atoms
+            # back to meta nodes via meta_graph node identity alone, the
+            # same convention resolve()/merge_graphs use -- no separate
+            # 'fragid' indirection needed downstream
+            meta_graph.add_node(unique_values[0], **new_attrs)
+            node_to_unique_value[unique_values[0]] = unique_values[0]
         elif len(unique_values) == 1:
             # another atom belonging to a fragment we already created a
             # meta node for; make sure it agrees on the copied attributes

@@ -14,19 +14,19 @@ jobs:
 
     strategy:
       matrix:
-       py_version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+       py_version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.py_version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.py_version }}
     - name: Install dependencies
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
-        pip install -r requirements-tests.txt
+        pip install --group tests
 
     - name: Run pytest with codecoverage
       run:  pytest --cov cgsmiles --cov-report=xml
@@ -42,16 +42,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v6
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v6
       with:
-        python-version: 3.12
+        python-version: 3.14
     - name: Install dependencies
       run: |
         pip install --upgrade setuptools pip
         pip install --upgrade .
-        pip install -r requirements-tests.txt
+        pip install --group tests
     - name: Run pylint
       run: |
          pylint --disable=fixme --fail-under=8.0 cgsmiles
@@ -60,21 +60,19 @@ jobs:
       runs-on: ubuntu-latest
 
       steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python 3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
            python-version: '3.x'
            cache: pip
            cache-dependency-path: |
-             **/setup.cfg
-             **/requirements-*.txt
              **/pyproject.toml
       - name: Install dependencies
         run: |
           pip install --upgrade setuptools pip
           pip install --upgrade .
-          pip install -r requirements-docs.txt
+          pip install --group docs
 
       - name: Run docs
         run: |
@@ -84,24 +82,26 @@ jobs:
   deploy:
       needs: [build, lint, docs]
       runs-on: ubuntu-latest
+      env:
+        # Strip local version from version -> 0.15.1.dev51 instead of 0.15.1.dev51+gc45000f63.d20260526
+        # And fail if that's not possible/required.
+        SETUPTOOLS_SCM_OVERRIDES_FOR_CGSMILES: '{local_scheme = ["fail-on-uncommitted-changes","no-local-version"]}'
       environment:
         name: deploy
         url: https://pypi.org/p/cgsmiles/
       permissions:
         id-token: write
       steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-tags: true
           fetch-depth: 0
       - name: Set up Python 3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
           cache: pip
           cache-dependency-path: |
-            **/setup.cfg
-            **/requirements-*.txt
             **/pyproject.toml
       - name: Install dependencies
         run: |
@@ -109,7 +109,7 @@ jobs:
           pip install --upgrade .
       - name: Install pypa/build
         run: |
-          python3 -m pip install build pbr --user
+          python3 -m pip install build --user
       - name: Build a binary wheel and a source tarball
         run: python3 -m build --sdist --wheel --outdir dist/
       - name: Publish distribution 📦 to PyPI
