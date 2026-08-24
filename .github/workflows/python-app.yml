@@ -98,6 +98,15 @@ jobs:
           fetch-tags: true
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Debug git state
+        run: |
+          echo "=== .git dir ==="
+          ls -la .git 2>&1 || echo "No .git"
+          echo "=== Version (pre-build) ==="
+          python -c "from setuptools_scm import get_version; print(get_version())" 2>&1 || echo "Failed"
+          echo "=== sdist contents (if built) ==="
+          ls dist/*.tar.gz && tar -tzf dist/*.tar.gz | head -50
+
       - name: Set up Python 3
         uses: actions/setup-python@v6
         with:
