@@ -46,6 +46,11 @@ def test_write_fragments(input_string):
                         "{[#PE]=[#PMA]}",
                         # special triple cycle
                         "{[#A]#[#B]}",
+                        # ring-closure bond with a non-default order;
+                        # this path (the order symbol attached to a
+                        # ring-closure digit, rather than a plain
+                        # tree-edge) was previously untested
+                        "{[#A]=1[#B][#C]1}",
 ))
 def test_write_mol_graphs(input_string):
     mol_graph = read_cgsmiles(input_string)
