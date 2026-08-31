@@ -81,49 +81,43 @@ jobs:
           sphinx-build -WnE -b html docs/source/ docs/build/html
 
   deploy:
-    needs: [build, lint, docs]
-    runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/cgsmiles
-      # Strip local version from version -> 0.15.1.dev51 instead of 0.15.1.dev51+gc45000f63.d20260526
-    env:
-      SETUPTOOLS_SCM_OVERRIDES_FOR_CGSMILES: '{"local_scheme": "no-local-version"}'
-    permissions:
-      id-token: write
-    steps:
+      needs: [build, lint, docs]
+      runs-on: ubuntu-latest
+      environment:
+        name: testpypi
+        url: https://test.pypi.org/p/cgsmiles
+      env:
+        # Strip local version from version -> 0.15.1.dev51 instead of 0.15.1.dev51+gc45000f63.d20260526
+        SETUPTOOLS_SCM_OVERRIDES_FOR_CGSMILES: '{local_scheme = "no-local-version"}'
+      permissions:
+        id-token: write
+      steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
           fetch-tags: true
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
+          fetch-depth: 0
       - name: Set up Python 3
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14'
-          cache: pip
-          cache-dependency-path: |
-            **/setup.cfg
-            **/requirements-*.txt
-            **/pyproject.toml
-
+           python-version: '3.14'
+           cache: pip
+           cache-dependency-path: |
+             **/setup.cfg
+             **/requirements-*.txt
+             **/pyproject.toml
       - name: Install dependencies
         run: |
           pip install --upgrade setuptools pip
           pip install --upgrade .
-
       - name: Install pypa/build
         run: |
-          python3 -m pip install build setuptools_scm --user
-
+          python3 -m pip install build --user
       - name: Build a binary wheel and a source tarball
         run: python3 -m build --sdist --wheel --outdir dist/
-
-      - name: Publish to TestPyPI 📦
+      - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
           verbose: true
-          # (optional) user: __token__  # not needed with id-token, but harmless
+          user: __token__
           password: ${{ secrets.PYPI_TEST_API_TOKEN }}
