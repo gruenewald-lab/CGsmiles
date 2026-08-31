@@ -12,7 +12,7 @@ license-files = ["LICENSE"]
 authors = [
     { name = "Fabian Grunewald", email = "fgrunewald.science@gmail.com" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = [
     "smiles",
     "bigsmiles",
@@ -57,6 +57,7 @@ tests = [
     "scipy",
     "matplotlib",
     "rdkit",
+    "coveralls",
 ]
 docs = [
     "sphinx < 8.2.0",
