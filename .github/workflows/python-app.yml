@@ -34,6 +34,19 @@ jobs:
       run:  pytest --cov cgsmiles --cov-report=xml
     - name: Coveralls
       uses: coverallsapp/github-action@v2
+      with:
+        flag-name: python-${{ matrix.py_version }}
+        parallel: true
+
+  coveralls-finished:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Close parallel build
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel-finished: true
 
   lint:
     runs-on: ubuntu-latest
