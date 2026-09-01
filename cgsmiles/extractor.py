@@ -9,6 +9,26 @@ from .graph_utils import (annotate_neighbors_as_hash,
 
 def _match_bonds(list1, list2):
     """
+    Pair up bonding descriptors from `list1` and `list2` that agree on
+    direction (the first character) and bond order (the last
+    character), each entry of `list2` used at most once. Called from
+    `_are_isomorphic` on two nodes already confirmed to have matching
+    direction/order multisets (see `satisfy_isomorphism`'s
+    `_node_match`), so in practice every entry of `list1` always finds
+    a pairing.
+
+    Parameters
+    ----------
+    list1: list[str]
+        bonding descriptors of one node, e.g. [">01", "!11"]
+    list2: list[str]
+        bonding descriptors of the node to pair `list1` against
+
+    Returns
+    -------
+    list[tuple[str, str]] or None
+        one (list1 entry, list2 entry) pair per entry of list1, or
+        None if some entry of list1 has no unused match left in list2
     """
     # Keep track of used indices in list2
     used_indices = set()
@@ -42,6 +62,24 @@ def _suffix_generator():
         length += 1
 
 def satisfy_isomorphism(target, other_frag):
+    """
+    Find subgraph isomorphisms between `target` and `other_frag`.
+    Nodes are matched on the `nhash` (neighbor-fragment hash), 'element',
+    'charge', 'rs_isomerism' and 'ez_isomerism' attributes, plus the
+    direction/order multiset of their bonding descriptors
+    (`_node_match`); edges are matched on bond order (`_edge_match`).
+
+    Parameters
+    ----------
+    target: networkx.Graph
+    other_frag: networkx.Graph
+
+    Returns
+    -------
+    iterator[dict]
+        one dict per isomorphism found, mapping each node of `target`
+        to the corresponding node of `other_frag`
+    """
 
     def _edge_match(e1, e2):
         if e1['order'] != e2['order']:
@@ -81,6 +119,15 @@ class MoleculeFragmentExtractor():
     Given a labelled molecule extract the fragments
     such that the most condensed representation in terms
     of the CGsmiles syntax is obtained.
+
+    A molecule counts as "labelled" once every atom carries a
+    `fragid` (a list of the meta node(s) it belongs to -- length 2
+    for an atom shared between two fragments via a squash operator)
+    and a `frag_label` attribute (the fragment name, `fragname` by
+    default). Fragment instances sharing a fragname are condensed
+    into one shared fragment definition whenever they are graph-
+    isomorphic and not adjacent to a branch point in the meta graph;
+    remaining instances are disambiguated with a letter suffix.
     """
 
     def __init__(self, frag_label='fragname'):
@@ -98,6 +145,10 @@ class MoleculeFragmentExtractor():
         self.bonding_op_convert = {}
 
     def _reset(self):
+        """
+        Reset all dynamic (per-call) instance state so the same
+        extractor instance can be reused across multiple molecules.
+        """
         self.fragment_dict = {}
         self.pre_fragment_dict = defaultdict(list)
         self.fragname_to_meta_node = None
@@ -111,7 +162,40 @@ class MoleculeFragmentExtractor():
                         other_fragname,
                         meta_graph):
         """
+        Check whether `target` and `other_frag` are isomorphic
+        fragments that can safely be condensed into one shared
+        fragment definition; if so, relabel `target`'s meta node to
+        `other_fragname` and record how their bonding operators
+        translate into one another (`self.bonding_op_convert`).
 
+        A node carrying more than one bonding descriptor, at least
+        one of which is a squash ('!') operator, blocks condensation
+        even for an otherwise perfect match: such a node sits at an
+        asymmetric squash junction to more than one neighboring
+        fragment, so two instances that look identical in isolation
+        are not guaranteed to be interchangeable in context.
+
+        Parameters
+        ----------
+        target: networkx.Graph
+            the fragment graph of the newly encountered instance
+        fragname: str
+            the base fragname `target` was collected under
+        idx: int
+            target's position within `self.pre_fragment_dict[fragname]`
+        other_frag: networkx.Graph
+            the fragment graph of an already-accepted instance to
+            compare `target` against
+        other_fragname: str
+            the (possibly suffixed) name already assigned to `other_frag`
+        meta_graph: networkx.Graph
+            the meta graph whose node label gets updated in place on
+            a match
+
+        Returns
+        -------
+        bool
+            True if `target` was matched onto `other_fragname`
         """
         compl = {">": "<", "<": ">", "!": "!"}
         matches = list(satisfy_isomorphism(target, other_frag))
@@ -186,6 +270,29 @@ class MoleculeFragmentExtractor():
         self.fragname_to_meta_node = {value: key for key, value in meta_node_to_fragname.items()}
 
     def condense_fragments(self, meta_graph):
+        """
+        Group the fragment instances collected per fragname
+        (`self.pre_fragment_dict`) into as few distinct fragment
+        definitions as possible. Each instance is compared, in
+        order, against previously accepted instances sharing its
+        fragname; it is relabeled onto the first isomorphic match
+        found (`_are_isomorphic`) rather than becoming its own
+        fragment, unless doing so would be ambiguous because it or
+        the candidate it's compared against neighbors a branch point
+        (a meta-graph node of degree > 2). The first instance of a
+        fragname always keeps the bare name; every later instance
+        that isn't condensed gets a letter suffix from
+        `_suffix_generator`, skipping any suffix that collides with a
+        distinct fragname already present elsewhere. Populates
+        `self.fragment_dict` and updates `meta_graph`'s fragname
+        labels in place.
+
+        Parameters
+        ----------
+        meta_graph: networkx.Graph
+            the meta graph whose node fragname labels get updated in
+            place to reflect any condensation
+        """
         for fragname, fraglist in self.pre_fragment_dict.items():
             temp_frags = {}
             suffixes = _suffix_generator()
@@ -224,8 +331,26 @@ class MoleculeFragmentExtractor():
 
     def get_fragment_dict_from_meta_graph(self, meta_graph):
         """
-        Given a molecule where each node is assigned to fragments
-        via a label, we want to assign bonding operators.
+        Given a meta graph whose nodes each carry a 'graph' (the
+        fragment's own atom-level subgraph) and a `self.frag_label`
+        attribute, collect and condense those fragment graphs into
+        the smallest set of distinct fragment definitions that can
+        reproduce the molecule, and make sure the bonding operators
+        used across them are mutually consistent.
+
+        Parameters
+        ----------
+        meta_graph: networkx.Graph
+            a meta graph with 'graph' and `self.frag_label` node
+            attributes, e.g. as produced by
+            `graph_utils.annotate_fragments`
+
+        Returns
+        -------
+        (networkx.Graph, dict[str, networkx.Graph])
+            `meta_graph`, with fragname labels updated in place to
+            reflect any condensation, and the dict mapping each
+            resulting fragment name to its fragment graph
         """
         # make sure these class variables are reset
         self._reset()
@@ -247,9 +372,24 @@ class MoleculeFragmentExtractor():
 
     def get_fragment_dict_from_molecule(self, molecule):
         """
-        Given a molecule where the membership of atoms/beads
-        is annotated using a fragment label, extract the
-        fragment dict.
+        Given an atomistic molecule where each atom is annotated with
+        a `fragid` (a list of the meta node(s) it belongs to --
+        length 2 for an atom shared between two fragments via a
+        squash operator) and a `fragname`, derive the meta graph and
+        extract the most condensed set of fragment definitions that
+        can reproduce the molecule.
+
+        Parameters
+        ----------
+        molecule: networkx.Graph
+            an atomistic molecule graph with 'fragid' and 'fragname'
+            node attributes
+
+        Returns
+        -------
+        (networkx.Graph, dict[str, networkx.Graph])
+            the derived meta graph and the dict mapping each
+            resulting fragment name to its fragment graph
         """
 
         molecule = annotate_bonding_operators(molecule)
