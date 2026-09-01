@@ -7,6 +7,7 @@ from cgsmiles.write_cgsmiles import (write_cgsmiles_fragments,
                                      write_cgsmiles_graph,
                                      write_cgsmiles)
 from cgsmiles import MoleculeResolver
+from cgsmiles.test_utils import _keep_selected_attr
 
 @pytest.mark.parametrize('input_string',(
                         # smiple linear seqeunce
@@ -87,3 +88,41 @@ def test_write_cgsmiles(input_string):
             nx.set_node_attributes(frag_dict_out[fragname], None, "atomname")
             nx.set_node_attributes(frag_dict[fragname], None, "atomname")
             assertEqualGraphs(frag_dict_out[fragname], frag_dict[fragname])
+
+def test_write_cgsmiles_virtual_side():
+    """
+    Full round trip (write the meta graph + fragment definitions,
+    re-resolve, compare) for a CGsmiles string with a virtual side
+    (a meta node whose fragname has no entry in fragment_dict) placed
+    BEFORE the real fragments -- the same fixture used to reproduce
+    the virtual-node fragid bug, now checked end to end through
+    write_cgsmiles rather than only through annotate_fragments.
+    """
+    input_string = "{[#TC4].[#SP4][#SP4]}.{#SP4=OC[$]C[$]O}"
+    resolver = MoleculeResolver.from_string(input_string)
+    fragment_dicts = resolver.fragment_dicts
+    molecule = resolver.molecule
+    assert nx.get_node_attributes(molecule, 'fragname')[0] == 'TC4'
+
+    output_string = write_cgsmiles(molecule, fragment_dicts)
+    assert output_string == input_string
+
+    out_resolver = MoleculeResolver.from_string(output_string)
+    out_mol = out_resolver.molecule
+    assertEqualGraphs(molecule, out_mol)
+    out_fragments = out_resolver.fragment_dicts
+    assert len(fragment_dicts) == len(out_fragments)
+    for frag_dict, frag_dict_out in zip(fragment_dicts, out_fragments):
+        assert set(frag_dict_out) == set(frag_dict)
+
+    # and the round trip survives all the way to the all-atom level:
+    # the virtual node contributes no atoms of its own, while both
+    # SP4 fragments end up with their own, distinct atom sets
+    _, aa_ref = resolver.resolve()
+    _, aa_out = out_resolver.resolve()
+    assert aa_ref.number_of_nodes() == aa_out.number_of_nodes()
+    attrs_compare = ["charge", "element", "hcount"]
+    edge_compare = ["order"]
+    _keep_selected_attr(aa_ref, attrs_compare, edge_compare)
+    _keep_selected_attr(aa_out, attrs_compare, edge_compare)
+    assertEqualGraphs(aa_ref, aa_out)
