@@ -13,9 +13,9 @@ A line notation for representing molecules using multiple resolutions
    :target: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml
    :alt: CI
 
-.. |Coverage| image:: https://coveralls.io/repos/github/gruenewald-lab/CGsmiles/badge.svg
-   :target: https://coveralls.io/github/gruenewald-lab/CGsmiles
-   :alt: Coverage
+.. |Coverage| image:: https://coveralls.io/repos/github/gruenewald-lab/CGsmiles/badge.svg?branch=master
+    :target: https://coveralls.io/github/gruenewald-lab/CGsmiles?branch=master
+    :alt: Coverage
 
 .. |Conda Version| image:: https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833
    :target: https://anaconda.org/conda-forge/cgsmiles
