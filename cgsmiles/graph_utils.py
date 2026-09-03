@@ -2,7 +2,6 @@
 Molecule utilites
 """
 import copy
-from functools import partial
 from collections import defaultdict
 import itertools
 import networkx as nx
@@ -147,7 +146,7 @@ def annotate_fragments(meta_graph, molecule):
         combinations = itertools.combinations(fragid_to_node[meta_node], r=2)
         for a, b in combinations:
             if molecule.has_edge(a, b):
-                graph_frag.add_edge(a, b)
+                graph_frag.add_edge(a, b, **molecule.edges[(a, b)])
 
         meta_graph.nodes[meta_node]['graph'] = graph_frag
 
@@ -187,3 +186,156 @@ def set_atom_names_atomistic(molecule, meta_graph=None):
             molecule.nodes[node]['atomname'] = atomname
             if meta_graph:
                 meta_graph.nodes[meta_node]['graph'].nodes[node]['atomname'] = atomname
+
+def _add_or_increment_edge(graph, n1, n2, order=1):
+    """
+    Add an edge between `n1` and `n2` with bond `order`. If the edge
+    already exists, increment its 'order' attribute by `order` instead
+    of overwriting it.
+
+    Parameters
+    ----------
+    graph: networkx.Graph
+    n1: collections.abc.Hashable
+    n2: collections.abc.Hashable
+    order: int
+    """
+    if graph.has_edge(n1, n2):
+        graph.edges[(n1, n2)]['order'] += order
+    else:
+        graph.add_edge(n1, n2, order=order)
+
+def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
+    """
+    Given a finer resolution graph extract the higher resolution graph
+    by looking at the attributes and connectivity.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        the finer resolution graph
+    unique_attr: collections.abc.Hashable
+        the attribute by which to get the coarse resolution
+    copy_attrs: list[[collections.abc.Hashable]
+        a list of attributes to copy over
+
+    Returns
+    -------
+    networkx.Graph
+    """
+    meta_graph = nx.Graph()
+    node_to_unique_value = {}
+    # a set because if we have hydrogen atoms one may overcount
+    # the number of squash atoms that are the same
+    squash = []
+    # first we loop over all nodes that are not squashed
+    for node in molecule.nodes:
+        unique_values = molecule.nodes[node][unique_attr]
+        if len(unique_values) == 1 and unique_values[0] not in node_to_unique_value:
+            new_attrs = {attr: molecule.nodes[node][attr] for attr in copy_attrs}
+            new_attrs[unique_attr] = unique_values[0]
+            # the meta node's own key IS the fragid value (not a freshly
+            # assigned counter) so that annotate_fragments can map atoms
+            # back to meta nodes via meta_graph node identity alone, the
+            # same convention resolve()/merge_graphs use -- no separate
+            # 'fragid' indirection needed downstream
+            meta_graph.add_node(unique_values[0], **new_attrs)
+            node_to_unique_value[unique_values[0]] = unique_values[0]
+        elif len(unique_values) == 1:
+            # another atom belonging to a fragment we already created a
+            # meta node for; make sure it agrees on the copied attributes
+            # (e.g. fragname) rather than silently ignoring a mismatch
+            meta_node = node_to_unique_value[unique_values[0]]
+            for attr in copy_attrs:
+                assert meta_graph.nodes[meta_node][attr] == molecule.nodes[node][attr], \
+                    (f"atom {node} has {attr}={molecule.nodes[node][attr]!r} but "
+                     f"fragment {unique_values[0]} was already created with "
+                     f"{attr}={meta_graph.nodes[meta_node][attr]!r}")
+        else:
+            if molecule.nodes[node].get('element', '*') != 'H':
+                squash.append(tuple(unique_values))
+
+    # now the squashed nodes are iterated
+    for unique_values in squash:
+        for u1, u2 in itertools.combinations(unique_values, r=2):
+            _add_or_increment_edge(meta_graph, node_to_unique_value[u1], node_to_unique_value[u2])
+
+    # finally we make edges between all nodes
+    for e1, e2 in molecule.edges:
+        uvalues_e1 = molecule.nodes[e1][unique_attr]
+        uvalues_e2 = molecule.nodes[e2][unique_attr]
+        if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
+            u1 = uvalues_e1[0]
+            u2 = uvalues_e2[0]
+            if u1 != u2:
+                _add_or_increment_edge(meta_graph, node_to_unique_value[u1], node_to_unique_value[u2])
+        else:
+            for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
+                n1 = node_to_unique_value[u1]
+                n2 = node_to_unique_value[u2]
+                if u1 != u2 and not meta_graph.has_edge(n1, n2):
+                    meta_graph.add_edge(n1, n2, order=1)
+    return meta_graph
+
+def annotate_neighbors_as_hash(molecule):
+    """
+    For each node in meta_graph annotate the
+    neighbouring fragments as hashes.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+    """
+    for node in molecule.nodes:
+        neighbor_hashs = []
+        for neigh in molecule.neighbors(node):
+            neighbor_hashs.append(nx.weisfeiler_lehman_graph_hash(molecule.nodes[neigh]['graph'],
+                                                                  node_attr='element',
+                                                                  edge_attr='order'))
+        nhash = hash(tuple(neighbor_hashs))
+        nx.set_node_attributes(molecule.nodes[node]['graph'], nhash, 'nhash')
+
+def annotate_bonding_operators(molecule, label='fragid'):
+    """
+    Given a labelled molecule figure out which bonds belong to
+    two different fragments and assign a unique bonding operator.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        the target molecule
+    label: collections.abc.Hashable
+        a label by which residues are marked
+
+    Returns
+    -------
+    networkx.Graph
+        the annotated graph
+    """
+    # we unset all existing bonding operators
+    nx.set_node_attributes(molecule, {n: [] for n in molecule.nodes}, 'bonding')
+
+    # next we loop over each edge in the meta_graph and see how.
+    # the connect in the real graph
+    op_counter = 0
+    for e1, e2 in nx.edge_dfs(molecule):
+        order = molecule.edges[(e1, e2)]['order']
+        # we have one intersection so the edge is in the same fragment
+        if set(molecule.nodes[e1][label]) & set(molecule.nodes[e2][label]):
+            continue
+        else:
+            if order == 1.5:
+                order = 1
+            op1 = f">{op_counter}{order}"
+            op2 = f"<{op_counter}{order}"
+
+            molecule.nodes[e1]['bonding'].append(op2)
+            molecule.nodes[e2]['bonding'].append(op1)
+            op_counter += 1
+    for node in molecule.nodes:
+        # here we deal with a squash operator
+        if len(molecule.nodes[node][label]) > 1 and molecule.nodes[node].get('element', '*') != 'H':
+            operator = f"!{op_counter}1"
+            molecule.nodes[node]['bonding'].append(operator)
+            op_counter += 1
+    return molecule

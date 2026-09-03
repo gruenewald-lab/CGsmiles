@@ -46,6 +46,11 @@ def test_write_fragments(input_string):
                         "{[#PE]=[#PMA]}",
                         # special triple cycle
                         "{[#A]#[#B]}",
+                        # ring-closure bond with a non-default order;
+                        # this path (the order symbol attached to a
+                        # ring-closure digit, rather than a plain
+                        # tree-edge) was previously untested
+                        "{[#A]=1[#B][#C]1}",
 ))
 def test_write_mol_graphs(input_string):
     mol_graph = read_cgsmiles(input_string)
@@ -57,7 +62,15 @@ def test_write_mol_graphs(input_string):
                         # smiple linear seqeunce
                         "{[#PEO][#PMMA][#PEO][#PMMA]}.{#PEO=[>]COC[<],#PMMA=[>]CC(C)[<]C(=O)OC}",
                         # something with ring
-                        "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}",))
+                        "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}",
+                        # virtual side (a meta node whose fragname has
+                        # no entry in fragment_dict) placed BEFORE the
+                        # real fragments -- the same fixture used to
+                        # reproduce the virtual-node fragid bug in
+                        # test_annotate_fragments, now round-tripped
+                        # through write_cgsmiles too
+                        "{[#TC4].[#SP4][#SP4]}.{#SP4=OC[$]C[$]O}",
+))
 def test_write_cgsmiles(input_string):
     resolver = MoleculeResolver.from_string(input_string)
     fragment_dicts = resolver.fragment_dicts
