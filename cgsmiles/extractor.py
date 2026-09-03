@@ -76,7 +76,7 @@ def satisfy_isomorphism(target, other_frag):
 
     Returns
     -------
-    iterator[dict]
+    :class:`collections.abc.Iterator`\[dict]
         one dict per isomorphism found, mapping each node of `target`
         to the corresponding node of `other_frag`
     """
