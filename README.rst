@@ -2,6 +2,37 @@
 Coarse-Grained SMILES (CGsmiles)
 ================================
 
+A line notation for representing molecules using multiple resolutions
+=======================================================================
+
+|CI| |Coverage| |Conda Version| |PyPI| |Python Version| |License|
+
+`Documentation <https://cgsmiles.readthedocs.io/en/latest/>`__ · `Installation <#installation>`__ · `Quick start <#quick-start>`__
+
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI
+   :target: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml
+   :alt: CI
+
+.. |Coverage| image:: https://coveralls.io/repos/github/gruenewald-lab/CGsmiles/badge.svg?branch=master
+    :target: https://coveralls.io/github/gruenewald-lab/CGsmiles?branch=master
+    :alt: Coverage
+
+.. |Conda Version| image:: https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Version
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: PyPI
+
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white&color=FFD43B&labelColor=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: Python Version
+
+.. |License| image:: https://img.shields.io/badge/license-Apache--2.0-2E86AB?style=flat-square
+   :target: ./LICENSE
+   :alt: License
+
 Overview
 ========
 
