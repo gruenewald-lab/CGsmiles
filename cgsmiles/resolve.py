@@ -1,5 +1,7 @@
 import re
 import copy
+import heapq
+import logging
 from collections import defaultdict
 import numpy as np
 import networkx as nx
@@ -11,6 +13,8 @@ from .graph_utils import (merge_graphs,
                           set_atom_names_atomistic)
 from .pysmiles_utils import (rebuild_h_atoms,
                              annotate_ez_isomers_cgsmiles)
+
+logger = logging.getLogger(__name__)
 
 def compatible(left, right, left_data={}, right_data={}, legacy=True):
     """
@@ -132,6 +136,167 @@ def admissible_matches(source, target, bond_attribute="bonding", legacy=True):
                                   legacy=legacy):
                         yield ((source_node, target_node),
                                (bond_source, bond_target))
+
+
+# how many search steps the descriptor backtracking may take before it
+# gives up and keeps the greedy assignment
+DESCRIPTOR_SEARCH_BUDGET = 20000
+
+
+class _SearchExhausted(Exception):
+    """
+    Raised when the descriptor search runs out of its step budget.
+    """
+
+
+def _descriptor_pools(graphs, bond_attribute="bonding"):
+    """
+    Copy the bonding descriptors out of the fragment graphs, so that a
+    search can consume and restore them without touching the molecule.
+
+    Parameters
+    ----------
+    graphs: dict[collections.abc.Hashable, networkx.Graph]
+        the fragment graph per meta node
+    bond_attribute: `collections.abc.Hashable`
+        under which attribute are the bonding descriptors stored
+
+    Returns
+    -------
+    dict[collections.abc.Hashable, dict[collections.abc.Hashable, list[str]]]
+        the descriptors still available per meta node and atom
+    """
+    return {node: {atom: list(descrpt) for atom, descrpt
+                   in nx.get_node_attributes(graph, bond_attribute).items()}
+            for node, graph in graphs.items()}
+
+
+def _pair_options(pools, graphs, source, target, legacy=True):
+    """
+    All distinct descriptor pairs by which the meta nodes `source` and
+    `target` could be bonded, given what is left in `pools`. Repeats of
+    one descriptor on the same atom are interchangeable and reported
+    once.
+
+    Parameters
+    ----------
+    pools: dict
+        as returned by `_descriptor_pools`
+    graphs: dict[collections.abc.Hashable, networkx.Graph]
+        the fragment graph per meta node
+    source: collections.abc.Hashable
+    target: collections.abc.Hashable
+    legacy: bool
+        which syntax convention to use when matching bonding
+        descriptors (legacy=BigSmiles)
+
+    Returns
+    -------
+    list[((collections.abc.Hashable, collections.abc.Hashable), (str, str))]
+        the atoms as well as bonding descriptors
+    """
+    options = []
+    seen = set()
+    for source_atom, source_descrpt in pools[source].items():
+        source_data = graphs[source].nodes[source_atom]
+        for target_atom, target_descrpt in pools[target].items():
+            target_data = graphs[target].nodes[target_atom]
+            for bond_source in source_descrpt:
+                for bond_target in target_descrpt:
+                    key = (source_atom, target_atom, bond_source, bond_target)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    if compatible(bond_source, bond_target,
+                                  source_data, target_data,
+                                  legacy=legacy):
+                        options.append(((source_atom, target_atom),
+                                        (bond_source, bond_target)))
+    return options
+
+
+def _search_descriptor_match(demands, graphs, pools, legacy=True,
+                             max_skips=0, budget=DESCRIPTOR_SEARCH_BUDGET):
+    """
+    Find a descriptor pair for every demand, leaving at most `max_skips`
+    of them unmatched.
+
+    A demand is one bond a meta edge asks for; an edge of order n
+    contributes n demands. Descriptors are consumed, so the demands
+    compete for them and serving one can starve another. The search
+    takes the most constrained demand first and backtracks over the
+    pairs, which the greedy pass cannot do.
+
+    Parameters
+    ----------
+    demands: list[(collections.abc.Hashable, collections.abc.Hashable)]
+        the meta nodes each demand connects
+    graphs: dict[collections.abc.Hashable, networkx.Graph]
+        the fragment graph per meta node
+    pools: dict
+        as returned by `_descriptor_pools`; restored on return
+    legacy: bool
+        which syntax convention to use when matching bonding
+        descriptors (legacy=BigSmiles)
+    max_skips: int
+        how many demands may be left unmatched
+    budget: int
+        how many search steps to take before giving up
+
+    Returns
+    -------
+    list[(int, (collections.abc.Hashable, collections.abc.Hashable), (str, str))] or None
+        the demand index, atoms and descriptors per assignment, or None
+        if no assignment within `max_skips` was found
+
+    Raises
+    ------
+    _SearchExhausted
+        if the search takes more than `budget` steps
+    """
+    steps = 0
+
+    def _recurse(remaining, skips_left):
+        nonlocal steps
+        if not remaining:
+            return []
+        steps += 1
+        if steps > budget:
+            raise _SearchExhausted
+
+        # most constrained demand first; a demand with no option at all
+        # settles the choice immediately
+        choice = None
+        for demand_idx in remaining:
+            source, target = demands[demand_idx]
+            options = _pair_options(pools, graphs, source, target, legacy=legacy)
+            if choice is None or len(options) < len(choice[1]):
+                choice = (demand_idx, options)
+            if not options:
+                break
+
+        demand_idx, options = choice
+        rest = [idx for idx in remaining if idx != demand_idx]
+        source, target = demands[demand_idx]
+        for atoms, bonding in options:
+            source_pool = pools[source][atoms[0]]
+            target_pool = pools[target][atoms[1]]
+            source_at = source_pool.index(bonding[0])
+            target_at = target_pool.index(bonding[1])
+            del source_pool[source_at]
+            del target_pool[target_at]
+            found = _recurse(rest, skips_left)
+            source_pool.insert(source_at, bonding[0])
+            target_pool.insert(target_at, bonding[1])
+            if found is not None:
+                return [(demand_idx, atoms, bonding)] + found
+
+        if skips_left:
+            return _recurse(rest, skips_left - 1)
+        return None
+
+    return _recurse(list(range(len(demands))), max_skips)
+
 
 def _adjust_hcount(molecule):
     """
@@ -364,10 +529,19 @@ class MoleculeResolver:
         otherwise consume the only pair the latter could have used, and
         that edge then ends up without a bond at all.
 
-        This ordering only helps where labels tell descriptors apart,
-        so it is applied for the legacy (BigSmiles) convention. Without
-        it nearly every pair is compatible and the original order is
-        kept.
+        The ordering alone is not enough: several meta edges can tie on
+        how many pairs they admit, and the first pair tried for whichever
+        goes first may be the wrong one. When the ordering leaves a meta
+        edge unmatched the pairs are therefore searched with
+        backtracking, for an assignment that leaves fewer edges without a
+        bond. Some edges legitimately have no pair, because a squash
+        operator realises them by merging two fragments rather than by
+        bonding them, so the search looks for the fewest unmatched edges
+        rather than insisting on none.
+
+        Both only help where labels tell descriptors apart, so they are
+        applied for the legacy (BigSmiles) convention. Without labels
+        nearly every pair is compatible and the original order is kept.
 
         Parameters
         ----------
@@ -382,6 +556,76 @@ class MoleculeResolver:
             order = self.meta_graph.edges[(prev_node, node)]["order"]
             demands.extend([(prev_node, node)] * order)
 
+        # only meta nodes that ask for a bond; a virtual particle has no
+        # fragment at the finer resolution and only zero order edges
+        graphs = {node: self.meta_graph.nodes[node]['graph']
+                  for demand in demands for node in demand}
+
+        assignments = self._greedy_descriptor_match(demands, graphs)
+        missing = len(demands) - len(assignments)
+        if missing and self.legacy:
+            # the ordering picked the right demand but may have taken the
+            # wrong pair within it; search over the pairs for something
+            # that leaves fewer demands unmatched
+            for max_skips in range(0, missing):
+                try:
+                    found = _search_descriptor_match(demands, graphs,
+                                                     _descriptor_pools(graphs),
+                                                     legacy=self.legacy,
+                                                     max_skips=max_skips)
+                except _SearchExhausted:
+                    logger.debug("descriptor search ran out of steps; "
+                                 "keeping the greedy assignment")
+                    break
+                if found is not None:
+                    assignments = found
+                    break
+
+        self._apply_descriptor_match(assignments, demands, graphs)
+
+    def _greedy_descriptor_match(self, demands, graphs):
+        """
+        Assign descriptor pairs to demands without backtracking, taking
+        the most constrained demand first.
+
+        Parameters
+        ----------
+        demands: list[(collections.abc.Hashable, collections.abc.Hashable)]
+            the meta nodes each demand connects
+        graphs: dict[collections.abc.Hashable, networkx.Graph]
+            the fragment graph per meta node
+
+        Returns
+        -------
+        list[(int, (collections.abc.Hashable, collections.abc.Hashable), (str, str))]
+            the demand index, atoms and descriptors per assignment
+        """
+        pools = _descriptor_pools(graphs)
+        assignments = []
+
+        def _take(idx, atoms, bonding):
+            prev_node, node = demands[idx]
+            assignments.append((idx, atoms, bonding))
+            pools[prev_node][atoms[0]].remove(bonding[0])
+            pools[node][atoms[1]].remove(bonding[1])
+
+        if not self.legacy:
+            # without labels almost every pair is compatible, so there is
+            # little to order by; serve the demands in the order the meta
+            # graph stores them and take the first pair that fits
+            for idx, (prev_node, node) in enumerate(demands):
+                options = _pair_options(pools, graphs, prev_node, node,
+                                        legacy=False)
+                if options:
+                    _take(idx, *options[0])
+            return assignments
+
+        # Take the most constrained demand first. Descriptors are a shared
+        # resource, so serving a demand that had a choice before one that
+        # had none can consume the only pair the latter could have used, in
+        # which case that demand ends up without a bond. Ties keep the
+        # original edge order.
+
         # which demands touch a given meta node, so that only those have to
         # be reconsidered after that node gives up a descriptor
         touching = defaultdict(set)
@@ -391,52 +635,67 @@ class MoleculeResolver:
 
         matches = {}
         pending = set(range(len(demands)))
+        # heap of (number of options, demand); entries are never removed,
+        # they are recognised as out of date when popped
+        queue = []
         stale = set(pending)
         while pending:
             for idx in stale & pending:
                 prev_node, node = demands[idx]
-                matches[idx] = list(
-                    admissible_matches(self.meta_graph.nodes[prev_node]['graph'],
-                                       self.meta_graph.nodes[node]['graph'],
-                                       legacy=self.legacy))
-                if not matches[idx]:
-                    # matching only ever consumes descriptors, so a meta edge
+                matches[idx] = _pair_options(pools, graphs, prev_node, node,
+                                             legacy=True)
+                if matches[idx]:
+                    heapq.heappush(queue, (len(matches[idx]), idx))
+                else:
+                    # matching only ever consumes descriptors, so a demand
                     # without an admissible pair now will not gain one later
                     pending.discard(idx)
             stale.clear()
-            if not pending:
+
+            idx = None
+            while queue:
+                n_options, candidate = heapq.heappop(queue)
+                if candidate in pending and n_options == len(matches[candidate]):
+                    idx = candidate
+                    break
+            if idx is None:
                 break
 
-            if self.legacy:
-                # Take the most constrained meta edge first. Descriptors are
-                # a shared resource, so serving an edge that had a choice
-                # before one that had none can consume the only pair the
-                # latter could have used, in which case that edge silently
-                # ends up without a bond. Ties keep the original edge order.
-                idx = min(pending, key=lambda key: (len(matches[key]), key))
-            else:
-                # without the labels almost every pair is compatible, so
-                # there is little to order by; keep the original behaviour
-                idx = min(pending)
-
-            edge, bonding = matches[idx][0]
             pending.discard(idx)
-
+            _take(idx, *matches[idx][0])
             prev_node, node = demands[idx]
-            prev_graph = self.meta_graph.nodes[prev_node]['graph']
-            node_graph = self.meta_graph.nodes[node]['graph']
-            # remove used bonding descriptors
-            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
-            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
             stale |= (touching[prev_node] | touching[node]) & pending
+
+        return assignments
+
+    def _apply_descriptor_match(self, assignments, demands, graphs):
+        """
+        Consume the assigned descriptors and add the bonds they describe
+        to the molecule.
+
+        Parameters
+        ----------
+        assignments: list[(int, (collections.abc.Hashable, collections.abc.Hashable), (str, str))]
+            as returned by `_greedy_descriptor_match`
+        demands: list[(collections.abc.Hashable, collections.abc.Hashable)]
+            the meta nodes each demand connects
+        graphs: dict[collections.abc.Hashable, networkx.Graph]
+            the fragment graph per meta node
+        """
+        for idx, atoms, bonding in sorted(assignments, key=lambda item: item[0]):
+            prev_node, node = demands[idx]
+            # remove used bonding descriptors
+            graphs[prev_node].nodes[atoms[0]]['bonding'].remove(bonding[0])
+            graphs[node].nodes[atoms[1]]['bonding'].remove(bonding[1])
 
             # bonding descriptors are assumed to have bonding order 1
             # unless they are specifically annotated
             order = int(bonding[0][-1])
-            if self.molecule.nodes[edge[0]].get('aromatic', False) and\
-               self.molecule.nodes[edge[1]].get('aromatic', False):
+            if self.molecule.nodes[atoms[0]].get('aromatic', False) and\
+               self.molecule.nodes[atoms[1]].get('aromatic', False):
                 order = 1.5
-            self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+            self.molecule.add_edge(atoms[0], atoms[1],
+                                   bonding=bonding, order=order)
 
     def squash_atoms(self):
         """

@@ -435,6 +435,15 @@ def _unrealised_meta_edges(meta_graph, molecule):
                         "{#OHa=[<a]O,#OHb=[>a]O,#PEO=[>a]COC[<a]}",
                         # a ring of one repeating bead
                         "{[#B]1[#B][#B]1}.{#B=[>1]CC[<1]}",
+                        # These two need more than an ordering. Every meta
+                        # edge here ties on how many pairs it admits, so the
+                        # order cannot tell them apart; the first pair tried
+                        # for the edge that goes first is the wrong one and
+                        # only backtracking recovers.
+                        "{[#F0]([#F2])[#F1]}."
+                        "{#F0=[<a]CC[>a],#F1=[>a]CCCC[>a],#F2=[<a]CCCC[>a]}",
+                        "{[#F0][#F1][#F2]}."
+                        "{#F0=[<a]CC([<a])C[<a],#F1=[>a]CC[<a],#F2=[>a]COC[<a]}",
 ))
 def test_descriptor_matching_order(cgsmiles_str):
     """
