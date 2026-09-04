@@ -1,4 +1,5 @@
 import re
+from collections import Counter
 import pytest
 import networkx as nx
 from cgsmiles import MoleculeResolver
@@ -396,3 +397,62 @@ def test_syntax_errors(cgsmiles_str, error_message, error_type):
         resolver = MoleculeResolver.from_string(cgsmiles_str)
         cg_mol, aa_mol = resolver.resolve()
         assert e_message == error_message
+
+def _unrealised_meta_edges(meta_graph, molecule):
+    """
+    Meta edges that ask for a bond but have none at the higher
+    resolution. An atom that belongs to both fragments counts, because a
+    squash operator realises an edge by merging rather than by bonding.
+    """
+    crossing = Counter()
+    for low, high in molecule.edges:
+        low_ids = set(molecule.nodes[low]['fragid'])
+        high_ids = set(molecule.nodes[high]['fragid'])
+        if low_ids.isdisjoint(high_ids):
+            for source in low_ids:
+                for target in high_ids:
+                    crossing[frozenset((source, target))] += 1
+    for node in molecule.nodes:
+        fragids = molecule.nodes[node]['fragid']
+        for idx, source in enumerate(fragids):
+            for target in fragids[idx + 1:]:
+                crossing[frozenset((source, target))] += 1
+    return [edge for edge in meta_graph.edges
+            if meta_graph.edges[edge].get('order', 1) > 0
+            and not crossing[frozenset(edge)]]
+
+@pytest.mark.parametrize('cgsmiles_str',(
+                        # A branch point whose two neighbours each accept
+                        # only one of its descriptors. Serving the B-B edge
+                        # first, as insertion order would, takes the pair
+                        # the A and C edges needed.
+                        "{[#B]([#B][#C])[#A]}.{#A=[<1]CC,#B=[>1]CC[<1],#C=[>1]CC}",
+                        # same, with a longer arm
+                        "{[#B]([#B][#B][#C])[#A]}.{#A=[<1]CC,#B=[>1]CC[<1],#C=[>1]CC}",
+                        # a branched PEO with directed connectors and one
+                        # end group of either direction
+                        "{[#PEO]([#PEO][#OHb])[#OHa]}."
+                        "{#OHa=[<a]O,#OHb=[>a]O,#PEO=[>a]COC[<a]}",
+                        # a ring of one repeating bead
+                        "{[#B]1[#B][#B]1}.{#B=[>1]CC[<1]}",
+                        # These two need more than an ordering. Every meta
+                        # edge here ties on how many pairs it admits, so the
+                        # order cannot tell them apart; the first pair tried
+                        # for the edge that goes first is the wrong one and
+                        # only backtracking recovers.
+                        "{[#F0]([#F2])[#F1]}."
+                        "{#F0=[<a]CC[>a],#F1=[>a]CCCC[>a],#F2=[<a]CCCC[>a]}",
+                        "{[#F0][#F1][#F2]}."
+                        "{#F0=[<a]CC([<a])C[<a],#F1=[>a]CC[<a],#F2=[>a]COC[<a]}",
+))
+def test_descriptor_matching_order(cgsmiles_str):
+    """
+    A fragment that carries both ends of one descriptor label serves
+    several meta edges, and only some of the pairings satisfy all of
+    them. Matching has to serve the most constrained meta edge first,
+    otherwise a less constrained one consumes the pair another edge
+    needed and that edge ends up without a bond at all.
+    """
+    meta_graph, molecule = MoleculeResolver.from_string(cgsmiles_str).resolve()
+    assert not _unrealised_meta_edges(meta_graph, molecule)
+    assert nx.number_connected_components(molecule) == 1
