@@ -1,5 +1,6 @@
 import re
 import copy
+from collections import defaultdict
 import numpy as np
 import networkx as nx
 from .read_cgsmiles import read_cgsmiles
@@ -88,6 +89,35 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
     LookupError
         if no match is found
     """
+    for match in admissible_matches(source, target,
+                                    bond_attribute=bond_attribute,
+                                    legacy=legacy):
+        return match
+    raise LookupError
+
+
+def admissible_matches(source, target, bond_attribute="bonding", legacy=True):
+    """
+    Yield every pair of matching bonding descriptors by which `source`
+    and `target` could be connected, in the order in which
+    `match_bonding_descriptors` considers them.
+
+    Parameters
+    ----------
+    source: networkx.Graph
+    target: networkx.Graph
+    bond_attribute: `collections.abc.Hashable`
+        under which attribute are the bonding descriptors
+        stored.
+    legacy: bool
+        which syntax convention to use when matching bonding
+        descriptors (legacy=BigSmiles)
+
+    Yields
+    ------
+    ((collections.abc.Hashable, collections.abc.Hashable), (str, str))
+        the nodes as well as bonding descriptors
+    """
     source_nodes = nx.get_node_attributes(source, bond_attribute)
     target_nodes = nx.get_node_attributes(target, bond_attribute)
     for source_node, bond_sources in source_nodes.items():
@@ -100,9 +130,8 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
                                   source_node_data,
                                   target_node_data,
                                   legacy=legacy):
-                        return ((source_node, target_node),
-                                (bond_source, bond_target))
-    raise LookupError
+                        yield ((source_node, target_node),
+                               (bond_source, bond_target))
 
 def _adjust_hcount(molecule):
     """
@@ -326,34 +355,88 @@ class MoleculeResolver:
         Later unconsumed descriptors are discarded and the valence
         filled in using hydrogen atoms in case of an atomistic molecule.
 
+        Descriptors are a shared resource: a fragment that carries both
+        ends of one label serves every meta edge that asks for it. The
+        meta edges are therefore served most constrained first, that is
+        the edge with the fewest matching descriptor pairs goes first,
+        rather than in the order the meta graph happens to store them.
+        Serving an edge that had a choice before one that had none can
+        otherwise consume the only pair the latter could have used, and
+        that edge then ends up without a bond at all.
+
+        This ordering only helps where labels tell descriptors apart,
+        so it is applied for the legacy (BigSmiles) convention. Without
+        it nearly every pair is compatible and the original order is
+        kept.
+
         Parameters
         ----------
         all_atom: bool
             if the high resolution level graph has all-atom resolution
             default: False
         """
-        edges = list(self.meta_graph.edges)
-        for prev_node, node in edges:
-            for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
-                prev_graph = self.meta_graph.nodes[prev_node]['graph']
-                node_graph = self.meta_graph.nodes[node]['graph']
-                try:
-                    edge, bonding = match_bonding_descriptors(prev_graph,
-                                                              node_graph,
-                                                              legacy=self.legacy)
-                except LookupError:
-                    continue
-                # remove used bonding descriptors
-                prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
-                node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+        # one demand per bond a meta edge asks for; an edge of order n
+        # needs n descriptor pairs
+        demands = []
+        for prev_node, node in self.meta_graph.edges:
+            order = self.meta_graph.edges[(prev_node, node)]["order"]
+            demands.extend([(prev_node, node)] * order)
 
-                # bonding descriptors are assumed to have bonding order 1
-                # unless they are specifically annotated
-                order = int(bonding[0][-1])
-                if self.molecule.nodes[edge[0]].get('aromatic', False) and\
-                   self.molecule.nodes[edge[1]].get('aromatic', False):
-                    order = 1.5
-                self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
+        # which demands touch a given meta node, so that only those have to
+        # be reconsidered after that node gives up a descriptor
+        touching = defaultdict(set)
+        for idx, (prev_node, node) in enumerate(demands):
+            touching[prev_node].add(idx)
+            touching[node].add(idx)
+
+        matches = {}
+        pending = set(range(len(demands)))
+        stale = set(pending)
+        while pending:
+            for idx in stale & pending:
+                prev_node, node = demands[idx]
+                matches[idx] = list(
+                    admissible_matches(self.meta_graph.nodes[prev_node]['graph'],
+                                       self.meta_graph.nodes[node]['graph'],
+                                       legacy=self.legacy))
+                if not matches[idx]:
+                    # matching only ever consumes descriptors, so a meta edge
+                    # without an admissible pair now will not gain one later
+                    pending.discard(idx)
+            stale.clear()
+            if not pending:
+                break
+
+            if self.legacy:
+                # Take the most constrained meta edge first. Descriptors are
+                # a shared resource, so serving an edge that had a choice
+                # before one that had none can consume the only pair the
+                # latter could have used, in which case that edge silently
+                # ends up without a bond. Ties keep the original edge order.
+                idx = min(pending, key=lambda key: (len(matches[key]), key))
+            else:
+                # without the labels almost every pair is compatible, so
+                # there is little to order by; keep the original behaviour
+                idx = min(pending)
+
+            edge, bonding = matches[idx][0]
+            pending.discard(idx)
+
+            prev_node, node = demands[idx]
+            prev_graph = self.meta_graph.nodes[prev_node]['graph']
+            node_graph = self.meta_graph.nodes[node]['graph']
+            # remove used bonding descriptors
+            prev_graph.nodes[edge[0]]['bonding'].remove(bonding[0])
+            node_graph.nodes[edge[1]]['bonding'].remove(bonding[1])
+            stale |= (touching[prev_node] | touching[node]) & pending
+
+            # bonding descriptors are assumed to have bonding order 1
+            # unless they are specifically annotated
+            order = int(bonding[0][-1])
+            if self.molecule.nodes[edge[0]].get('aromatic', False) and\
+               self.molecule.nodes[edge[1]].get('aromatic', False):
+                order = 1.5
+            self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
 
     def squash_atoms(self):
         """
