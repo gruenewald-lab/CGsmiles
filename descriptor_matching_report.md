@@ -92,6 +92,55 @@ would have found it:
 
 Assign the four forced ones, and the fifth collapses to one option too.
 
+The dropped bonds are the visible half of this. The same arbitrariness has
+a second consequence that leaves no trace at all: when the descriptors do
+stretch to cover every edge, *which* pairing gets used decides which
+isomer comes out.
+
+```
+{[#F0][#F1][#F2]}.{#F0=[>a]CC[>a],#F1=[<a]CCO[<a],#F2=[>a]COC[<a]}
+```
+
+`#F1` offers a carbon and an oxygen as attachment points and puts `[<a]`
+on both, so nothing in the string says which neighbour takes which:
+
+| | `F0–F1` | `F1–F2` |
+|---|---|---|
+| insertion order | `C–C` | `O–C` |
+| most constrained first | `C–O` | `C–C` |
+
+22 atoms in one piece either way, every meta edge bonded, and two
+different constitutional isomers — an ether linkage on one side or the
+other. The same swap shows up with undirected descriptors:
+
+```
+{[#F0][#F1][#F2]}.{#F0=[$a]CC([$a])C[$a],#F1=[$a]CCO[$a],#F2=[$a]CCO[$a]}
+    insertion order          F0:C-F1:C, F1:O-F2:C
+    most constrained first   F0:C-F1:O, F1:C-F2:C
+```
+
+and inside a meta ring, where it moves two of the three bonds:
+
+```
+{[#F0]1[#F1][#F2]1}.{#F0=[>a]CC([<a])C[>a],#F1=[<a]CCO[>a],#F2=[<a]cc[>a]}
+    insertion order          F0:C-F1:C, F0:C-F2:C, F1:O-F2:C
+    most constrained first   F0:C-F1:O, F0:C-F2:C, F1:C-F2:C
+```
+
+Neither reading is more correct than the other. The string
+underdetermines the molecule and both versions pick arbitrarily; they
+just happen to pick differently. Over a corpus of 6000 generated strings,
+221 resolved completely under both versions and 28 of those came out
+non-isomorphic.
+
+This is why §4 claims only that fewer edges are left unbonded. Ordering
+and backtracking decide *whether* every edge gets a bond; they do not and
+cannot decide which of several equally valid pairings was meant. The
+triazine from the syntax reference,
+`{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cn[$]}`, resolves identically under both
+versions — `F0:C-F1:C`, `F0:N-F2:C`, `F1:N-F2:N`, a spurious C–C and N–N
+in a ring that should alternate. That is the gap §6.3 covers.
+
 ### 2.3 An unsatisfiable edge was dropped in silence
 
 ```python
