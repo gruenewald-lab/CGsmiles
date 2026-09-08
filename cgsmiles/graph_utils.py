@@ -118,15 +118,33 @@ def _keyfunc(graph, node_idx, attrs):
     """
     return [graph.nodes[node_idx].get(attr) for attr in attrs]
 
-def annotate_fragments(meta_graph, molecule):
+def annotate_fragments(meta_graph, molecule, meta_node_attr='fragid'):
     """
     Given a low resolution graph and a high resolution graph
     figure out which fragments belong to the nodes on the low
-    resolution graph. Note that the nodes in the high resolution
-    graph need to be annotated with 'fragid' that needs to match
-    the lower resolution graph nodes.
+    resolution graph and annotate the corresponding subgraph
+    under the 'graph' attribute.
+
+    Note that the nodes in the high resolution graph need to
+    be annotated with `meta_node_attr` that needs to match
+    the lower resolution graph nodes indices.
+
+    Paramters
+    ---------
+    meta_graph: networkx.Graph
+        the lower resolution graph
+    molecule: networkx.Graph
+        the higher resolution graph
+    meta_node_attr: abc.hashable
+        the attribute on molecule that stores the node keys
+        matching meta_graph
+
+    Returns
+    -------
+    networkx.Graph
+        the annotated lower resolution graph
     """
-    node_to_fragids = nx.get_node_attributes(molecule, 'fragid')
+    node_to_fragids = nx.get_node_attributes(molecule, meta_node_attr)
 
     fragid_to_node = defaultdict(list)
     for node, fragids in node_to_fragids.items():

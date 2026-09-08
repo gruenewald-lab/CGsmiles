@@ -128,16 +128,31 @@ class MoleculeFragmentExtractor():
     into one shared fragment definition whenever they are graph-
     isomorphic and not adjacent to a branch point in the meta graph;
     remaining instances are disambiguated with a letter suffix.
+
+    Condensing only makes the written string shorter. Pass
+    `group_fragments=False` to switch it off, so that every instance
+    keeps its own definition: more verbose, but no bonding descriptor
+    label is then shared between several meta edges.
     """
 
-    def __init__(self, frag_label='fragname'):
+    def __init__(self,
+                 frag_label='fragname',
+                 unique_attr='fragid',
+                 group_fragments=False):
         """
         Parameters
         ----------
         frag_label: str
             the name by which fragments are labeled
+        unique_attr: abc.hashable
+            the attribute that identifies meta nodes. Default: fragid
+        group_fragments: bool
+            whether isomorphic instances of a fragment are condensed
+            into a single shared definition. Default: True
         """
         self.frag_label = frag_label
+        self.unique_attr = unique_attr
+        self.group_fragments = group_fragments
         # dynamic variables
         self.fragment_dict = {}
         self.pre_fragment_dict = defaultdict(list)
@@ -269,63 +284,136 @@ class MoleculeFragmentExtractor():
             meta_node_to_fragname[node] = (label, len(self.pre_fragment_dict[label])-1)
         self.fragname_to_meta_node = {value: key for key, value in meta_node_to_fragname.items()}
 
-    def condense_fragments(self, meta_graph):
+    def _find_condensation_target(self, meta_graph, fragname, idx, target,
+                                  fnode, temp_frags):
         """
-        Group the fragment instances collected per fragname
-        (`self.pre_fragment_dict`) into as few distinct fragment
-        definitions as possible. Each instance is compared, in
-        order, against previously accepted instances sharing its
-        fragname; it is relabeled onto the first isomorphic match
-        found (`_are_isomorphic`) rather than becoming its own
-        fragment, unless doing so would be ambiguous because it or
-        the candidate it's compared against neighbors a branch point
-        (a meta-graph node of degree > 2). The first instance of a
-        fragname always keeps the bare name; every later instance
-        that isn't condensed gets a letter suffix from
-        `_suffix_generator`, skipping any suffix that collides with a
-        distinct fragname already present elsewhere. Populates
-        `self.fragment_dict` and updates `meta_graph`'s fragname
-        labels in place.
+        Find an already accepted instance that `target` can share a
+        fragment definition with.
+
+        An instance is compared, in order, against the instances
+        accepted so far under the same fragname. A candidate is
+        rejected if it or `target` neighbours a branch point (a meta
+        node of degree > 2), because condensing across one is
+        ambiguous, and otherwise accepted if the two are isomorphic
+        in the sense of `_are_isomorphic`.
+
+        Parameters
+        ----------
+        meta_graph: networkx.Graph
+        fragname: str
+            the shared fragname the instances were collected under
+        idx: int
+            index of `target` in `self.pre_fragment_dict[fragname]`
+        target: networkx.Graph
+            the fragment graph looking for a definition
+        fnode: collections.abc.Hashable
+            the meta node `target` belongs to
+        temp_frags: dict[str, (networkx.Graph, collections.abc.Hashable)]
+            the instances accepted so far under this fragname
+
+        Returns
+        -------
+        str or None
+            the name of the definition to condense onto, or None if
+            `target` needs one of its own
+        """
+        for other_fragname, (other_frag, gnode) in temp_frags.items():
+            # if any connect to a fragment with degree larger than 2
+            # we need to separate them
+            common = set(meta_graph.neighbors(gnode)) | set(meta_graph.neighbors(fnode))
+            if any(meta_graph.degree(node) > 2 for node in common):
+                continue
+            if self._are_isomorphic(target,
+                                    fragname,
+                                    idx,
+                                    other_frag,
+                                    other_fragname,
+                                    meta_graph):
+                return other_fragname
+        return None
+
+    def _register_fragment(self, meta_graph, fragname, idx, target, fnode,
+                           temp_frags, suffixes):
+        """
+        Generate a unique label for fragments that occur more than once
+        in the molecule.
+
+        The first instance of a fragname keeps the bare name; every
+        later one gets a letter suffix from `suffixes`, skipping any
+        suffix that collides with a distinct fragname already present
+        elsewhere. Records the new label in `temp_frags` and writes the
+        chosen name onto its meta node.
+
+        Parameters
+        ----------
+        meta_graph: networkx.Graph
+            the meta graph whose fragname label is updated in place
+        fragname: str
+            the shared fragname the instances were collected under
+        idx: int
+            index of `target` in `self.pre_fragment_dict[fragname]`
+        target: networkx.Graph
+            the fragment graph being registered
+        fnode: collections.abc.Hashable
+            the meta node `target` belongs to
+        temp_frags: dict[str, (networkx.Graph, collections.abc.Hashable)]
+            the instances accepted so far under this fragname; updated
+            in place
+        suffixes: collections.abc.Iterator
+            the suffix generator for this fragname
+        """
+        if idx == 0:
+            target_name = fragname
+        else:
+            while True:
+                target_name = fragname + next(suffixes)
+                if target_name not in self.pre_fragment_dict:
+                    break
+        temp_frags[target_name] = (target, fnode)
+        meta_node = self.fragname_to_meta_node[(fragname, idx)]
+        meta_graph.nodes[meta_node][self.frag_label] = target_name
+
+    def canonicalize_fragment_list(self, meta_graph):
+        """
+        Turn the fragment instances collected per fragname
+        (`self.pre_fragment_dict`) into fragment definitions.
+
+        With `self.group_fragments`, which is currently experimental,
+        an instance is condensed onto an earlier isomorphic fragment
+        wherever that is unambiguous (`_find_condensation_target`),
+        so that as few fragments as possible are returned.
+
+        In the current default setting, all fragments corresponding to
+        a coarse node get their own definition, which results in more
+        verbose strings, which however are guranteed to resolve to the
+        correct molecule.
+
+        Either way every instance that does not condense onto another
+        is named and recorded by `_register_fragment`, so this
+        populates `self.fragment_dict` and updates `meta_graph`'s
+        fragname labels in place in both modes.
 
         Parameters
         ----------
         meta_graph: networkx.Graph
             the meta graph whose node fragname labels get updated in
-            place to reflect any condensation
+            place to reflect the naming
         """
         for fragname, fraglist in self.pre_fragment_dict.items():
             temp_frags = {}
             suffixes = _suffix_generator()
             for idx, (target, fnode) in enumerate(fraglist):
-                for other_fragname, (other_frag, gnode) in temp_frags.items():
-                    # if any connect to a fragment with degree larger than 2
-                    # we need to separate them
-                    common = set(meta_graph.neighbors(gnode)) | set(meta_graph.neighbors(fnode))
-                    if any(meta_graph.degree(node) > 2 for node in common):
-                        continue
-                    are_iso = self._are_isomorphic(target,
-                                                   fragname,
-                                                   idx,
-                                                   other_frag,
-                                                   other_fragname,
-                                                   meta_graph)
-                    if are_iso:
-                        break
-                else:
-                    # the first fragment with this fragname keeps the bare
-                    # name; every later, non-isomorphic one gets a letter
-                    # suffix, skipping any suffix that happens to collide
-                    # with a distinct fragname already present elsewhere
-                    if idx == 0:
-                        target_name = fragname
-                    else:
-                        while True:
-                            target_name = fragname + next(suffixes)
-                            if target_name not in self.pre_fragment_dict:
-                                break
-                    temp_frags[target_name] = (target, fnode)
-                    meta_node = self.fragname_to_meta_node[(fragname, idx)]
-                    meta_graph.nodes[meta_node][self.frag_label] = target_name
+                condensed_onto = None
+                if self.group_fragments:
+                    condensed_onto = self._find_condensation_target(meta_graph,
+                                                                    fragname,
+                                                                    idx,
+                                                                    target,
+                                                                    fnode,
+                                                                    temp_frags)
+                if condensed_onto is None:
+                    self._register_fragment(meta_graph, fragname, idx, target,
+                                            fnode, temp_frags, suffixes)
 
             self.fragment_dict.update({fname: graph for fname, (graph,_) in temp_frags.items()})
 
@@ -333,10 +421,13 @@ class MoleculeFragmentExtractor():
         """
         Given a meta graph whose nodes each carry a 'graph' (the
         fragment's own atom-level subgraph) and a `self.frag_label`
-        attribute, collect and condense those fragment graphs into
-        the smallest set of distinct fragment definitions that can
-        reproduce the molecule, and make sure the bonding operators
-        used across them are mutually consistent.
+        attribute, turn those fragment graphs into a set of fragment
+        definitions that can reproduce the molecule, and make sure the
+        bonding operators used across them are mutually consistent.
+
+        With `self.group_fragments` the set is made as small as the
+        condensation allows; without it each instance keeps its own
+        definition.
 
         Parameters
         ----------
@@ -359,12 +450,12 @@ class MoleculeFragmentExtractor():
         # first me make a list of all fragment graphs grouped
         # by common frag_labels
         self.collect_all_fragments(meta_graph)
-        # Now we do some condensing of the fragments;
-        # If a fragment is isomorphic to one or more
-        # fragments in the list & all the neighboring fragments
-        # are the same, we can savely regard them as one fragment.
-        # Thus we collect them in the fragment_dict.
-        self.condense_fragments(meta_graph)
+        # Now we name the fragments and collect them in the
+        # fragment_dict. Unless grouping is switched off, a fragment
+        # that is isomorphic to one or more fragments in the list and
+        # whose neighboring fragments are the same can savely be
+        # regarded as the same fragment, and is condensed onto it.
+        self.canonicalize_fragment_list(meta_graph)
         # Finally, we make sure the bonding operators are
         # consistent across the fragment list
         self._relabel_bonding_operators()
@@ -374,10 +465,12 @@ class MoleculeFragmentExtractor():
         """
         Given an atomistic molecule where each atom is annotated with
         a `fragid` (a list of the meta node(s) it belongs to --
-        length 2 for an atom shared between two fragments via a
-        squash operator) and a `fragname`, derive the meta graph and
-        extract the most condensed set of fragment definitions that
-        can reproduce the molecule.
+        length >2 for an atom shared between two fragments via
+        squash operators) and a `fragname`, derive the meta graph and
+        extract the fragment definitions that reconstitute the molecule.
+        Optionally, if the `self.group_fragemnts` attribute is set,
+        the fragments will be grouped such that a minimal amount of
+        fragments is used.
 
         Parameters
         ----------
@@ -394,8 +487,8 @@ class MoleculeFragmentExtractor():
 
         molecule = annotate_bonding_operators(molecule)
         meta_graph = make_meta_graph(molecule,
-                                     unique_attr='fragid',
-                                     copy_attrs=['fragname'])
+                                     unique_attr=self.unique_attr,
+                                     copy_attrs=[self.frag_label])
         meta_graph = annotate_fragments(meta_graph, molecule)
         meta_graph, fragment_dict = self.get_fragment_dict_from_meta_graph(meta_graph)
         return meta_graph, fragment_dict
