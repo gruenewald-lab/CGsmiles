@@ -144,7 +144,7 @@ class MoleculeFragmentExtractor():
         ----------
         frag_label: str
             the name by which fragments are labeled
-        unique_attr: abc.hashable
+        unique_attr: collections.abc.Hashable
             the attribute that identifies meta nodes. Default: fragid
         group_fragments: bool
             whether isomorphic instances of a fragment are condensed
