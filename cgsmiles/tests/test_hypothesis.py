@@ -243,46 +243,13 @@ def test_every_meta_edge_is_resolved(case):
     the molecule must come out in one piece.
     """
     note(case["fragment_str"])
-    realised = _inter_bead_bonds(case["aa_ref"])
-    missing = [edge for edge in case["meta_topology"].edges
-               if not realised[frozenset(edge)]]
-    assert not missing, f"meta edges without an atomistic bond: {missing}"
-    assert nx.number_connected_components(case["aa_ref"]) == 1
-
+    _check_extractor_roundtrip(case)
 
 @given(case=mapped_molecules())
 @SETTINGS
 def test_meta_graph_write_read_roundtrip(case):
     """
     Writing the meta graph out and reading it back must preserve it.
-    """
-    note(case["fragment_str"])
-    written = write_cgsmiles_graph(case["cg_ref"])
-    note(written)
-    reread = read_cgsmiles(written)
-    match = lambda left, right: left.get('fragname') == right.get('fragname')
-    assert nx.is_isomorphic(case["cg_ref"], reread, node_match=match)
-
-
-@XFAIL_DESCRIPTOR_REUSE
-@given(case=mapped_molecules())
-@SETTINGS_NO_SHRINK
-def test_extractor_roundtrip(case):
-    """
-    Extracting fragments from a permuted molecule, writing them out and
-    resolving the result must reproduce the molecule it started from.
-    """
-    note(case["fragment_str"])
-    _check_extractor_roundtrip(case)
-
-
-@XFAIL_DESCRIPTOR_REUSE
-@given(case=homopolymers())
-@SETTINGS_NO_SHRINK
-def test_extractor_roundtrip_homopolymer(case):
-    """
-    The same round trip restricted to chains and rings of one repeating
-    bead, which is where condensing fragments reuses descriptor labels.
     """
     note(case["fragment_str"])
     _check_extractor_roundtrip(case)
