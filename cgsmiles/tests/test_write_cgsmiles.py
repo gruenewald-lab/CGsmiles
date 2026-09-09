@@ -51,6 +51,8 @@ def test_write_fragments(input_string):
                         # ring-closure digit, rather than a plain
                         # tree-edge) was previously untested
                         "{[#A]=1[#B][#C]1}",
+                        "{[#A]1[#B][#C]=1}",
+
 ))
 def test_write_mol_graphs(input_string):
     mol_graph = read_cgsmiles(input_string)
