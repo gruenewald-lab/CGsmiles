@@ -265,10 +265,11 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             # (e.g. fragname) rather than silently ignoring a mismatch
             meta_node = node_to_unique_value[unique_values[0]]
             for attr in copy_attrs:
-                assert meta_graph.nodes[meta_node][attr] == molecule.nodes[node][attr], \
-                    (f"atom {node} has {attr}={molecule.nodes[node][attr]!r} but "
-                     f"fragment {unique_values[0]} was already created with "
-                     f"{attr}={meta_graph.nodes[meta_node][attr]!r}")
+                if meta_graph.nodes[meta_node][attr] != molecule.nodes[node][attr]:
+                    msg = (f"atom {node} has {attr}={molecule.nodes[node][attr]!r} but "
+                           f"fragment {unique_values[0]} was already created with "
+                           f"{attr}={meta_graph.nodes[meta_node][attr]!r}")
+                    raise ValueError(msg)
         else:
             if molecule.nodes[node].get('element', '*') != 'H':
                 squash.append(tuple(unique_values))
