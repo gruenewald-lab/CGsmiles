@@ -6,6 +6,7 @@ import networkx as nx
 import pytest
 from cgsmiles import MoleculeResolver
 from cgsmiles.drawing import draw_molecule, DEFAULT_SHARED_COLOR
+from cgsmiles.drawing_utils import make_node_pies
 
 
 def linear_graph():
@@ -216,3 +217,29 @@ def test_end_to_end_without_cg_mapping(ax):
     _, aa_mol = resolver.resolve()
     out_ax, out_pos = draw_molecule(aa_mol, ax=ax, layout_method='vespr', cg_mapping=False)
     assert set(out_pos.keys()) == set(aa_mol.nodes)
+
+
+@pytest.mark.parametrize('container', (list, tuple, np.array))
+def test_multi_fragid_node_pies_are_container_agnostic(container):
+    # make_node_pies() must key off how many fragments a node belongs to,
+    # not off the concrete type used to store them. Any sized, indexable
+    # container of fragids should give the same pie.
+    graph, pos = ring_graph()
+    nx.set_node_attributes(graph,
+                           {node: container(fragids) for node, fragids
+                            in graph.nodes(data='fragid')},
+                           'fragid')
+    colors = {0: 'tab:blue', 1: 'tab:red'}
+    pies = dict(zip(graph.nodes, make_node_pies(graph, pos, True, colors)))
+
+    # nodes 0 and 1 sit in both fragments -> two equal slices, one per colour
+    for node in (0, 1):
+        slices, kwargs = pies[node]
+        assert len(slices) == 2
+        assert np.allclose(slices, 0.5)
+        assert sorted(kwargs['colors']) == ['tab:blue', 'tab:red']
+
+    # nodes 2 and 3 sit in a single fragment -> one coloured slice
+    for node, color in ((2, 'tab:red'), (3, 'tab:blue')):
+        slices, kwargs = pies[node]
+        assert kwargs['colors'][0] == color

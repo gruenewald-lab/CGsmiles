@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections.abc import Sized
 import math
 import numpy as np
 
@@ -20,7 +21,7 @@ def angle_of_interest(v1, v2):
 def rotate_2D(x, y, theta):
     return x*math.cos(theta) - y*math.sin(theta), x*math.sin(theta) + y*math.cos(theta)
 
-def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
+def make_edge(p0, p1, bond_order, spacing=0.2, sep=0.0):
     """
     Given two positions `p0` and `p1` as well as a bond_order
     generate a horizontal line or a double / triple line depending
@@ -66,7 +67,7 @@ def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
         out.append([[x0pp, y0pp], [x1pp, y1pp]])
     return out
 
-def make_graph_edges(graph, pos, spacing=0.1, sep=0.2):
+def make_graph_edges(graph, pos, spacing=0.2, sep=0.2):
     """
     Given a molecule graph generate starting and stop
     points for the edges taking into account the bond
@@ -184,10 +185,16 @@ def make_node_pies(graph,
     for node in graph.nodes:
         position = pos[node]
         fragids = graph.nodes[node].get('fragid', None)
+        # fragid is normally a sized, indexable container of fragment ids, but
+        # unresolved fragment graphs carry a bare scalar; we normalize here so
+        # that the branches below only have to count fragments
+        if fragids is not None and not isinstance(fragids, Sized):
+            fragids = [fragids]
+        n_fragids = 0 if fragids is None else len(fragids)
         wedgeprops=None
         # here we have a zero weight node where the node belongs to more than
         # a single fragid in a cgmapping
-        if use_weights and fragids and len(fragids) > 1 and graph.nodes[node].get('weight', 1) == 0:
+        if use_weights and n_fragids > 1 and graph.nodes[node].get('weight', 1) == 0:
             wedgeprops = {'edgecolor': 'black', 'linewidth':linewidth}
             slices = np.array([1])
             pie_colors = ['white', 'white']
@@ -195,7 +202,7 @@ def make_node_pies(graph,
         # thus we color the pie slices according to the fragment and rotate
         # the node such that the colors align; this is only possible if we
         # have cgmapping
-        elif fragids and len(fragids) > 1:
+        elif n_fragids > 1:
             # find the first fragid and compute the angle of the edge with z
             neighbors = graph.neighbors(node)
             pie_colors = []
@@ -232,8 +239,8 @@ def make_node_pies(graph,
                 startangle = shared_angles[0]
                 pie_colors = [colors[fragid] for fragid in fragids]
                 angles = []
-                slice_ang = 360/len(fragids)
-                for ang_idx in range(len(fragids)):
+                slice_ang = 360/n_fragids
+                for ang_idx in range(n_fragids):
                     ang = startangle + slice_ang * (ang_idx + 0.5)
                     if ang > 360:
                         ang -= 360
@@ -248,8 +255,8 @@ def make_node_pies(graph,
             pie_colors = pre_pie_colors[::-1]
             # here we set the weights that split the pies in equal slices
             # I guess in principle on could also use the weight attribute
-            weight = 1/len(fragids)
-            slices = np.array([weight for n in range(0, len(fragids))])
+            weight = 1/n_fragids
+            slices = np.array([weight for n in range(0, n_fragids)])
         # in this case we have a node belonging to a single fragid or we
         # don't draw a cgmapping
         else:

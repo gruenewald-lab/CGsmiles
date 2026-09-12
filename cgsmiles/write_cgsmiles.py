@@ -49,27 +49,34 @@ def format_bonding(bonding):
         bond_order = bonding_descrpt[-1]
         order_symb = order_to_symbol[int(bond_order)]
         if order_symb != '-':
-            bond_str = order_symb
+            bond_str += order_symb
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
-def write_graph(molecule, smiles_format=False, default_element='*'):
+def _write_molecule(molecule, smiles_format=False, default_element='*'):
     """
-    Creates a CGsmiles string describing `molecule`.
-    `molecule` should be a single connected component.
+    Write the body of a (CG)SMILES string for a single connected
+    `molecule`, without the enclosing '{' '}' that marks a complete
+    CGsmiles string. Nodes are written using CGsmiles fragment syntax
+    (`[#fragname]`) unless `smiles_format` is True, in which case they
+    are written as OpenSMILES atoms, producing a plain SMILES string
+    instead. `molecule` must be a single connected component; use
+    :func:`write_graph` for graphs that may have several.
 
     Parameters
     ----------
     molecule : networkx.Graph
-        The molecule for which a CGsmiles string should be generated.
-    smiles_format:
-        If the nodes are written using the OpenSmiles standard format.
+        The molecule to write.
+    smiles_format: bool
+        If True, write nodes as OpenSMILES atoms instead of CGsmiles
+        fragment nodes.
 
     Returns
     -------
     str
-        The CGsmiles string describing `molecule`.
+        The (CG)SMILES string body describing `molecule`.
     """
+    assert nx.is_connected(molecule)
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
@@ -139,7 +146,7 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
                     marker = ring_idx_to_marker.pop(ring_idx)
                     new_marker = False
 
-                if smiles_format and _write_edge_symbol(molecule, *ring_bond) and new_marker:
+                if _write_edge_symbol(molecule, *ring_bond) and new_marker:
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
@@ -158,6 +165,37 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
 
     smiles += ')' * branch_depth
     return smiles
+
+def write_graph(molecule, smiles_format=False, default_element='*'):
+    """
+    Write the body of a (CG)SMILES string describing `molecule`,
+    without the enclosing '{' '}' that marks a complete CGsmiles
+    string. Nodes are written using CGsmiles fragment syntax
+    (`[#fragname]`) unless `smiles_format` is True, in which case they
+    are written as OpenSMILES atoms, producing a plain SMILES string
+    instead. `molecule` may consist of several disconnected components
+    (e.g. distinct molecules in one system); each component is written
+    separately and the resulting strings are joined with '.',
+    mirroring how (CG)SMILES represents disjoint molecules.
+
+    Parameters
+    ----------
+    molecule : networkx.Graph
+        The molecule to write.
+    smiles_format: bool
+        If True, write nodes as OpenSMILES atoms instead of CGsmiles
+        fragment nodes.
+
+    Returns
+    -------
+    str
+        The (CG)SMILES string body describing `molecule`.
+    """
+    components = sorted(nx.connected_components(molecule), key=min)
+    return '.'.join(_write_molecule(molecule.subgraph(component),
+                                    smiles_format=smiles_format,
+                                    default_element=default_element)
+                    for component in components)
 
 def write_cgsmiles_graph(molecule):
     """
