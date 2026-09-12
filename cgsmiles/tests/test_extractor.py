@@ -36,25 +36,54 @@ def shuffle_nodes(G):
     return nx.relabel_nodes(G, node_mapping)
 
 def shuffle_fragids(G):
-    fragids = nx.get_node_attributes(G, 'fragid')
-    unique_fid = []
-    for _ids in fragids:
-        if type(_ids) == int:
-            unique_fid.append(_ids)
-        else:
-            unique_fid += _ids
+    """
+    Randomly relabel the (always list-valued) 'fragid' node attribute,
+    preserving which nodes share a fragid.
+    """
+    unique_fid = set()
+    for ids in nx.get_node_attributes(G, 'fragid').values():
+        unique_fid.update(ids)
 
-    ref = list(set(unique_fid))
-    target = list(set(unique_fid))
+    ref = list(unique_fid)
+    target = list(unique_fid)
     random.shuffle(target)
-
-    print(ref, target)
     mapping = dict(zip(ref, target))
+
     for node in G.nodes:
-        fragids = G.nodes[node]['fragid']
-        new_ids = [mapping[_id] for _id in fragids]
-        G.nodes[node]['fragid'] = new_ids
+        G.nodes[node]['fragid'] = [mapping[_id] for _id in G.nodes[node]['fragid']]
     return G
+
+def resolve_shuffle_and_extract(cgs_ref):
+    """
+    Resolve a CGsmiles string to its all-atom molecule, shuffle its
+    node labels and fragids (so extraction can't depend on any
+    particular ordering), strip the trailing letter suffix the
+    resolver uses to disambiguate same-named fragments (so the
+    extractor has to re-derive it itself), and run the result through
+    MoleculeFragmentExtractor.
+
+    Parameters
+    ----------
+    cgs_ref: str
+        a CGsmiles string to resolve
+
+    Returns
+    -------
+    (networkx.Graph, networkx.Graph, dict[str, networkx.Graph])
+        the shuffled all-atom molecule, the extracted meta graph, and
+        the extracted fragment dict
+    """
+    resolver = cgsmiles.MoleculeResolver.from_string(cgs_ref, legacy=True)
+    _, aa_ref = resolver.resolve()
+    aa_ref = shuffle_nodes(aa_ref)
+    aa_ref = shuffle_fragids(aa_ref)
+    for node, fragname in aa_ref.nodes(data='fragname'):
+        if fragname[-1] in "ABCDEFG":
+            aa_ref.nodes[node]["fragname"] = fragname[:-1]
+
+    extractor = MoleculeFragmentExtractor()
+    cg_new, frags_new = extractor.get_fragment_dict_from_molecule(aa_ref)
+    return aa_ref, cg_new, frags_new
 
 @pytest.mark.parametrize('cgs_ref', (
                          '{[#TC3][#TC5]1[#TN6a][#TC5]1}.{#TC3=CC[$],#TC5=[<]cc[>][$],#TN6a=[<]nc[>]}',
@@ -76,20 +105,7 @@ def test_extractor(cgs_ref):
     attrs_compare = ["charge", "element", "hcount"]
     edge_compare = ["order"]
 
-    resolver = cgsmiles.MoleculeResolver.from_string(cgs_ref, legacy=True)
-    cg_ref, aa_ref = resolver.resolve()
-    # shuffel the aa nodoes
-    aa_ref = shuffle_nodes(aa_ref)
-    # also shuffel the fragids
-    aa_ref = shuffle_fragids(aa_ref)
-    # we drop the tags that separate fragments of the same bead type
-    # this should be done automagically
-    for node, fragname in aa_ref.nodes(data='fragname'):
-        if fragname[-1] in "ABCDEFG":
-            aa_ref.nodes[node]["fragname"] = fragname[:-1]
-
-    extractor = MoleculeFragmentExtractor()
-    cg_new, frags_new = extractor.get_fragment_dict_from_molecule(aa_ref)
+    aa_ref, cg_new, frags_new = resolve_shuffle_and_extract(cgs_ref)
     cgs_new = write_cgsmiles(cg_new, [frags_new])
 
     resolver_new = cgsmiles.MoleculeResolver.from_string(cgs_new, legacy=True)
@@ -109,18 +125,19 @@ def test_extractor_ambiguous_squash_stays_separate():
     """
     cgs_ref = ('{[#TC3][#TC5]1[#TC5][#TC5]1[#P5]}.'
                '{#TC5=[!][>]cc[>a]c[>][!],#TC3=[<]CC,#P5=[<a][S](=O)(=O)N}')
-    resolver = cgsmiles.MoleculeResolver.from_string(cgs_ref, legacy=True)
-    _, aa_ref = resolver.resolve()
-    aa_ref = shuffle_nodes(aa_ref)
-    aa_ref = shuffle_fragids(aa_ref)
-    for node, fragname in aa_ref.nodes(data='fragname'):
-        if fragname[-1] in "ABCDEFG":
-            aa_ref.nodes[node]["fragname"] = fragname[:-1]
-
-    extractor = MoleculeFragmentExtractor()
-    _, frags_new = extractor.get_fragment_dict_from_molecule(aa_ref)
+    aa_ref, cg_new, frags_new = resolve_shuffle_and_extract(cgs_ref)
     tc5_names = [name for name in frags_new if name.startswith('TC5')]
     assert len(tc5_names) == 3
+
+    cgs_new = write_cgsmiles(cg_new, [frags_new])
+    resolver_new = cgsmiles.MoleculeResolver.from_string(cgs_new, legacy=True)
+    _, aa_new_from_string = resolver_new.resolve()
+
+    attrs_compare = ["charge", "element", "hcount"]
+    edge_compare = ["order"]
+    _keep_selected_attr(aa_ref, attrs_compare, edge_compare)
+    _keep_selected_attr(aa_new_from_string, attrs_compare, edge_compare)
+    assertEqualGraphs(aa_ref, aa_new_from_string)
 
 def test_extractor_squash_siblings_differ_by_directed_bond():
     """
@@ -136,16 +153,7 @@ def test_extractor_squash_siblings_differ_by_directed_bond():
     cgs_ref = ('{[#TN2a][#TC5A]([#SC2])[#TC5][#TC6]}.'
                '{#TN2a=[!]cn,#TC5A=[!]cc[>]c[!],#TC5=[!]ccc[!],'
                '#TC6=[!]CC,#SC2=[<]CC}')
-    resolver = cgsmiles.MoleculeResolver.from_string(cgs_ref, legacy=True)
-    _, aa_ref = resolver.resolve()
-    aa_ref = shuffle_nodes(aa_ref)
-    aa_ref = shuffle_fragids(aa_ref)
-    for node, fragname in aa_ref.nodes(data='fragname'):
-        if fragname[-1] in "ABCDEFG":
-            aa_ref.nodes[node]["fragname"] = fragname[:-1]
-
-    extractor = MoleculeFragmentExtractor()
-    cg_new, frags_new = extractor.get_fragment_dict_from_molecule(aa_ref)
+    aa_ref, cg_new, frags_new = resolve_shuffle_and_extract(cgs_ref)
     tc5_names = sorted(name for name in frags_new if name.startswith('TC5'))
     assert len(tc5_names) == 2
 
