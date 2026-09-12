@@ -91,8 +91,11 @@ def satisfy_isomorphism(target, other_frag):
             if n1.get(attr, None) != n2.get(attr, None):
                 return False
 
-        bond1 = n1.get('bonding', [])
-        bond2 = n2.get('bonding', [])
+
+        # these clauses only trigger when the advanced grouping
+        # scheme is used 
+        bond1 = n1.get('bonding')
+        bond2 = n2.get('bonding')
         if bond1 is None:
             bond1 = []
         if bond2 is None:
@@ -101,6 +104,16 @@ def satisfy_isomorphism(target, other_frag):
         if len(bond1) != len(bond2):
            return False
 
+
+        # initally all bonding operators are assigned unique labels
+        # so one can only compare directions for grouping
+
+        # compare descriptors by direction+order only (drop the
+        # arbitrary per-edge label in the middle, e.g. ">01" -> ">1"),
+        # as a same-count multiset: same len() but different
+        # direction/order composition (e.g. ['>1','<1'] vs ['>1','>1'])
+        # means the two atoms play a different structural role and
+        # must not be treated as interchangeable
         ops1 = [b[0]+b[-1] for b in bond1]
         ops2 = [b[0]+b[-1] for b in bond2]
         if Counter(ops1) != Counter(ops2):
@@ -121,9 +134,8 @@ class MoleculeFragmentExtractor():
     of the CGsmiles syntax is obtained.
 
     A molecule counts as "labelled" once every atom carries a
-    `fragid` (a list of the meta node(s) it belongs to -- length 2
-    for an atom shared between two fragments via a squash operator)
-    and a `frag_label` attribute (the fragment name, `fragname` by
+    `fragid` (a list of the meta node(s) it belongs to and a
+    `frag_label` attribute (the fragment name, `fragname` by
     default). Fragment instances sharing a fragname are condensed
     into one shared fragment definition whenever they are graph-
     isomorphic and not adjacent to a branch point in the meta graph;
@@ -261,16 +273,13 @@ class MoleculeFragmentExtractor():
                 if bonding:
                     new_bonds = []
                     for bond in bonding:
-                        if bond in self.bonding_op_convert:
-                            new_bonds.append(self.bonding_op_convert[bond])
-                        else:
-                            new_bonds.append(bond)
+                        new_bonds.append(self.bonding_op_convert.get(bond, bond))
                     graph.nodes[node]['bonding'] = new_bonds
 
     def collect_all_fragments(self, meta_graph):
         """
         Collects all fragments from the self.meta_graph and
-        writes them into a dict. Dict keys are values retrived
+        writes them into a dict. Dict keys are values retrieved
         from the `frag_label` keyword. It also populates a dict
         mapping the nodes in meta_graph to a fragment label and
         the index in the list of fragment graphs with the same
