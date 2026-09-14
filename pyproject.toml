@@ -57,6 +57,7 @@ tests = [
     "scipy",
     "matplotlib",
     "rdkit",
+    "hypothesis",
 ]
 docs = [
     "sphinx < 8.2.0",
