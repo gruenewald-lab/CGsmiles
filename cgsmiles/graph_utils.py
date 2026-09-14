@@ -282,10 +282,10 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
         uvalues_e1 = molecule.nodes[e1][unique_attr]
         uvalues_e2 = molecule.nodes[e2][unique_attr]
 
-    # This if/else claude separates out edge making from regular connectors and squash mechanics.
-    # The if clause deals with regular bond connectors that can increment the bond order.
-    # The else clause iterates over all squashed atoms and adds an edge wherever there isn't one.
-    # That edge, by definition, is 1 and cannot be incremented further, as the squash only happens once.
+        # This if/else claude separates out edge making from regular connectors and squash mechanics.
+        # The if clause deals with regular bond connectors that can increment the bond order.
+        # The else clause iterates over all squashed atoms and adds an edge wherever there isn't one.
+        # That edge, by definition, is 1 and cannot be incremented further, as the squash only happens once.
 
         if len(uvalues_e1) == 1 and len(uvalues_e2) == 1:
             u1 = uvalues_e1[0]
@@ -315,7 +315,6 @@ def annotate_neighbors_as_hash(molecule):
             neighbor_hashs.append(nx.weisfeiler_lehman_graph_hash(molecule.nodes[neigh]['graph'],
                                                                   node_attr='element',
                                                                   edge_attr='order'))
-        #nhash = hash(tuple(neighbor_hashs))
         nhash = hash(frozenset(Counter(neighbor_hashs).items()))
         nx.set_node_attributes(molecule.nodes[node]['graph'], nhash, 'nhash')
 
