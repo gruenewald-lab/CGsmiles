@@ -1,0 +1,6 @@
+# Exclude all git-tracked files that should not be packaged. setuptools-scm includes.
++recursive-include .git *
+ prune cgsmiles/tests
+ prune maintainers
+ prune .github
+ global-exclude __pycache__ *.pyc *.pyo

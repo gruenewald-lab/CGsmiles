@@ -125,6 +125,13 @@ from cgsmiles.read_fragments import strip_bonding_descriptors, fragment_iter
                         None,
                         [(0, 1), (1, 2), (2, 3), (0, 3)],
                         [1, 1, 1, 2]),
+                        # simple bond order within branch
+                        ("{[#SN5a]([#SP3]1[#SC3][#SN5A](=[#TC3A])[#TC3B]1)}",
+                        ["SN5a", "SP3", "SC3", "SN5A", "TC3A", "TC3B"],
+                        None,
+                        [(0, 1), (1, 2), (1, 5), (5, 3), (2, 3), (3, 4)],
+                        [1, 1, 1, 1, 1, 2]
+                        ),
                         # simple branch expension
                         ("{[#PMA]([#PEO][#PEO][#OHter])|3}",
                         ["PMA", "PEO", "PEO", "OHter",
@@ -392,6 +399,18 @@ def test_read_cgsmiles(smile, nodes, charges, edges, orders):
                         ("C(COC[$1])[$2]CCC[$3]",
                          "C(COC)CCC",
                         {0: ["$21"], 3: ["$11"], 6: ["$31"]},
+                        None,
+                        None),
+                        # bonding descriptor with expansion
+                        ("[#EO][<]|3[#TDI][>]",
+                         "[#EO]|3[#TDI]",
+                        {0: ["<1"], 3: [">1"]},
+                        None,
+                        None),
+                        # bonding descriptor with branch-expansion
+                        ("[<][#EO]([#PMA]|2)|5[#TDI][>]",
+                         "[#EO]([#PMA]|2)|5[#TDI]",
+                        {0: ["<1"], 15: [">1"]},
                         None,
                         None),
                         # left rigth bonding desciptors

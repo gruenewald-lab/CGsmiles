@@ -11,37 +11,52 @@ from .graph_utils import (merge_graphs,
 from .pysmiles_utils import (rebuild_h_atoms,
                              annotate_ez_isomers_cgsmiles)
 
-def compatible(left, right, legacy=True):
+def compatible(left, right, left_data={}, right_data={}, legacy=True):
     """
     Check bonding descriptor compatibility according
-    to the CGsmiles syntax conventions. With legacy
+    to the CGsmiles syntax conventions. With legacy,
     the BigSmiles convention can be used.
+
+    The dicts of left_data and right_data are only
+    used when compatibility-checking uses of the
+    squashing ([!]) operator.
 
     Parameters
     ----------
     left: str
     right: str
+    left_data: dict
+    right_data: dict
     legacy: bool
 
     Returns
     -------
     bool
     """
-    if legacy:
-        if left == right and left[0] not in '> <':
-            return True
-        l, r = left[0], right[0]
-        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
-            return left[1:] == right[1:]
-        return False
-    else:
-        if left[0] == right[0] == '$' or left[0] == right[0] == '!':
-            return True
 
-        l, r = left[0], right[0]
-        if (l, r) == ('<', '>') or (l, r) == ('>', '<'):
-            return True
+    # Non-legacy only checks the first character for compatibility
+    if not legacy:
+        left = left[0]
+        right = right[0]
+
+    # By flipping the <> for one of the binders, we no longer need special
+    #  case checking downstream
+    left = left[0].translate(str.maketrans('<>','><')) + left[1:]
+
+    if left != right:
         return False
+
+    if left[0] != '!':
+        return True
+
+    # Only the '!' compatibility control left
+    left_name = left_data.get('element', left_data.get('atomname'))
+    right_name = right_data.get('element', right_data.get('atomname'))
+    # Could there be nameless nodes? Anyway, not enough info to reject
+    #  so we accept if they're involved
+    return (left_name is None or
+            right_name is None or
+            (left_name == right_name))
 
 def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=True):
     """
@@ -75,15 +90,36 @@ def match_bonding_descriptors(source, target, bond_attribute="bonding", legacy=T
     """
     source_nodes = nx.get_node_attributes(source, bond_attribute)
     target_nodes = nx.get_node_attributes(target, bond_attribute)
-    for source_node in source_nodes:
-        for target_node in target_nodes:
-            bond_sources = source_nodes[source_node]
-            bond_targets = target_nodes[target_node]
+    for source_node, bond_sources in source_nodes.items():
+        source_node_data = source.nodes[source_node]
+        for target_node, bond_targets in target_nodes.items():
+            target_node_data = target.nodes[target_node]
             for bond_source in bond_sources:
                 for bond_target in bond_targets:
-                    if compatible(bond_source, bond_target, legacy=legacy):
-                        return ((source_node, target_node), (bond_source, bond_target))
+                    if compatible(bond_source, bond_target,
+                                  source_node_data,
+                                  target_node_data,
+                                  legacy=legacy):
+                        return ((source_node, target_node),
+                                (bond_source, bond_target))
     raise LookupError
+
+def _adjust_hcount(molecule):
+    """
+    Given atoms in a molecule built from cgsmiles fragments, adjust
+    the hcount such that we substract the total number of newly formed
+    edges multiplied by their bond order. The 'hcount' attribute is
+    updated in place.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+    """
+    for node in molecule.nodes:
+        hcount = molecule.nodes[node]["_hcount"]
+        new_degree = sum([molecule.edges[edge]["order"] for edge in molecule.edges(node)])
+        init_degree = molecule.nodes[node]["_edge_orders"]
+        molecule.nodes[node]["hcount"] =  max([0, hcount - (new_degree - init_degree)])
 
 class MoleculeResolver:
     """
@@ -251,7 +287,7 @@ class MoleculeResolver:
                 continue
 
             fragment = fragment_dict[fragname]
-            correspondence = merge_graphs(self.molecule, fragment, fragment_offset=meta_node)
+            correspondence = merge_graphs(self.molecule, fragment, fragid=meta_node)
 
             graph_frag = nx.Graph()
 
@@ -262,6 +298,11 @@ class MoleculeResolver:
                 nx.set_node_attributes(graph_frag, [meta_node], 'fragid')
                 graph_frag.nodes[new_node]['mapping'] = [(fragname, node)]
                 self.molecule.nodes[new_node]['mapping'] = [(fragname, node)]
+                if self.last_all_atom:
+                    # we need to keep some info about the original valances
+                    edge_orders = [self.molecule.edges[edge]["order"] for edge in self.molecule.edges(new_node)]
+                    self.molecule.nodes[new_node]["_edge_orders"] = sum(edge_orders)
+                    self.molecule.nodes[new_node]['_hcount'] = self.molecule.nodes[new_node].get('hcount', 0)
 
             for a, b in fragment.edges:
                 new_a = correspondence[a]
@@ -273,7 +314,7 @@ class MoleculeResolver:
 
             self.meta_graph.nodes[meta_node]['graph'] = graph_frag
 
-    def edges_from_bonding_descrpt(self, all_atom=False):
+    def edges_from_bonding_descrpt(self, all_atom=True):
         """
         Makes edges according to the bonding descriptors stored
         in the node attributes of meta_molecule residue graph.
@@ -292,8 +333,6 @@ class MoleculeResolver:
             default: False
         """
         edges = list(self.meta_graph.edges)
-        #import random
-        #random.shuffle(edges)
         for prev_node, node in edges:
             for _ in range(0, self.meta_graph.edges[(prev_node, node)]["order"]):
                 prev_graph = self.meta_graph.nodes[prev_node]['graph']
@@ -315,16 +354,7 @@ class MoleculeResolver:
                    self.molecule.nodes[edge[1]].get('aromatic', False):
                     order = 1.5
                 self.molecule.add_edge(edge[0], edge[1], bonding=bonding, order=order)
-                if all_atom:
-                    for edge_node in edge:
-                        if self.molecule.nodes[edge_node]['element'] == 'H':
-                            continue
-                        hcount = self.molecule.nodes[edge_node]['hcount']
-                        if self.molecule.nodes[edge_node].get('aromatic', 'False'):
-                            hcount = max(0, hcount - 1.5)
-                        else:
-                            hcount = max(0, hcount - 1)
-                        self.molecule.nodes[edge_node]['hcount'] = hcount
+
     def squash_atoms(self):
         """
         Applies the squash operator by removing the duplicate node
@@ -362,6 +392,12 @@ class MoleculeResolver:
             # add the fragment id of the sequashed node
             self.molecule.nodes[node_to_keep]['fragid'] += ref_id
             self.molecule.nodes[node_to_keep]['mapping'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['mapping']
+            # add the isomer class of the squashed node
+            if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]:
+                if 'ez_isomer_class' in self.molecule.nodes[node_to_keep]:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] += self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
+                else:
+                    self.molecule.nodes[node_to_keep]['ez_isomer_class'] = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['ez_isomer_class']
 
     def resolve(self):
         """
@@ -380,10 +416,6 @@ class MoleculeResolver:
         new_fragnames = nx.get_node_attributes(self.meta_graph, "atomname")
         nx.set_node_attributes(self.meta_graph, new_fragnames, "fragname")
 
-        # adjust the fragids because at meta-graph level
-        new_fragids = {node: idx for idx, node in enumerate(self.meta_graph.nodes)}
-        nx.set_node_attributes(self.meta_graph, new_fragids, 'fragid')
-
         # create an empty molecule graph
         self.molecule = nx.Graph()
 
@@ -395,9 +427,9 @@ class MoleculeResolver:
 
         # contract atoms with squash descriptors
         self.squash_atoms()
-
         # rebuild hydrogen in all-atom case
         if all_atom:
+            _adjust_hcount(self.molecule)
             rebuild_h_atoms(self.molecule)
 
         # sort the atoms

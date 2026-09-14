@@ -12,7 +12,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-from pkg_resources import get_distribution
+from importlib.metadata import version
 import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
@@ -30,7 +30,7 @@ copyright = '2024, Dr. F Gruenewald'
 author = 'F. Gruneewald and P. C. Kroon'
 
 # The full version, including alpha/beta/rc tags
-release = get_distribution('cgsmiles').version
+release = version('cgsmiles')
 # The short X.Y version
 # version = '.'.join(release.split('.')[:2])
 version = release
@@ -210,8 +210,8 @@ napoleon_type_aliases = {
 intersphinx_mapping = {
     'python': ('https://docs.python.org', None),
     'networkx': ('https://networkx.github.io/documentation/latest', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy', None),
-    'scipy': ('http://docs.scipy.org/doc/scipy/reference', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None),
     'matplotlib': ('https://matplotlib.org/stable', None),
     'rdkit': ('https://www.rdkit.org/docs/', None)
 }

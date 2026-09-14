@@ -18,13 +18,21 @@ def _keep_selected_attr(graph, node_attrs_to_keep, edge_attrs_to_keep):
 def assertEqualMeta(graph1, graph2, node_attr, edge_attr):
     def _node_match(n1, n2):
         for attr in node_attr:
-            if n1[attr] != n2[attr]:
-                return False
+            try:
+                if n1[attr] != n2[attr]:
+                    return False
+            except KeyError:
+                msg = f"Missing Attribute {attr}."
+                raise KeyError(msg)
         return True
     def _edge_match(e1, e2):
         for attr in edge_attr:
-            if e1[attr] != e2[attr]:
-                return False
+            try:
+                if e1[attr] != e2[attr]:
+                    return False
+            except KeyError:
+                msg = f"Missing Attribute {attr}."
+                raise KeyError(msg)
         return True
 
     assert nx.is_isomorphic(graph1,

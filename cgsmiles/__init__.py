@@ -1,9 +1,12 @@
 """
 CGsmiles: Coarse-Grained Smiles (CGsmiles) for representing abitrarily complex molecules using line notation.
 """
-import pbr.version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = pbr.version.VersionInfo('cgsmiles').release_string()
+try:
+    __version__ = version('cgsmiles')
+except PackageNotFoundError:
+    __version__ = '0+unknown'
 
 from .read_cgsmiles import read_cgsmiles
 from .read_fragments import read_fragments

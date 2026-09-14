@@ -2,6 +2,37 @@
 Coarse-Grained SMILES (CGsmiles)
 ================================
 
+A line notation for representing molecules using multiple resolutions
+=======================================================================
+
+|CI| |Coverage| |Conda Version| |PyPI| |Python Version| |License|
+
+`Documentation <https://cgsmiles.readthedocs.io/en/latest/>`__ · `Installation <#installation>`__ · `Quick start <#quick-start>`__
+
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/gruenewald-lab/CGsmiles/python-app.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI
+   :target: https://github.com/gruenewald-lab/CGsmiles/actions/workflows/python-app.yml
+   :alt: CI
+
+.. |Coverage| image:: https://coveralls.io/repos/github/gruenewald-lab/CGsmiles/badge.svg?branch=master
+    :target: https://coveralls.io/github/gruenewald-lab/CGsmiles?branch=master
+    :alt: Coverage
+
+.. |Conda Version| image:: https://img.shields.io/conda/vn/conda-forge/cgsmiles?style=flat-square&logo=anaconda&logoColor=white&label=conda-forge&color=44A833
+   :target: https://anaconda.org/conda-forge/cgsmiles
+   :alt: Conda Version
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/cgsmiles?style=flat-square&logo=pypi&logoColor=white&label=PyPI&color=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: PyPI
+
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/cgsmiles?style=flat-square&logo=python&logoColor=white&color=FFD43B&labelColor=306998
+   :target: https://pypi.org/project/cgsmiles/
+   :alt: Python Version
+
+.. |License| image:: https://img.shields.io/badge/license-Apache--2.0-2E86AB?style=flat-square
+   :target: ./LICENSE
+   :alt: License
+
 Overview
 ========
 
@@ -17,12 +48,12 @@ as three particles. The CGSmiles string would be:
 
     "{[#TC5]1[#TC5][#TC5]1}.{#TC5=[$]cc[$]}"
 
-Additionally, multiple resolutions may be layered together so that a hirachical
+Additionally, multiple resolutions may be layered together so that a hierarchical
 description between one or more CG resolutions becomes possible. Especially,
 expressing large polymeric molecules becomes simpler when using multiple
-resolution. For instance consider the copolymer
-`Styreic-Melic Acid <https://en.wikipedia.org/wiki/Styrene_maleic_anhydride>`__.
-It is an almost perfectly alternating polymer of maleic anhydrade and styrene.
+resolutions. For instance consider the copolymer
+`Styrene-Maleic Acid <https://en.wikipedia.org/wiki/Styrene_maleic_anhydride>`__.
+It is an almost perfectly alternating polymer of maleic anhydride and styrene.
 In CGSmiles, we can thus write 100 repeat units of this polymer by using three
 resolutions each contained in curly braces:
 
@@ -103,4 +134,16 @@ Related Tools
 Citation
 ========
 
-When using **cgsmiles** to for your publication, please:
+When using **cgsmiles** for your publication, please cite:
+
+.. code::
+
+    @article{Grunewald2025CGsmiles,
+      title={CGsmiles: A Versatile Line Notation for Molecular Representations across Multiple Resolutions},
+      author={Gr{\"u}newald, Fabian and Seute, Leif and Alessandri, Riccardo and K{\"o}nig, Melanie and Kroon, Peter C},
+      journal={Journal of Chemical Information and Modeling},
+      year={2025},
+      doi={https://doi.org/10.1021/acs.jcim.5c00064},
+      publisher={ACS Publications}
+    }
+

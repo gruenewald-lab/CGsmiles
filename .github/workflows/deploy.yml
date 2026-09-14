@@ -1,13 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: test package
+name: upload python package
 
 on:
-  push:
-    branches: [ master, develop ]
-  pull_request:
-    branches: [ master, develop ]
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -16,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-       py_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+       py_version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v6
@@ -32,31 +30,23 @@ jobs:
 
     - name: Run pytest with codecoverage
       run:  pytest --cov cgsmiles --cov-report=xml
-    - name: Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        flag-name: python-${{ matrix.py_version }}
-        parallel: true
-
-  coveralls-finished:
-    needs: build
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-    - name: Close parallel build
-      uses: coverallsapp/github-action@v2
-      with:
-        parallel-finished: true
-
+#    - name: Upload coverage codecov   
+#      uses: codecov/codecov-action@v3 
+#      with:
+#            token: ${{ secrets.CODECOV_TOKEN }}
+#            files: ./coverage.xml
+#            fail_ci_if_error: true
+#            verbose: true
+            
   lint:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v6
-    - name: Set up Python 3.12
+    - name: Set up Python 3.14
       uses: actions/setup-python@v6
       with:
-        python-version: 3.12
+        python-version: 3.14
     - name: Install dependencies
       run: |
         pip install --upgrade setuptools pip
@@ -77,8 +67,6 @@ jobs:
            python-version: '3.x'
            cache: pip
            cache-dependency-path: |
-             **/setup.cfg
-             **/requirements-*.txt
              **/pyproject.toml
       - name: Install dependencies
         run: |
@@ -94,12 +82,13 @@ jobs:
   deploy:
       needs: [build, lint, docs]
       runs-on: ubuntu-latest
-      environment:
-        name: testpypi
-        url: https://test.pypi.org/p/cgsmiles
       env:
         # Strip local version from version -> 0.15.1.dev51 instead of 0.15.1.dev51+gc45000f63.d20260526
-        SETUPTOOLS_SCM_OVERRIDES_FOR_CGSMILES: '{local_scheme = "no-local-version"}'
+        # And fail if that's not possible/required.
+        SETUPTOOLS_SCM_OVERRIDES_FOR_CGSMILES: '{local_scheme = ["fail-on-uncommitted-changes","no-local-version"]}'
+      environment:
+        name: deploy
+        url: https://pypi.org/p/cgsmiles/
       permissions:
         id-token: write
       steps:
@@ -110,12 +99,10 @@ jobs:
       - name: Set up Python 3
         uses: actions/setup-python@v6
         with:
-           python-version: '3.14'
-           cache: pip
-           cache-dependency-path: |
-             **/setup.cfg
-             **/requirements-*.txt
-             **/pyproject.toml
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: |
+            **/pyproject.toml
       - name: Install dependencies
         run: |
           pip install --upgrade setuptools pip
@@ -128,7 +115,7 @@ jobs:
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository-url: https://upload.pypi.org/legacy/
           verbose: true
           user: __token__
-          password: ${{ secrets.PYPI_TEST_API_TOKEN }}
+          password: ${{ secrets.PYPI_GENERAL_TOKEN }}
