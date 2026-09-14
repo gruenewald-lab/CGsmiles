@@ -13,7 +13,7 @@ def _match_bonds(list1, list2):
     direction (the first character) and bond order (the last
     character), each entry of `list2` used at most once. Called from
     `_are_isomorphic` on two nodes already confirmed to have matching
-    direction/order multisets (see `satisfy_isomorphism`'s
+    direction/order multisets (see `find_subgraph_isomorphism`'s
     `_node_match`), so in practice every entry of `list1` always finds
     a pairing.
 
@@ -61,7 +61,7 @@ def _suffix_generator():
             yield "".join(combo)
         length += 1
 
-def satisfy_isomorphism(target, other_frag):
+def find_subgraph_isomorphism(target, other_frag):
     """
     Find subgraph isomorphisms between `target` and `other_frag`.
     Nodes are matched on the `nhash` (neighbor-fragment hash), 'element',
@@ -225,7 +225,7 @@ class MoleculeFragmentExtractor():
             True if `target` was matched onto `other_fragname`
         """
         compl = {">": "<", "<": ">", "!": "!"}
-        matches = list(satisfy_isomorphism(target, other_frag))
+        matches = list(find_subgraph_isomorphism(target, other_frag))
         # fragments are not isomorphic in the way we require
         # so we return
         if len(matches) == 0:
