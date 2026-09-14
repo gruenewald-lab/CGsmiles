@@ -40,8 +40,7 @@ def merge_graphs(source_graph, target_graph, fragid=None, max_node=None):
         # We assume that the last id is always the largest.
         last_node_idx = max_node
         offset = last_node_idx
-        if fragment_offset is None:
-            fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0])) + 1
+        fragment_offset = max(source_graph.nodes[last_node_idx].get('fragid', [0])) + 1
 
     correspondence = {}
     for idx, node in enumerate(target_graph.nodes(), start=offset + 1):
@@ -379,8 +378,6 @@ def annotate_bonding_operators(molecule, label='fragid'):
         order = molecule.edges[(e1, e2)]['order']
         # we have one intersection so the edge is in the same fragment
         if set(molecule.nodes[e1][label]) & set(molecule.nodes[e2][label]):
-            continue
-        if order == 0:
             continue
         else:
             if order == 1.5:

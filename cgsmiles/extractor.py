@@ -506,6 +506,7 @@ class MoleculeFragmentExtractor():
             the derived meta graph and the dict mapping each
             resulting fragment name to its fragment graph
         """
+        molecule = annotate_bonding_operators(molecule)
         meta_graph = make_meta_graph(molecule,
                                      unique_attr=self.unique_attr,
                                      copy_attrs=[self.frag_label])

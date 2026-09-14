@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 import networkx as nx
-from pysmiles.smiles_helper import has_default_h_count
+from pysmiles.smiles_helper import has_default_h_count, AROMATIC_ATOMS
 from pysmiles.write_smiles import _get_ring_marker,_write_edge_symbol
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def format_atom(molecule, node_key, default_element='*', annotations=['weight', 
     default_h = has_default_h_count(molecule, node_key)
 
     if stereo is not None or node.get('ez_isomer'):  # pragma: nocover
-        LOGGER.warning("The SMILES writer does not write stereochemical information")
+        logger.warning("The SMILES writer does not write stereochemical information")
 
     if aromatic and name in AROMATIC_ATOMS:
         name = name.lower()
@@ -98,9 +98,11 @@ def format_node(molecule, current, annotations=[]):
         the formatted string
     """
     attr_to_symbol = {"atype": "t"}
+    annot_str = ""
     if annotations:
-        annot_str = ""
         for key in annotations:
+            if key not in molecule.nodes[current]:
+                continue
             annotation_value = molecule.nodes[current][key]
             annot_str += ";"+attr_to_symbol[key]+f"={annotation_value}"
 
@@ -134,7 +136,7 @@ def format_bonding(bonding):
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
-def _write_molecule(molecule, smiles_format=False, default_element='*'):
+def _write_molecule(molecule, smiles_format=False, default_element='*', cg_annote=["atype"]):
     """
     Write the body of a (CG)SMILES string for a single connected
     `molecule`, without the enclosing '{' '}' that marks a complete
@@ -248,7 +250,7 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
     smiles += ')' * branch_depth
     return smiles
 
-def write_graph(molecule, smiles_format=False, default_element='*'):
+def write_graph(molecule, smiles_format=False, default_element='*', cg_annote=["atype"]):
     """
     Write the body of a (CG)SMILES string describing `molecule`,
     without the enclosing '{' '}' that marks a complete CGsmiles
@@ -276,7 +278,8 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     components = sorted(nx.connected_components(molecule), key=min)
     return '.'.join(_write_molecule(molecule.subgraph(component),
                                     smiles_format=smiles_format,
-                                    default_element=default_element)
+                                    default_element=default_element,
+                                    cg_annote=cg_annote)
                     for component in components)
 
 def write_cgsmiles_graph(molecule):
