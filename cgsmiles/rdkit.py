@@ -44,7 +44,7 @@ def rdkit_to_networkx(rdkit_mol):
         props['hcount'] = atom.GetTotalNumHs()
 
         if conf:
-            pos = conf.GetAtomPosition(idx)
+            pos = conf.GetAtomPosition(atom.GetIdx())
             props['position'] = np.array([pos.x, pos.y, pos.z])
 
         out_mol.add_node(atom.GetIdx(), **props)
@@ -58,24 +58,39 @@ def rdkit_to_networkx(rdkit_mol):
                          order=bt)
     return out_mol
 
-def networkx_to_rdkit(mol_graph):
+def networkx_to_rdkit(mol_graph, return_mapping=False):
     """
     Convert a networkx molecule graph to a rdkit molecule.
+
+    Atoms are added in the order in which the nodes are stored in the
+    graph, which need not match the node labels. Use `return_mapping`
+    to get the mapping from node label to RDKit atom index.
+
+    If a node defines 'hcount', that number of implicit hydrogen atoms
+    is set on the RDKit atom (e.g. the hydrogen of an aromatic [nH]).
+    Otherwise RDKit infers implicit hydrogen atoms from valence.
 
     Parameters
     ----------
     mol_graph: networkx.Graph
+    return_mapping: bool
+        if True also return a dict mapping node label to atom index
 
     Returns
     -------
     rdkit.Chem.rdchem.Mol
         the RDKit molecule
+    dict
+        node label to RDKit atom index; only if `return_mapping` is True
     """
     mol = Chem.RWMol()
     node_to_idx = {}
     for node, props in mol_graph.nodes(data=True):
         atom = Chem.Atom(props.get('element', '*'))
         atom.SetFormalCharge(props.get('charge', 0))
+        if 'hcount' in props:
+            atom.SetNumExplicitHs(props['hcount'])
+            atom.SetNoImplicit(True)
         node_to_idx[node] = mol.AddAtom(atom)
 
     for u, v, data in mol_graph.edges(data=True):
@@ -87,6 +102,8 @@ def networkx_to_rdkit(mol_graph):
     # some clean up to get the molecule up to speed
     Chem.SanitizeMol(mol)
 
+    if return_mapping:
+        return mol, node_to_idx
     return mol
 
 def embed_3d_via_rdkit(mol_graph):
@@ -102,7 +119,7 @@ def embed_3d_via_rdkit(mol_graph):
     add_explicit_hydrogens(mol_graph)
 
     # convert to rdkit mol
-    rdkit_mol = networkx_to_rdkit(mol_graph)
+    rdkit_mol, node_to_idx = networkx_to_rdkit(mol_graph, return_mapping=True)
 
     # Add hydrogens to the molecule
     rdkit_mol = Chem.AddHs(rdkit_mol)
@@ -116,10 +133,11 @@ def embed_3d_via_rdkit(mol_graph):
     # Get the conformer
     conf = rdkit_mol.GetConformer()
 
-    # write the positions to the original molecule graph
-    for ndx, atom in enumerate(rdkit_mol.GetAtoms()):
-        pos = conf.GetAtomPosition(atom.GetIdx())
-        mol_graph.nodes[ndx]['position'] = np.array([pos.x, pos.y, pos.z])
+    # write the positions to the original molecule graph; node labels
+    # need not coincide with RDKit atom indices, so use the mapping
+    for node, idx in node_to_idx.items():
+        pos = conf.GetAtomPosition(idx)
+        mol_graph.nodes[node]['position'] = np.array([pos.x, pos.y, pos.z])
 
     return mol_graph
 
