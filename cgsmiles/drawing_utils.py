@@ -21,7 +21,7 @@ def angle_of_interest(v1, v2):
 def rotate_2D(x, y, theta):
     return x*math.cos(theta) - y*math.sin(theta), x*math.sin(theta) + y*math.cos(theta)
 
-def make_edge(p0, p1, bond_order, spacing=0.2, sep=0.0):
+def make_edge(p0, p1, bond_order, spacing=0.1, sep=0.0):
     """
     Given two positions `p0` and `p1` as well as a bond_order
     generate a horizontal line or a double / triple line depending
@@ -67,7 +67,7 @@ def make_edge(p0, p1, bond_order, spacing=0.2, sep=0.0):
         out.append([[x0pp, y0pp], [x1pp, y1pp]])
     return out
 
-def make_graph_edges(graph, pos, spacing=0.2, sep=0.2):
+def make_graph_edges(graph, pos, spacing=0.1, sep=0.2):
     """
     Given a molecule graph generate starting and stop
     points for the edges taking into account the bond

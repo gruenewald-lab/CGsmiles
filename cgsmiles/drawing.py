@@ -53,7 +53,7 @@ def draw_molecule(graph,
                   edge_widths=3,
                   mapped_edge_width=20,
                   default_bond=1,
-                  spacing=0.15,
+                  spacing=0.1,
                   layout_kwargs={}):
     """
     Draw the graph of a molecule optionally with a coarse-grained
