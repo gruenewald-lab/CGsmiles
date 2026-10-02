@@ -152,6 +152,8 @@ def annotate_fragments(meta_graph, molecule, meta_node_attr='fragid'):
             fragid_to_node[fragid].append(node)
 
     for meta_node in meta_graph.nodes:
+        if meta_graph.nodes[meta_node].get("_virtual", False):
+            continue
         # adding node to the fragment graph
         graph_frag = nx.Graph()
         for node in fragid_to_node[meta_node]:
@@ -273,7 +275,30 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
                 squash.append(tuple(unique_values))
 
     # now the squashed nodes are iterated
+    ref_node_to_unique = nx.get_node_attributes(molecule, unique_attr)
+    vs_nodes = []
     for unique_values in squash:
+        anchor_nodes = []
+        for uval in unique_values:
+            # this must be a VS or a atom with VS on top
+            if uval not in node_to_unique_value:
+                for node, values in ref_node_to_unique.items():
+                    if uval in values:
+                        idx = values.index(uval)
+                        new_attrs = {label_attr: molecule.nodes[node][label_attr][idx]}
+                        break
+                new_attrs[unique_attr] = uval
+                if len(anchor_nodes) > 0:
+                    new_attrs["_virtual"] = True
+                    vs_nodes.append(node_counter)
+                else:
+                    ref_nodes.append(node)
+                    anchor_nodes.append(uval)
+                meta_graph.add_node(node_counter, **new_attrs)
+                node_to_unique_value[uval] = node_counter
+                node_counter += 1
+            else:
+                anchor_nodes.append(uval)
         for u1, u2 in itertools.combinations(unique_values, r=2):
             _add_or_increment_edge(meta_graph, node_to_unique_value[u1], node_to_unique_value[u2])
 
@@ -293,6 +318,8 @@ def make_meta_graph(molecule, unique_attr='fragid', copy_attrs=['fragname']):
             if u1 != u2:
                 _add_or_increment_edge(meta_graph, node_to_unique_value[u1], node_to_unique_value[u2])
         else:
+            if set(uvalues_e1) == set(uvalues_e2):
+                continue
             for u1, u2 in itertools.product(uvalues_e1, uvalues_e2):
                 n1 = node_to_unique_value[u1]
                 n2 = node_to_unique_value[u2]
@@ -311,7 +338,11 @@ def annotate_neighbors_as_hash(molecule):
     """
     for node in molecule.nodes:
         neighbor_hashs = []
+        if molecule.nodes[node].get("_virtual", False):
+            continue
         for neigh in molecule.neighbors(node):
+            if molecule.nodes[neigh].get("_virtual", False):
+                continue
             neighbor_hashs.append(nx.weisfeiler_lehman_graph_hash(molecule.nodes[neigh]['graph'],
                                                                   node_attr='element',
                                                                   edge_attr='order'))
@@ -327,6 +358,8 @@ def annotate_bonding_operators(molecule, label='fragid'):
     ----------
     molecule: networkx.Graph
         the target molecule
+    meta_graph: networkx.Graph
+        the lower resolution graph
     label: collections.abc.Hashable
         a label by which residues are marked
 
@@ -351,7 +384,6 @@ def annotate_bonding_operators(molecule, label='fragid'):
                 order = 1
             op1 = f">{op_counter}{order}"
             op2 = f"<{op_counter}{order}"
-
             molecule.nodes[e1]['bonding'].append(op2)
             molecule.nodes[e2]['bonding'].append(op1)
             op_counter += 1
