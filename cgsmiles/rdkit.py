@@ -328,29 +328,85 @@ def networkx_to_rdkit(mol_graph, return_mapping=False):
         return mol, node_to_idx
     return mol
 
-def embed_3d_via_rdkit(mol_graph):
+def _stereo_labels(rdkit_mol):
+    """
+    CIP labels of the stereocenters and stereo double bonds of
+    `rdkit_mol`.
+
+    Returns
+    -------
+    dict
+        atom index to CIP label (R/S)
+    dict
+        bond index to CIP label (E/Z)
+    """
+    mol = Chem.Mol(rdkit_mol)
+    rdCIPLabeler.AssignCIPLabels(mol)
+    atoms = {atom.GetIdx(): atom.GetProp('_CIPCode')
+             for atom in mol.GetAtoms() if atom.HasProp('_CIPCode')}
+    bonds = {bond.GetIdx(): bond.GetProp('_CIPCode')
+             for bond in mol.GetBonds() if bond.HasProp('_CIPCode')}
+    return atoms, bonds
+
+def _check_embedded_stereo(rdkit_mol, ref_atoms, ref_bonds):
+    """
+    Check that the 3D structure of `rdkit_mol` has the stereo given by
+    the CIP labels `ref_atoms` and `ref_bonds` (see :func:`_stereo_labels`).
+
+    Raises
+    ------
+    ValueError
+        if a stereocenter or double bond has the wrong configuration
+    """
+    mol = Chem.Mol(rdkit_mol)
+    Chem.AssignStereochemistryFrom3D(mol)
+    atoms, bonds = _stereo_labels(mol)
+    wrong_atoms = {idx: (label, atoms.get(idx)) for idx, label in ref_atoms.items()
+                   if atoms.get(idx) != label}
+    wrong_bonds = {idx: (label, bonds.get(idx)) for idx, label in ref_bonds.items()
+                   if bonds.get(idx) != label}
+    if wrong_atoms or wrong_bonds:
+        raise ValueError("The embedded structure has the wrong stereo "
+                         "(index: (requested, built)); atoms: "
+                         f"{wrong_atoms}, bonds: {wrong_bonds}.")
+
+def embed_3d_via_rdkit(mol_graph, seed=None):
     """
     Generate 3D coordiantes of a molecule using the rdKit
     embedding scheme. Coordinates annotated in place.
 
+    Stereochemistry defined on `mol_graph` (see :func:`networkx_to_rdkit`)
+    is kept, and checked on the final structure.
+
     Parameters
     ----------
     mol_graph: networkx.Graph
+    seed: int, optional
+        random seed of the embedding; the same seed gives the same
+        coordinates. If None, a random seed is used.
+
+    Raises
+    ------
+    ValueError
+        if embedding fails or the structure has the wrong stereo
     """
-    # add explicit hydrogen atoms
+    # add explicit hydrogen atoms to the graph
     add_explicit_hydrogens(mol_graph)
 
     # convert to rdkit mol
     rdkit_mol, node_to_idx = networkx_to_rdkit(mol_graph, return_mapping=True)
 
-    # Add hydrogens to the molecule
+    # Add any hydrogens that RDKit infers but the graph does not define
     rdkit_mol = Chem.AddHs(rdkit_mol)
+    ref_atoms, ref_bonds = _stereo_labels(rdkit_mol)
 
     # Generate 3D coordinates
-    AllChem.EmbedMolecule(rdkit_mol)
+    if AllChem.EmbedMolecule(rdkit_mol, randomSeed=-1 if seed is None else seed) == -1:
+        raise ValueError("RDKit could not embed the molecule.")
 
     # Optimize the 3D structure using a force field
     AllChem.UFFOptimizeMolecule(rdkit_mol)
+    _check_embedded_stereo(rdkit_mol, ref_atoms, ref_bonds)
 
     # Get the conformer
     conf = rdkit_mol.GetConformer()

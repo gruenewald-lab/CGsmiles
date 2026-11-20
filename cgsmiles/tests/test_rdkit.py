@@ -4,8 +4,10 @@ import pytest
 import pysmiles
 import cgsmiles
 from rdkit import Chem
+from rdkit.Chem import AllChem
 from pysmiles.testhelper import assertEqualGraphs
 from cgsmiles.rdkit import rdkit_to_networkx, networkx_to_rdkit, embed_3d_via_rdkit
+from cgsmiles.rdkit import _stereo_labels, _check_embedded_stereo
 from cgsmiles.test_utils import _keep_selected_attr
 
 @pytest.mark.parametrize('smiles_string',(
@@ -184,3 +186,47 @@ def test_rdkit_stereo_attributes_roundtrip(cgsmiles_str, chiral, n_ez):
               nx.get_node_attributes(out_graph, 'ez_isomer').values() for entry in entries}
     assert len(out_ez) == n_ez
     assert out_ez == ref_ez
+
+def _embedded_stereo_smiles(mol_graph):
+    """
+    Stereo SMILES as perceived from the positions of `mol_graph`.
+    """
+    rdkit_mol, mapping = networkx_to_rdkit(mol_graph, return_mapping=True)
+    conformer = Chem.Conformer(rdkit_mol.GetNumAtoms())
+    for node, idx in mapping.items():
+        conformer.SetAtomPosition(idx, mol_graph.nodes[node]['position'].tolist())
+    rdkit_mol.AddConformer(conformer)
+    Chem.AssignStereochemistryFrom3D(rdkit_mol)
+    return _canonical_stereo_smiles(rdkit_mol)
+
+@pytest.mark.parametrize('cgsmiles_str, ref_smiles',(
+    ("{[#A]}.{#A=C[C;x=S](N)C(=O)O}", "C[C@H](N)C(=O)O"),
+    ("{[#A]}.{#A=C[C;x=R](N)C(=O)O}", "C[C@@H](N)C(=O)O"),
+    ("{[#A]}.{#A=C/C=C\\C}", "C/C=C\\C"),
+    ("{[#A]}.{#A=C/C=C/C}", "C/C=C/C"),
+    # chiral center spanning two fragments
+    ("{[#A][#B]}.{#A=C[C;x=S][$](N),#B=[$]C(=O)O}", "C[C@H](N)C(=O)O"),
+))
+@pytest.mark.parametrize('seed', (1, 2, 3))
+def test_embed_stereo(cgsmiles_str, ref_smiles, seed):
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    embed_3d_via_rdkit(mol, seed=seed)
+    assert _embedded_stereo_smiles(mol) == Chem.MolToSmiles(Chem.MolFromSmiles(ref_smiles))
+
+def test_embed_seed():
+    cgsmiles_str = "{[#A]}.{#A=C[C;x=S](N)C(=O)O}"
+    positions = []
+    for seed in (7, 7, 8):
+        _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+        embed_3d_via_rdkit(mol, seed=seed)
+        positions.append(np.array([mol.nodes[node]['position'] for node in sorted(mol.nodes)]))
+    assert np.allclose(positions[0], positions[1])
+    assert not np.allclose(positions[0], positions[2])
+
+def test_embed_stereo_check():
+    ref_mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](N)C(=O)O"))
+    ref_atoms, ref_bonds = _stereo_labels(ref_mol)
+    mirror = Chem.AddHs(Chem.MolFromSmiles("C[C@@H](N)C(=O)O"))
+    AllChem.EmbedMolecule(mirror, randomSeed=1)
+    with pytest.raises(ValueError):
+        _check_embedded_stereo(mirror, ref_atoms, ref_bonds)
