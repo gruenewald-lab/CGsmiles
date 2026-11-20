@@ -134,3 +134,53 @@ def test_rdkit_chiral_label_not_stereocenter():
     _, mol = cgsmiles.MoleculeResolver.from_string("{[#A]}.{#A=C[C;x=S](C)O}").resolve()
     with pytest.raises(ValueError):
         networkx_to_rdkit(mol)
+
+@pytest.mark.parametrize('smiles_string',(
+                        "C[C@H](N)C(=O)O",
+                        "C[C@@H](N)C(=O)O",
+                        "C[C@@H](O)[C@H](N)C(=O)O",
+                        "F[C@](Cl)(Br)I",
+                        "C/C=C\\C",
+                        "C/C=C/C",
+                        "C/C(Br)=C\\C",
+                        "F/C(Cl)=C(/Br)I",
+                        "C/C=C/C=C\\C",
+                        "C/C=C/[C@H](N)C(=O)O",
+                        "C[C@H]1CCCC[C@@H]1O",
+))
+def test_rdkit_stereo_roundtrip(smiles_string):
+    """
+    RDKit -> networkx -> RDKit keeps stereo.
+    """
+    ref_mol = Chem.MolFromSmiles(smiles_string)
+    mol_graph = rdkit_to_networkx(ref_mol)
+    assert not nx.get_node_attributes(mol_graph, 'rs_isomer')
+    out_mol = networkx_to_rdkit(mol_graph)
+    assert _canonical_stereo_smiles(out_mol) == Chem.MolToSmiles(ref_mol)
+
+@pytest.mark.parametrize('cgsmiles_str, chiral, n_ez',(
+    ("{[#A]}.{#A=C[C;x=S](N)C(=O)O}", {'S'}, 0),
+    ("{[#A]}.{#A=C[C;x=R]([OH])[C;x=S](N)C(=O)O}", {'R', 'S'}, 0),
+    ("{[#A]}.{#A=C/C=C\\C}", set(), 2),
+    ("{[#A]}.{#A=C/C=C/C=C\\C}", set(), 4),
+))
+def test_rdkit_stereo_attributes_roundtrip(cgsmiles_str, chiral, n_ez):
+    """
+    networkx -> RDKit -> networkx writes 'chiral' and 'ez_isomer'
+    with the same labels.
+    """
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    rdkit_mol, mapping = networkx_to_rdkit(mol, return_mapping=True)
+    out_graph = rdkit_to_networkx(rdkit_mol)
+    out_chiral = nx.get_node_attributes(out_graph, 'chiral')
+    assert set(out_chiral.values()) == chiral
+    for node, label in nx.get_node_attributes(mol, 'chiral').items():
+        assert out_chiral[mapping[node]] == label
+    # the ligand entries come back with the same cis/trans labels
+    idx_to_node = {idx: node for node, idx in mapping.items()}
+    ref_ez = {(entry[0], entry[3], entry[4]) for entries in
+              nx.get_node_attributes(mol, 'ez_isomer').values() for entry in entries}
+    out_ez = {(idx_to_node[entry[0]], idx_to_node[entry[3]], entry[4]) for entries in
+              nx.get_node_attributes(out_graph, 'ez_isomer').values() for entry in entries}
+    assert len(out_ez) == n_ez
+    assert out_ez == ref_ez

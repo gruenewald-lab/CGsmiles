@@ -177,9 +177,52 @@ def _match_cip_labels(mol, mol_graph, node_to_idx):
 
     raise ValueError(f"Could not assign the chirality labels {labels}.")
 
+# cis/trans relative to the stereo atoms of a bond; for E/Z RDKit stores
+# the CIP-preferred ligands as stereo atoms, so Z is cis and E is trans
+BOND_STEREO_TO_EZ = {Chem.BondStereo.STEREOCIS: 'cis',
+                     Chem.BondStereo.STEREOZ: 'cis',
+                     Chem.BondStereo.STEREOTRANS: 'trans',
+                     Chem.BondStereo.STEREOE: 'trans'}
+
+def _get_stereo(rdkit_mol, out_mol):
+    """
+    Annotate `out_mol` with the stereochemistry of `rdkit_mol`:
+    'chiral' R/S labels on stereocenters and 'ez_isomer' entries on
+    the ligands of stereo double bonds, in the format used by the
+    CGsmiles parser. Node labels must equal RDKit atom indices.
+
+    Parameters
+    ----------
+    rdkit_mol: rdkit.Chem.rdchem.Mol
+    out_mol: networkx.Graph
+    """
+    # work on a copy so the CIP labels are not stored on the input
+    mol = Chem.Mol(rdkit_mol)
+    rdCIPLabeler.AssignCIPLabels(mol)
+    for atom in mol.GetAtoms():
+        if atom.HasProp('_CIPCode'):
+            label = atom.GetProp('_CIPCode').upper()
+            if label in ('R', 'S'):
+                out_mol.nodes[atom.GetIdx()]['chiral'] = label
+
+    for bond in mol.GetBonds():
+        label = BOND_STEREO_TO_EZ.get(bond.GetStereo())
+        stereo_atoms = list(bond.GetStereoAtoms())
+        if label is None or len(stereo_atoms) != 2:
+            continue
+        a, d = stereo_atoms
+        b, c = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        out_mol.nodes[a].setdefault('ez_isomer', []).append((a, b, c, d, label))
+        out_mol.nodes[d].setdefault('ez_isomer', []).append((d, c, b, a, label))
+
 def rdkit_to_networkx(rdkit_mol):
     """
     Convert an rdkit molecule to a networkx graph.
+
+    Stereochemistry is written as 'chiral' (CIP R/S label) and
+    'ez_isomer' node attributes, such that converting back with
+    :func:`networkx_to_rdkit` restores it. Neighbor order chirality
+    ('rs_isomer') is not written.
 
     Parameters
     ----------
@@ -219,6 +262,8 @@ def rdkit_to_networkx(rdkit_mol):
         out_mol.add_edge(bond.GetBeginAtomIdx(),
                          bond.GetEndAtomIdx(),
                          order=bt)
+
+    _get_stereo(rdkit_mol, out_mol)
     return out_mol
 
 def networkx_to_rdkit(mol_graph, return_mapping=False):
