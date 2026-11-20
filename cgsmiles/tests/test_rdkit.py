@@ -3,6 +3,7 @@ import networkx as nx
 import pytest
 import pysmiles
 import cgsmiles
+from rdkit import Chem
 from pysmiles.testhelper import assertEqualGraphs
 from cgsmiles.rdkit import rdkit_to_networkx, networkx_to_rdkit, embed_3d_via_rdkit
 from cgsmiles.test_utils import _keep_selected_attr
@@ -66,3 +67,70 @@ def test_aromatic_nh_hcount(smiles_string, n_hcounts):
     rdkit_mol = networkx_to_rdkit(mol)
     hcounts = [atom.GetTotalNumHs() for atom in rdkit_mol.GetAtoms() if atom.GetSymbol() == 'N']
     assert hcounts == n_hcounts
+
+def _canonical_stereo_smiles(rdkit_mol):
+    return Chem.MolToSmiles(Chem.RemoveHs(rdkit_mol))
+
+PYSMILES_BUG = "pysmiles misreads the stereo of this SMILES"
+
+@pytest.mark.parametrize('smiles_string',(
+                        "C[C@H](N)C(=O)O",
+                        "C[C@@H](N)C(=O)O",
+                        "N[C@@H](C)C(=O)O",
+                        "F[C@](Cl)(Br)I",
+                        "C/C=C\\C",
+                        "C/C=C/C",
+                        "F/C=C/F",
+                        # stereo atoms are not the CIP-preferred ligands
+                        "C/C(Br)=C\\C",
+                        # conjugated diene
+                        "C/C=C/C=C\\C",
+                        # one ligand shared by two double bonds
+                        "C(/C=C/C)/C=C\\C",
+                        "C/C=C/[C@H](N)C(=O)O",
+                        # implicit H placeholder at the wrong position
+                        pytest.param("[C@H](F)(Cl)Br",
+                                     marks=pytest.mark.xfail(reason=PYSMILES_BUG, strict=True)),
+                        # ring closure on the chiral atom
+                        pytest.param("C1C[C@H](O)CC[C@@H]1N",
+                                     marks=pytest.mark.xfail(reason=PYSMILES_BUG, strict=True)),
+                        # E/Z tokens on both sides of one atom
+                        pytest.param("C/C=C\\[C@@H](Cl)/C=C/C",
+                                     marks=pytest.mark.xfail(reason=PYSMILES_BUG, strict=True)),
+))
+@pytest.mark.parametrize('resolve', (False, True))
+def test_rdkit_stereo(smiles_string, resolve):
+    """
+    The stereo set from 'rs_isomer' and 'ez_isomer' must match RDKit's
+    reading of the same SMILES, for pysmiles graphs with implicit
+    hydrogen atoms and resolved CGsmiles graphs with explicit ones.
+    """
+    if resolve:
+        cgsmiles_str = "{[#A]}.{#A=" + smiles_string + "}"
+        _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    else:
+        mol = pysmiles.read_smiles(smiles_string)
+    ref = Chem.MolToSmiles(Chem.MolFromSmiles(smiles_string))
+    assert _canonical_stereo_smiles(networkx_to_rdkit(mol)) == ref
+
+@pytest.mark.parametrize('cgsmiles_str, ref_smiles',(
+    ("{[#A]}.{#A=C[C;x=S](N)C(=O)O}", "C[C@H](N)C(=O)O"),
+    ("{[#A]}.{#A=C[C;x=R](N)C(=O)O}", "C[C@@H](N)C(=O)O"),
+    # L-threonine (2S,3R) and L-allo-threonine (2S,3S)
+    ("{[#A]}.{#A=C[C;x=R]([OH])[C;x=S](N)C(=O)O}", "C[C@@H](O)[C@H](N)C(=O)O"),
+    ("{[#A]}.{#A=C[C;x=S]([OH])[C;x=S](N)C(=O)O}", "C[C@H](O)[C@H](N)C(=O)O"),
+    # chiral center spanning two fragments
+    ("{[#A][#B]}.{#A=C[C;x=S][$](N),#B=[$]C(=O)O}", "C[C@H](N)C(=O)O"),
+))
+def test_rdkit_chiral_labels(cgsmiles_str, ref_smiles):
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    rdkit_mol, mapping = networkx_to_rdkit(mol, return_mapping=True)
+    ref = Chem.MolToSmiles(Chem.MolFromSmiles(ref_smiles))
+    assert _canonical_stereo_smiles(rdkit_mol) == ref
+    for node, label in nx.get_node_attributes(mol, 'chiral').items():
+        assert rdkit_mol.GetAtomWithIdx(mapping[node]).GetProp('_CIPCode') == label
+
+def test_rdkit_chiral_label_not_stereocenter():
+    _, mol = cgsmiles.MoleculeResolver.from_string("{[#A]}.{#A=C[C;x=S](C)O}").resolve()
+    with pytest.raises(ValueError):
+        networkx_to_rdkit(mol)
