@@ -2,7 +2,8 @@ import pytest
 import networkx as nx
 import cgsmiles
 from cgsmiles.test_utils import assertEqualMeta
-from cgsmiles.graph_utils import make_meta_graph, annotate_bonding_operators, annotate_fragments
+from cgsmiles.graph_utils import (make_meta_graph, annotate_bonding_operators,
+                                  annotate_fragments, merge_graphs, sort_nodes_by_attr)
 
 @pytest.mark.parametrize('cgsmiles_str', (
                         # simple string
@@ -95,3 +96,23 @@ def test_annotate_fragments(cgsmiles_str):
     for node in new_cg.nodes:
         covered_atoms |= set(new_cg.nodes[node]['graph'].nodes)
     assert covered_atoms == all_atoms
+
+def test_merge_graphs_maps_rs_isomer():
+    source = nx.path_graph(3)
+    target = nx.Graph()
+    target.add_edges_from([(0, 1), (1, 2), (1, 3)])
+    # node 1 is the center; its own label stands for an implicit hydrogen
+    target.nodes[1]['rs_isomer'] = (0, 1, 2, 3)
+    correspondence = merge_graphs(source, target)
+    center = correspondence[1]
+    assert source.nodes[center]['rs_isomer'] == (3, center, 5, 6)
+    # the input graph is not changed
+    assert target.nodes[1]['rs_isomer'] == (0, 1, 2, 3)
+
+def test_sort_nodes_by_attr_maps_rs_isomer():
+    graph = nx.Graph()
+    graph.add_edges_from([(10, 11), (11, 12), (11, 13)])
+    nx.set_node_attributes(graph, {10: 3, 11: 2, 12: 1, 13: 0}, 'fragid')
+    graph.nodes[11]['rs_isomer'] = (10, 11, 12, 13)
+    new_graph = sort_nodes_by_attr(graph)
+    assert new_graph.nodes[2]['rs_isomer'] == (3, 2, 1, 0)

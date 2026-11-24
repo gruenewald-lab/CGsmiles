@@ -1,11 +1,12 @@
 import random
+import sys
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 import pysmiles
 import pytest
 from pysmiles.testhelper import assertEqualGraphs
 import cgsmiles
-from cgsmiles.extractor import MoleculeFragmentExtractor, _match_bonds
+from cgsmiles.extractor import MoleculeFragmentExtractor, _match_bonds, _stereo_match
 from cgsmiles.write_cgsmiles import write_cgsmiles
 from cgsmiles.test_utils import _keep_selected_attr
 
@@ -283,3 +284,75 @@ def test_extractor_anthracene_fused_tricyclic():
     node_match = iso.categorical_node_match('element', None)
     matcher = iso.GraphMatcher(heavy_new, reference, node_match=node_match)
     assert matcher.is_isomorphic()
+
+def _stereo_per_fragment(molecule, cg_graph, fragments):
+    """
+    For each meta node, the stereo of its atoms in `molecule` and the
+    stereo of the fragment definition it is written with.
+    """
+    pairs = []
+    for meta_node, fragname in cg_graph.nodes(data='fragname'):
+        atoms = [n for n, fragids in molecule.nodes(data='fragid') if meta_node in fragids]
+        own = sorted(str(molecule.nodes[n].get('chiral')) for n in atoms) + \
+              sorted(e[4] for n in atoms for e in molecule.nodes[n].get('ez_isomer') or [])
+        frag = fragments[fragname]
+        written = sorted(str(frag.nodes[n].get('chiral')) for n in frag.nodes) + \
+                  sorted(e[4] for n in frag.nodes for e in frag.nodes[n].get('ez_isomer') or [])
+        pairs.append((own, written))
+    return pairs
+
+@pytest.mark.parametrize('cgs_ref, n_frags', (
+    # all L: identical residues share a definition
+    ("{[#NT][#ALA][#ALA][#ALA][#ALA][#CT]}.{#NT=C[>],#ALA=[<]N[C;x=S](C)C(=O)[>],#CT=[<]OC}", 5),
+    # one D residue: it needs a definition of its own
+    ("{[#NT][#ALA][#ALA][#ALAD][#ALA][#CT]}.{#NT=C[>],#ALA=[<]N[C;x=S](C)C(=O)[>],"
+     "#ALAD=[<]N[C;x=R](C)C(=O)[>],#CT=[<]OC}", 6),
+    ("{[#NT][#U][#U][#U][#U][#CT]}.{#NT=C[>],#U=[<]C/C=C\\C[>],#CT=[<]OC}", 5),
+    ("{[#NT][#U][#U][#UT][#U][#CT]}.{#NT=C[>],#U=[<]C/C=C\\C[>],#UT=[<]C/C=C/C[>],#CT=[<]OC}", 6),
+))
+def test_extractor_groups_by_stereo(cgs_ref, n_frags):
+    _, molecule = cgsmiles.MoleculeResolver.from_string(cgs_ref).resolve()
+    # same base name for all residues, so only stereo can tell them apart
+    for node, fragname in molecule.nodes(data='fragname'):
+        if fragname in ('ALAD', 'UT'):
+            molecule.nodes[node]['fragname'] = fragname[:-1]
+    extractor = MoleculeFragmentExtractor(group_fragments=True)
+    cg_graph, fragments = extractor.get_fragment_dict_from_molecule(molecule)
+    assert len(fragments) == n_frags
+    for own, written in _stereo_per_fragment(molecule, cg_graph, fragments):
+        assert own == written
+
+def _partition_alanine(smiles_string):
+    """
+    Alanine from plain SMILES, split into two fragments, as when a
+    molecule read from SMILES is partitioned into beads.
+    """
+    mol = pysmiles.read_smiles(smiles_string)
+    for node in mol.nodes:
+        mol.nodes[node]['fragid'] = [0 if node < 3 else 1]
+        mol.nodes[node]['fragname'] = 'P1' if node < 3 else 'P2'
+    return mol
+
+@pytest.mark.parametrize('smiles_string, label', (
+    ("C[C@H](N)C(=O)O", 'S'),
+    ("C[C@@H](N)C(=O)O", 'R'),
+))
+def test_extractor_labels_neighbor_order_chirality(smiles_string, label):
+    mol = _partition_alanine(smiles_string)
+    _, fragments = MoleculeFragmentExtractor().get_fragment_dict_from_molecule(mol)
+    assert nx.get_node_attributes(fragments['P1'], 'chiral') == {1: label}
+    assert nx.get_node_attributes(fragments['P2'], 'chiral') == {}
+
+def test_extractor_without_rdkit(monkeypatch, caplog):
+    # a None entry in sys.modules makes the import fail
+    monkeypatch.setitem(sys.modules, 'cgsmiles.rdkit', None)
+    mol = _partition_alanine("C[C@H](N)C(=O)O")
+    _, fragments = MoleculeFragmentExtractor().get_fragment_dict_from_molecule(mol)
+    assert not nx.get_node_attributes(fragments['P1'], 'chiral')
+    assert "RDKit is not installed" in caplog.text
+
+def test_stereo_match_neighbor_order_never_matches():
+    # neighbor order refers to atom indices, so it cannot be compared
+    assert not _stereo_match({'rs_isomer': (0, 1, 2, 3)}, {'rs_isomer': (0, 1, 2, 3)})
+    assert _stereo_match({'rs_isomer': (0, 1, 2, 3), 'chiral': 'S'}, {'chiral': 'S'})
+    assert not _stereo_match({'chiral': 'S'}, {'chiral': 'R'})

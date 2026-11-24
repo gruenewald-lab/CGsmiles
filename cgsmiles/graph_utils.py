@@ -50,12 +50,14 @@ def merge_graphs(source_graph, target_graph, fragid=None, max_node=None):
             new_atom['fragid'] = [fragid]
         else:
             new_atom['fragid'] = [(new_atom.get('fragid', 0) + fragment_offset)]
-        # make sure to propagate the ez isomers
-        if 'ez_isomer_atoms' in new_atom:
-            new_atom['ez_isomer_atoms'] = (new_atom['ez_isomer_atoms'][0]+offset+1,
-                                           new_atom['ez_isomer_atoms'][1]+offset+1)
-        # make sure to propagate the ez atoms
         source_graph.add_node(idx, **new_atom)
+
+    # the neighbor order of '@'/'@@' atoms refers to node labels of
+    # `target_graph`; the center itself stands for an implicit hydrogen
+    for node, new_node in correspondence.items():
+        neighbors = source_graph.nodes[new_node].get('rs_isomer')
+        if neighbors:
+            source_graph.nodes[new_node]['rs_isomer'] = tuple(correspondence[n] for n in neighbors)
 
     for node1, node2 in target_graph.edges:
         if correspondence[node1] != correspondence[node2]:
@@ -66,7 +68,7 @@ def merge_graphs(source_graph, target_graph, fragid=None, max_node=None):
 
 def sort_nodes_by_attr(graph,
                        sort_attr="fragid",
-                       relative_attr=[('ez_isomer_atoms', True)]):
+                       relative_attr=(('rs_isomer', True),)):
     """
     Sort nodes in graph by attribute and relable the graph in place.
 
@@ -104,7 +106,7 @@ def sort_nodes_by_attr(graph,
             else:
                 is_list = not isinstance(values, str)
             if is_list:
-                new_values = [mapping[value] for value in values]
+                new_values = type(values)(mapping[value] for value in values)
             else:
                 new_values = mapping[values]
             new_dict[key] = new_values

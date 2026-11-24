@@ -375,6 +375,11 @@ class MoleculeResolver:
                                                 node_to_keep,
                                                 node_to_remove,
                                                 self_loops=False)
+            # neighbor order of '@'/'@@' atoms now refers to the kept node
+            for node, neighbors in self.molecule.nodes(data='rs_isomer'):
+                if neighbors and node_to_remove in neighbors:
+                    self.molecule.nodes[node]['rs_isomer'] = \
+                        tuple(node_to_keep if n == node_to_remove else n for n in neighbors)
             target_id = self.molecule.nodes[node_to_keep]['fragid']
             ref_id = self.molecule.nodes[node_to_keep]['contraction'][node_to_remove]['fragid']
             # remove redundant hydrogen atoms
