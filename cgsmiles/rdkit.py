@@ -127,9 +127,11 @@ def _match_cip_labels(mol, mol_graph, node_to_idx):
     match the 'chiral' (R/S) node attributes of `mol_graph`.
 
     All labelled atoms get a chiral tag; then CIP labels are computed
-    and the tag of a mismatching atom is inverted. As the label of one
-    center can depend on the configuration of another, this repeats
-    one inversion at a time until all labels match.
+    and the tag of the first mismatching atom is inverted. As the label
+    of one center can depend on the configuration of another, this
+    repeats one inversion at a time until all labels match. An atom
+    without a CIP label is not a mismatch: it can become a stereocenter
+    once other centers are inverted (e.g. a pseudo-asymmetric center).
 
     Parameters
     ----------
@@ -159,21 +161,23 @@ def _match_cip_labels(mol, mol_graph, node_to_idx):
         return
 
     for _ in range(4 * len(labels) + 1):
-        for atom in mol.GetAtoms():
-            atom.ClearProp('_CIPCode')
-        rdCIPLabeler.AssignCIPLabels(mol)
+        cip_atoms, _ = _cip_labels(mol)
         mismatch = None
+        unlabelled = []
         for node, label in labels.items():
-            atom = mol.GetAtomWithIdx(node_to_idx[node])
-            if not atom.HasProp('_CIPCode'):
-                raise ValueError(f"Node {node} is labelled chiral ({label}) "
-                                  "but is not a stereocenter.")
-            if atom.GetProp('_CIPCode').upper() != label:
-                mismatch = atom
+            idx = node_to_idx[node]
+            if idx not in cip_atoms:
+                unlabelled.append(node)
+            elif cip_atoms[idx].upper() != label:
+                mismatch = idx
                 break
         if mismatch is None:
+            if unlabelled:
+                node = unlabelled[0]
+                raise ValueError(f"Node {node} is labelled chiral ({labels[node]}) "
+                                  "but is not a stereocenter.")
             return
-        mismatch.InvertChirality()
+        mol.GetAtomWithIdx(mismatch).InvertChirality()
 
     raise ValueError(f"Could not assign the chirality labels {labels}.")
 
@@ -196,16 +200,13 @@ def _get_stereo(rdkit_mol, out_mol):
     rdkit_mol: rdkit.Chem.rdchem.Mol
     out_mol: networkx.Graph
     """
-    # work on a copy so the CIP labels are not stored on the input
-    mol = Chem.Mol(rdkit_mol)
-    rdCIPLabeler.AssignCIPLabels(mol)
-    for atom in mol.GetAtoms():
-        if atom.HasProp('_CIPCode'):
-            label = atom.GetProp('_CIPCode').upper()
-            if label in ('R', 'S'):
-                out_mol.nodes[atom.GetIdx()]['chiral'] = label
+    atoms, _ = _cip_labels(rdkit_mol)
+    for idx, label in atoms.items():
+        label = label.upper()
+        if label in ('R', 'S'):
+            out_mol.nodes[idx]['chiral'] = label
 
-    for bond in mol.GetBonds():
+    for bond in rdkit_mol.GetBonds():
         label = BOND_STEREO_TO_EZ.get(bond.GetStereo())
         stereo_atoms = list(bond.GetStereoAtoms())
         if label is None or len(stereo_atoms) != 2:
@@ -320,27 +321,32 @@ def networkx_to_rdkit(mol_graph, return_mapping=False):
     _match_cip_labels(mol, mol_graph, node_to_idx)
     # RDKit's legacy stereo perception discards hand-set double bond
     # stereo (e.g. in MolToSmiles or RemoveHs) unless the neighboring
-    # bonds carry directions and stereo is marked as perceived
+    # bonds carry directions and stereo is marked as perceived. This
+    # also removes chiral tags from atoms that are not stereocenters.
     Chem.SetDoubleBondNeighborDirections(mol)
-    Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
+    Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
 
     if return_mapping:
         return mol, node_to_idx
     return mol
 
-def _stereo_labels(rdkit_mol):
+def _cip_labels(rdkit_mol):
     """
     CIP labels of the stereocenters and stereo double bonds of
-    `rdkit_mol`.
+    `rdkit_mol`, computed with the new CIP labeller. Labels already
+    stored on the molecule (e.g. by the legacy stereo perception) are
+    ignored; `rdkit_mol` is not changed.
 
     Returns
     -------
     dict
-        atom index to CIP label (R/S)
+        atom index to CIP label (R/S, or r/s if pseudo-asymmetric)
     dict
         bond index to CIP label (E/Z)
     """
     mol = Chem.Mol(rdkit_mol)
+    for item in (*mol.GetAtoms(), *mol.GetBonds()):
+        item.ClearProp('_CIPCode')
     rdCIPLabeler.AssignCIPLabels(mol)
     atoms = {atom.GetIdx(): atom.GetProp('_CIPCode')
              for atom in mol.GetAtoms() if atom.HasProp('_CIPCode')}
@@ -351,7 +357,7 @@ def _stereo_labels(rdkit_mol):
 def _check_embedded_stereo(rdkit_mol, ref_atoms, ref_bonds):
     """
     Check that the 3D structure of `rdkit_mol` has the stereo given by
-    the CIP labels `ref_atoms` and `ref_bonds` (see :func:`_stereo_labels`).
+    the CIP labels `ref_atoms` and `ref_bonds` (see :func:`_cip_labels`).
 
     Raises
     ------
@@ -360,7 +366,7 @@ def _check_embedded_stereo(rdkit_mol, ref_atoms, ref_bonds):
     """
     mol = Chem.Mol(rdkit_mol)
     Chem.AssignStereochemistryFrom3D(mol)
-    atoms, bonds = _stereo_labels(mol)
+    atoms, bonds = _cip_labels(mol)
     wrong_atoms = {idx: (label, atoms.get(idx)) for idx, label in ref_atoms.items()
                    if atoms.get(idx) != label}
     wrong_bonds = {idx: (label, bonds.get(idx)) for idx, label in ref_bonds.items()
@@ -398,7 +404,7 @@ def embed_3d_via_rdkit(mol_graph, seed=None):
 
     # Add any hydrogens that RDKit infers but the graph does not define
     rdkit_mol = Chem.AddHs(rdkit_mol)
-    ref_atoms, ref_bonds = _stereo_labels(rdkit_mol)
+    ref_atoms, ref_bonds = _cip_labels(rdkit_mol)
 
     # Generate 3D coordinates
     if AllChem.EmbedMolecule(rdkit_mol, randomSeed=-1 if seed is None else seed) == -1:
@@ -447,7 +453,7 @@ def annotate_stereo_labels(mol_graph):
         return mol_graph
 
     rdkit_mol, node_to_idx = networkx_to_rdkit(mol_graph, return_mapping=True)
-    labels, _ = _stereo_labels(rdkit_mol)
+    labels, _ = _cip_labels(rdkit_mol)
     for node in nodes:
         label = labels.get(node_to_idx[node])
         if label is None:

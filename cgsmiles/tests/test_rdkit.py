@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from pysmiles.testhelper import assertEqualGraphs
 from cgsmiles.rdkit import rdkit_to_networkx, networkx_to_rdkit, embed_3d_via_rdkit
-from cgsmiles.rdkit import _stereo_labels, _check_embedded_stereo, annotate_stereo_labels
+from cgsmiles.rdkit import _cip_labels, _check_embedded_stereo, annotate_stereo_labels
 from cgsmiles.test_utils import _keep_selected_attr
 
 @pytest.mark.parametrize('smiles_string',(
@@ -137,6 +137,39 @@ def test_rdkit_chiral_label_not_stereocenter():
     with pytest.raises(ValueError):
         networkx_to_rdkit(mol)
 
+@pytest.mark.parametrize('cgsmiles_str, ref_smiles',(
+    # trihydroxyglutaric acid; C3 is only a (pseudo-asymmetric)
+    # stereocenter once C2 and C4 have opposite configurations
+    ("{[#A]}.{#A=O=C(O)[C;x=R](O)[C;x=r](O)[C;x=S](O)C(=O)O}",
+     "O=C(O)[C@@H](O)[C@@H](O)[C@@H](O)C(=O)O"),
+    ("{[#A]}.{#A=O=C(O)[C;x=R](O)[C;x=s](O)[C;x=S](O)C(=O)O}",
+     "O=C(O)[C@@H](O)[C@H](O)[C@@H](O)C(=O)O"),
+))
+def test_rdkit_chiral_labels_pseudo_asymmetric(cgsmiles_str, ref_smiles):
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    rdkit_mol, mapping = networkx_to_rdkit(mol, return_mapping=True)
+    ref = Chem.MolToSmiles(Chem.MolFromSmiles(ref_smiles))
+    assert _canonical_stereo_smiles(rdkit_mol) == ref
+    labels, _ = _cip_labels(rdkit_mol)
+    for node, label in nx.get_node_attributes(mol, 'chiral').items():
+        assert labels[mapping[node]] == label
+
+def test_rdkit_no_chirality_on_non_stereocenter():
+    # '@' on an atom with two identical ligands is dropped
+    rdkit_mol = networkx_to_rdkit(pysmiles.read_smiles("C[C@H](C)O"))
+    assert Chem.MolToSmiles(rdkit_mol) == "CC(C)O"
+    assert all(atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED
+               for atom in rdkit_mol.GetAtoms())
+
+def test_cip_labels_ignores_stored_labels():
+    mol = Chem.MolFromSmiles("C[C@H](N)C(=O)O")
+    for atom in mol.GetAtoms():
+        atom.SetProp('_CIPCode', 'R')
+    atoms, _ = _cip_labels(mol)
+    assert atoms == {1: 'S'}
+    # the input is not changed
+    assert mol.GetAtomWithIdx(1).GetProp('_CIPCode') == 'R'
+
 @pytest.mark.parametrize('smiles_string',(
                         "C[C@H](N)C(=O)O",
                         "C[C@@H](N)C(=O)O",
@@ -225,7 +258,7 @@ def test_embed_seed():
 
 def test_embed_stereo_check():
     ref_mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](N)C(=O)O"))
-    ref_atoms, ref_bonds = _stereo_labels(ref_mol)
+    ref_atoms, ref_bonds = _cip_labels(ref_mol)
     mirror = Chem.AddHs(Chem.MolFromSmiles("C[C@@H](N)C(=O)O"))
     AllChem.EmbedMolecule(mirror, randomSeed=1)
     with pytest.raises(ValueError):
