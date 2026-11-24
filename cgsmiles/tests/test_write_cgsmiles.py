@@ -120,28 +120,74 @@ def _relabel(graph, seed):
             attrs['rs_isomer'] = tuple(mapping[n] for n in attrs['rs_isomer'])
     return new_graph
 
-@pytest.mark.parametrize('smiles_string', (
-    "C/C=C\\C",
-    "C/C=C/C",
-    "F/C(Cl)=C(/Br)I",
-    # conjugated: one single bond carries the direction of two double bonds
-    "C/C=C/C=C\\C",
-    "C/C=C/C=C/C=C\\C",
-    # one ligand shared by two double bonds
-    "C(/C=C/C)/C=C\\C",
-    # ring bonds as ligands
-    "C1C/C(=C/C)CC1C",
-    "CC1CCC/C1=C\\C",
-    "c1ccccc1/C=C/C",
-    "C/C=C\\C1CC1/C=C/C",
-))
-@pytest.mark.parametrize('seed', range(10))
-def test_write_graph_ez_isomers(smiles_string, seed):
+def _wrong_and_kept_ez(smiles_string, out):
+    """
+    Resolve `out` with the CGsmiles parser and compare the E/Z labels of
+    its double bonds with those of `smiles_string`. Returns the number
+    of wrong labels (for the best atom mapping, as the molecule may be
+    symmetric) and whether all labels were kept.
+    """
     Chem = pytest.importorskip("rdkit.Chem")
+    rdkit = pytest.importorskip("cgsmiles.rdkit")
+    ref = Chem.MolFromSmiles(smiles_string)
+    _, ref_labels = rdkit._cip_labels(ref)
+    _, resolved = MoleculeResolver.from_string("{[#A]}.{#A=" + out + "}").resolve()
+    mol = Chem.RemoveHs(rdkit.networkx_to_rdkit(resolved))
+    _, labels = rdkit._cip_labels(mol)
+
+    def _n_wrong(match):
+        n_wrong = 0
+        for idx, label in labels.items():
+            bond = mol.GetBondWithIdx(idx)
+            ref_bond = ref.GetBondBetweenAtoms(match[bond.GetBeginAtomIdx()],
+                                               match[bond.GetEndAtomIdx()])
+            n_wrong += ref_labels.get(ref_bond.GetIdx()) != label
+        return n_wrong
+
+    n_wrong = min(_n_wrong(match) for match in ref.GetSubstructMatches(mol, uniquify=False))
+    return n_wrong, len(labels) == len(ref_labels)
+
+@pytest.mark.parametrize('smiles_string, always_kept', (
+    ("C/C=C\\C", True),
+    ("C/C=C/C", True),
+    ("F/C(Cl)=C(/Br)I", True),
+    # conjugated: one single bond carries the direction of two double bonds
+    ("C/C=C/C=C\\C", True),
+    ("C/C=C/C=C/C=C\\C", True),
+    # one ligand shared by two double bonds; needs one group inverted
+    ("C(/C=C/C)/C=C\\C", True),
+    # ring bonds as ligands; a directed ring closure bond cannot be read
+    ("C1C/C(=C/C)CC1C", False),
+    ("CC1CCC/C1=C\\C", False),
+    ("c1ccccc1/C=C/C", True),
+    ("C/C=C\\C1CC1/C=C/C", True),
+))
+@pytest.mark.parametrize('seed', range(20))
+def test_write_graph_ez_isomers(smiles_string, always_kept, seed, caplog):
+    """
+    The CGsmiles parser reads the written E/Z back: never wrong, never
+    failing, and dropped only with a warning.
+    """
     mol = _relabel(pysmiles.read_smiles(smiles_string), seed)
     out = write_graph(mol, smiles_format=True)
-    assert Chem.MolToSmiles(Chem.MolFromSmiles(out)) == \
-           Chem.MolToSmiles(Chem.MolFromSmiles(smiles_string))
+    n_wrong, kept = _wrong_and_kept_ez(smiles_string, out)
+    assert n_wrong == 0
+    if always_kept:
+        assert kept
+    elif not kept:
+        assert "cannot be written in this atom order" in caplog.text
+
+@pytest.mark.parametrize('smiles_string', (
+    "C1C/C(=C/C)CC1C",
+    "CC1CCC/C1=C\\C",
+))
+def test_write_graph_ez_isomers_ring_kept(smiles_string):
+    # if no ring closure carries a direction, the E/Z is written
+    kept = [_wrong_and_kept_ez(smiles_string,
+                               write_graph(_relabel(pysmiles.read_smiles(smiles_string), seed),
+                                           smiles_format=True))[1]
+            for seed in range(20)]
+    assert any(kept)
 
 def test_write_graph_plain_smiles_has_no_annotation():
     mol = pysmiles.read_smiles("C[C@H](N)C(=O)O")

@@ -71,6 +71,10 @@ def _bond_directions(molecule):
     fragment boundary) or a ligand bond that is not single cannot be
     written and are skipped with a warning.
 
+    Bonds whose directions depend on each other form a group, e.g. the
+    ligand bonds of one double bond or of a whole conjugated chain.
+    Inverting all directions of a group describes the same molecule.
+
     Parameters
     ----------
     molecule: networkx.Graph
@@ -79,6 +83,10 @@ def _bond_directions(molecule):
     -------
     dict
         (p, q) to the direction (+1 or -1) of the bond p-q
+    dict
+        frozenset((p, q)) to the group of the directed bond p-q
+    dict
+        frozenset((b, c)) to the group of the stereo double bond b=c
     """
     orientation = {}
     relations = defaultdict(list)
@@ -105,6 +113,8 @@ def _bond_directions(molecule):
                    for _, other, order in molecule.edges(ligand, data='order'))
 
     double_bonds = set()
+    # stereo double bond to one of its ligand bonds
+    stereo_double_bonds = {}
     skipped = set()
     for node, entries in molecule.nodes(data='ez_isomer'):
         for a, b, c, d, label in entries or []:
@@ -132,6 +142,7 @@ def _bond_directions(molecule):
             _relate((b, a), (c, d), 1 if label == 'cis' else -1)
             double_bonds.add((b, c))
             double_bonds.add((c, b))
+            stereo_double_bonds[frozenset((b, c))] = frozenset((b, a))
 
     for anchor, partner in double_bonds:
         ligands = [n for n in molecule[anchor]
@@ -140,10 +151,13 @@ def _bond_directions(molecule):
             _relate((anchor, ligands[0]), (anchor, ligand), -1)
 
     values = {}
+    bond_group = {}
     for start in relations:
         if start in values:
             continue
+        group = len(set(bond_group.values()))
         values[start] = 1
+        bond_group[start] = group
         queue = [start]
         while queue:
             key = queue.pop()
@@ -151,12 +165,156 @@ def _bond_directions(molecule):
                 value = sign * values[key]
                 if other not in values:
                     values[other] = value
+                    bond_group[other] = group
                     queue.append(other)
                 elif values[other] != value:
                     logger.warning("The cis/trans isomerism of the molecule "
                                    "is inconsistent and is not written.")
-                    return {}
-    return {orientation[key]: value for key, value in values.items()}
+                    return {}, {}, {}
+    directions = {orientation[key]: value for key, value in values.items()}
+    double_bond_group = {bond: bond_group[ligand_bond]
+                         for bond, ligand_bond in stereo_double_bonds.items()}
+    return directions, bond_group, double_bond_group
+
+class _ParityUnion:
+    """
+    Union-find over groups that also tracks whether two groups are
+    inverted relative to each other.
+    """
+    def __init__(self):
+        self.parent = {}
+
+    def find(self, item):
+        """
+        Root of `item` and the parity (+1 or -1) of `item` relative to it.
+        """
+        parity = 1
+        while item in self.parent:
+            item, sign = self.parent[item]
+            parity *= sign
+        return item, parity
+
+    def union(self, item1, item2, parity):
+        """
+        Require flip(item1) * flip(item2) == parity; False if that
+        contradicts earlier requirements.
+        """
+        root1, parity1 = self.find(item1)
+        root2, parity2 = self.find(item2)
+        if root1 == root2:
+            return parity1 * parity2 == parity
+        self.parent[root2] = (root1, parity1 * parity2 * parity)
+        return True
+
+def _readable_directions(molecule, directions, bond_group, double_bond_group,
+                         position, ring_bonds):
+    """
+    Adapt the bond `directions` (see :func:`_bond_directions`) to what the
+    CGsmiles parser can read back for the atom order `position` (atom
+    to the index at which it is written).
+
+    The parser keeps only one '/' or '\\' token per atom, the last one
+    written next to it, and takes it as the mark of the bond from that
+    atom to any double bond anchor it neighbors. A token before a ring
+    closure digit goes to the wrong atom. Hence:
+
+    1. A group with a directed ring closure bond is dropped.
+    2. For each double bond, the token of every neighbor of an anchor
+       must equal the mark that bond should carry. For a bond without
+       direction next to a directed ligand bond, that is the mark
+       opposite to the directed ligand. A token next to a double bond
+       without stereo makes the parser read stereo there, so the group
+       giving it is dropped. The ligand of the later written anchor
+       must also be written after that anchor.
+
+    Each requirement either holds or fails within a group, or relates
+    the inversion of two groups. The groups are inverted such that all
+    hold; groups in a contradiction are dropped, with a warning.
+
+    Returns
+    -------
+    dict
+        (p, q) to the direction (+1 or -1) of the bond p-q
+    """
+    # the mark of a bond, +1 for '/', as written: direction from the
+    # atom written first to the one written second
+    marks = {}
+    for (p, q), value in directions.items():
+        marks[frozenset((p, q))] = value if position[p] < position[q] else -value
+
+    def _direction(anchor, ligand_bond):
+        # dir(anchor, ligand) of an unflipped directed bond
+        ligand = next(iter(ligand_bond - {anchor}))
+        mark = marks[ligand_bond]
+        return mark if position[anchor] < position[ligand] else -mark
+
+    dropped = set()
+    for bond in map(frozenset, ring_bonds):
+        if bond in marks:
+            dropped.add(bond_group[bond])
+
+    while True:
+        active = {bond for bond in marks if bond_group[bond] not in dropped}
+        # the token of an atom is the mark of the last directed bond
+        # written next to it
+        token_bond = {}
+        for bond in active:
+            written = max(position[node] for node in bond)
+            for node in bond:
+                if node not in token_bond or \
+                   written > max(position[n] for n in token_bond[node]):
+                    token_bond[node] = bond
+
+        # (group of the token, group of the expected mark, parity)
+        requirements = []
+        bad = set()
+        for b, c, order in molecule.edges(data='order'):
+            if order != 2 or (b not in token_bond and c not in token_bond):
+                continue
+            bond = frozenset((b, c))
+            if double_bond_group.get(bond) in dropped or bond not in double_bond_group:
+                bad.update(bond_group[token_bond[n]] for n in (b, c) if n in token_bond)
+                continue
+            later = b if position[b] > position[c] else c
+            for anchor, partner in ((b, c), (c, b)):
+                ligand_bonds = [frozenset((anchor, n)) for n in molecule[anchor]
+                                if n != partner and frozenset((anchor, n)) in active]
+                for ligand in molecule[anchor]:
+                    if ligand == partner or ligand not in token_bond:
+                        continue
+                    if anchor == later and position[ligand] < position[anchor]:
+                        bad.add(bond_group[token_bond[ligand]])
+                        continue
+                    ligand_bond = frozenset((anchor, ligand))
+                    if ligand_bond in active:
+                        group, expected = bond_group[ligand_bond], marks[ligand_bond]
+                    else:
+                        # opposite to a directed ligand of the same anchor
+                        group = bond_group[ligand_bonds[0]]
+                        direction = -_direction(anchor, ligand_bonds[0])
+                        expected = direction if position[anchor] < position[ligand] else -direction
+                    token = token_bond[ligand]
+                    requirements.append((bond_group[token], group, marks[token] * expected))
+
+        flips = _ParityUnion()
+        if not bad:
+            for group1, group2, parity in requirements:
+                if not flips.union(group1, group2, parity):
+                    bad.update((group1, group2))
+        if not bad:
+            break
+        dropped |= bad
+
+    if dropped:
+        lost = sorted(tuple(sorted(bond)) for bond, group in double_bond_group.items()
+                      if group in dropped)
+        logger.warning("The cis/trans isomerism of the double bonds %s cannot "
+                       "be written in this atom order, as the CGsmiles parser "
+                       "would misread it.", lost)
+
+    return {(p, q): value * flips.find(bond_group[frozenset((p, q))])[1]
+            for (p, q), value in directions.items()
+            if bond_group[frozenset((p, q))] not in dropped}
 
 def _direction_symbol(directions, p, q):
     """
@@ -214,7 +372,6 @@ def _write_molecule(molecule, smiles_format=False, default_element='*',
     assert nx.is_connected(molecule)
     directions = {}
     if smiles_format:
-        directions = _bond_directions(molecule)
         # pysmiles' format_atom cannot write stereo, so it gets a copy
         # without it
         clean = nx.Graph(molecule)
@@ -246,6 +403,19 @@ def _write_molecule(molecule, smiles_format=False, default_element='*',
             edges.add(frozenset((n_idx, n_jdx)))
     total_edges = set(map(frozenset, molecule.edges))
     ring_edges = list(total_edges - edges)
+
+    if smiles_format:
+        directions, bond_group, double_bond_group = _bond_directions(molecule)
+        if directions:
+            # the order in which the atoms are written, as in the walk below
+            position = {}
+            to_visit = [start]
+            while to_visit:
+                current = to_visit.pop()
+                position[current] = len(position)
+                to_visit.extend(dfs_successors.get(current, []))
+            directions = _readable_directions(molecule, directions, bond_group,
+                                              double_bond_group, position, ring_edges)
 
     atom_to_ring_idx = defaultdict(list)
     ring_idx_to_bond = {}
