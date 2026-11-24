@@ -53,7 +53,139 @@ def format_bonding(bonding):
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
-def _write_molecule(molecule, smiles_format=False, default_element='*'):
+def _bond_directions(molecule):
+    """
+    Choose the directions of the single bonds that encode the cis/trans
+    isomerism of the double bonds in `molecule`, i.e. where to write
+    '/' and '\\'.
+
+    A direction dir(p, q) = +1 means that, written as 'p/q', atom q
+    lies 'up' from p; dir(q, p) = -dir(p, q). For a stereo double bond
+    b=c with ligands a (on b) and d (on c), a cis relation requires
+    dir(b, a) = dir(c, d) and a trans relation dir(b, a) = -dir(c, d).
+    Two ligands on the same anchor point to opposite sides. One bond
+    can take part in several double bonds (e.g. dienes), so the
+    directions are found by propagating these relations.
+
+    E/Z entries that involve atoms outside `molecule` (e.g. across a
+    fragment boundary) or a ligand bond that is not single cannot be
+    written and are skipped with a warning.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+
+    Returns
+    -------
+    dict
+        (p, q) to the direction (+1 or -1) of the bond p-q
+    """
+    orientation = {}
+    relations = defaultdict(list)
+
+    def _variable(p, q):
+        key = frozenset((p, q))
+        orientation.setdefault(key, (p, q))
+        return key, 1 if orientation[key] == (p, q) else -1
+
+    def _relate(bond1, bond2, sign):
+        # dir(bond1) = sign * dir(bond2)
+        key1, sign1 = _variable(*bond1)
+        key2, sign2 = _variable(*bond2)
+        relations[key1].append((key2, sign * sign1 * sign2))
+        relations[key2].append((key1, sign * sign1 * sign2))
+
+    stereo_bonds = {frozenset(entry[1:3]) for _, entries in molecule.nodes(data='ez_isomer')
+                    for entry in entries or []}
+
+    def _other_double_bond(ligand):
+        # the parser takes a '/' or '\' on an atom with a further double
+        # bond as (incomplete) E/Z of that bond, so this cannot be read
+        return any(order == 2 and frozenset((ligand, other)) not in stereo_bonds
+                   for _, other, order in molecule.edges(ligand, data='order'))
+
+    double_bonds = set()
+    skipped = set()
+    for node, entries in molecule.nodes(data='ez_isomer'):
+        for a, b, c, d, label in entries or []:
+            if frozenset((b, c)) in skipped:
+                continue
+            if any(n not in molecule for n in (a, b, c, d)):
+                skipped.add(frozenset((b, c)))
+                logger.warning("The cis/trans isomerism of the double bond "
+                               "%s=%s involves atoms in another fragment and "
+                               "cannot be written.", b, c)
+                continue
+            if molecule.edges[a, b].get('order', 1) != 1 or \
+               molecule.edges[c, d].get('order', 1) != 1:
+                skipped.add(frozenset((b, c)))
+                logger.warning("The cis/trans isomerism of the double bond "
+                               "%s=%s cannot be written, as a ligand bond is "
+                               "not a single bond.", b, c)
+                continue
+            if _other_double_bond(a) or _other_double_bond(d):
+                skipped.add(frozenset((b, c)))
+                logger.warning("The cis/trans isomerism of the double bond "
+                               "%s=%s cannot be written, as a ligand is part "
+                               "of another double bond.", b, c)
+                continue
+            _relate((b, a), (c, d), 1 if label == 'cis' else -1)
+            double_bonds.add((b, c))
+            double_bonds.add((c, b))
+
+    for anchor, partner in double_bonds:
+        ligands = [n for n in molecule[anchor]
+                   if n != partner and frozenset((anchor, n)) in orientation]
+        for ligand in ligands[1:]:
+            _relate((anchor, ligands[0]), (anchor, ligand), -1)
+
+    values = {}
+    for start in relations:
+        if start in values:
+            continue
+        values[start] = 1
+        queue = [start]
+        while queue:
+            key = queue.pop()
+            for other, sign in relations[key]:
+                value = sign * values[key]
+                if other not in values:
+                    values[other] = value
+                    queue.append(other)
+                elif values[other] != value:
+                    logger.warning("The cis/trans isomerism of the molecule "
+                                   "is inconsistent and is not written.")
+                    return {}
+    return {orientation[key]: value for key, value in values.items()}
+
+def _direction_symbol(directions, p, q):
+    """
+    The '/' or '\\' to write between `p` and `q` (in that order), or
+    None if the bond has no direction.
+    """
+    if (p, q) in directions:
+        value = directions[(p, q)]
+    elif (q, p) in directions:
+        value = -directions[(q, p)]
+    else:
+        return None
+    return '/' if value == 1 else '\\'
+
+def _format_stereo_atom(molecule, clean, node, default_element, chiral_labels):
+    """
+    Format `node` as OpenSMILES atom, adding its 'chiral' label as
+    CGsmiles annotation (e.g. '[C;x=S]') if `chiral_labels` is True.
+    `clean` is `molecule` without stereo attributes, as pysmiles'
+    `format_atom` cannot write stereo.
+    """
+    atom = format_atom(clean, node, default_element)
+    label = molecule.nodes[node].get('chiral')
+    if chiral_labels and label:
+        atom = (atom[:-1] if atom.startswith('[') else '[' + atom) + f';x={label}]'
+    return atom
+
+def _write_molecule(molecule, smiles_format=False, default_element='*',
+                    chiral_labels=False):
     """
     Write the body of a (CG)SMILES string for a single connected
     `molecule`, without the enclosing '{' '}' that marks a complete
@@ -70,6 +202,9 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
     smiles_format: bool
         If True, write nodes as OpenSMILES atoms instead of CGsmiles
         fragment nodes.
+    chiral_labels: bool
+        If True (and `smiles_format`), write 'chiral' node attributes
+        as CGsmiles annotation, e.g. '[C;x=S]'.
 
     Returns
     -------
@@ -77,6 +212,24 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
         The (CG)SMILES string body describing `molecule`.
     """
     assert nx.is_connected(molecule)
+    directions = {}
+    if smiles_format:
+        directions = _bond_directions(molecule)
+        # pysmiles' format_atom cannot write stereo, so it gets a copy
+        # without it
+        clean = nx.Graph(molecule)
+        for node in clean.nodes:
+            for attr in ('rs_isomer', 'ez_isomer', 'chiral'):
+                clean.nodes[node].pop(attr, None)
+        if chiral_labels:
+            unlabelled = [node for node, neighbors in molecule.nodes(data='rs_isomer')
+                          if neighbors and not molecule.nodes[node].get('chiral')]
+            if unlabelled:
+                logger.warning("The chirality of nodes %s is given as neighbor "
+                               "order only and is not written. Use "
+                               "cgsmiles.rdkit.annotate_stereo_labels on the "
+                               "complete molecule first.", unlabelled)
+
     start = min(molecule)
     dfs_successors = nx.dfs_successors(molecule, source=start)
 
@@ -120,12 +273,16 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
             previous = predecessors[current]
             assert len(previous) == 1
             previous = previous[0]
-            if _write_edge_symbol(molecule, previous, current):
+            direction = _direction_symbol(directions, previous, current)
+            if direction:
+                smiles += direction
+            elif _write_edge_symbol(molecule, previous, current):
                 order = molecule.edges[previous, current].get('order', 1)
                 smiles += order_to_symbol[order]
 
         if smiles_format:
-            smiles += format_atom(molecule, current, default_element)
+            smiles += _format_stereo_atom(molecule, clean, current,
+                                          default_element, chiral_labels)
         else:
             smiles += format_node(molecule, current)
 
@@ -146,7 +303,11 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
                     marker = ring_idx_to_marker.pop(ring_idx)
                     new_marker = False
 
-                if _write_edge_symbol(molecule, *ring_bond) and new_marker:
+                partner = ring_bond[1] if ring_bond[0] == current else ring_bond[0]
+                direction = _direction_symbol(directions, current, partner)
+                if direction and new_marker:
+                    smiles += direction
+                elif _write_edge_symbol(molecule, *ring_bond) and new_marker:
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
@@ -166,7 +327,8 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
     smiles += ')' * branch_depth
     return smiles
 
-def write_graph(molecule, smiles_format=False, default_element='*'):
+def write_graph(molecule, smiles_format=False, default_element='*',
+                chiral_labels=False):
     """
     Write the body of a (CG)SMILES string describing `molecule`,
     without the enclosing '{' '}' that marks a complete CGsmiles
@@ -184,7 +346,12 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
         The molecule to write.
     smiles_format: bool
         If True, write nodes as OpenSMILES atoms instead of CGsmiles
-        fragment nodes.
+        fragment nodes. Cis/trans isomerism ('ez_isomer') is then
+        written as '/' and '\\'.
+    chiral_labels: bool
+        If True (and `smiles_format`), write 'chiral' node attributes
+        as CGsmiles annotation, e.g. '[C;x=S]'. The result is then no
+        longer plain SMILES.
 
     Returns
     -------
@@ -194,7 +361,8 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     components = sorted(nx.connected_components(molecule), key=min)
     return '.'.join(_write_molecule(molecule.subgraph(component),
                                     smiles_format=smiles_format,
-                                    default_element=default_element)
+                                    default_element=default_element,
+                                    chiral_labels=chiral_labels)
                     for component in components)
 
 def write_cgsmiles_graph(molecule):
@@ -230,7 +398,8 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
         a dict of fragment graphs
     smiles_format: bool
         write all atom SMILES if True (default) otherwise
-        write CGsmiles
+        write CGsmiles. All atom fragments include stereo: 'chiral'
+        labels as e.g. '[C;x=S]' and cis/trans isomerism as '/' and '\\'.
 
     Returns
     -------
@@ -240,7 +409,8 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
     for fragname, frag_graph in fragment_dict.items():
         fragment_str += f"#{fragname}="
         # format graph depending on resolution
-        fragment_str += write_graph(frag_graph, smiles_format=smiles_format) + ","
+        fragment_str += write_graph(frag_graph, smiles_format=smiles_format,
+                                    chiral_labels=True) + ","
     fragment_str = "{" + fragment_str[:-1] + "}"
     return fragment_str
 
