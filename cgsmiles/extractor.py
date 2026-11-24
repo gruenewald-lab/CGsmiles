@@ -1,11 +1,86 @@
 from collections import defaultdict, Counter
 import itertools
+import logging
 import string
 import networkx as nx
 from .graph_utils import (annotate_neighbors_as_hash,
                           annotate_fragments,
                           make_meta_graph,
                           annotate_bonding_operators)
+
+LOGGER = logging.getLogger(__name__)
+
+def _annotate_stereo_labels(molecule):
+    """
+    Turn chirality given as neighbor order ('rs_isomer') into 'chiral'
+    R/S labels on the complete `molecule`, see
+    :func:`cgsmiles.rdkit.annotate_stereo_labels`. This must happen
+    before the molecule is split into fragments. If RDKit is not
+    installed, a warning is logged and the molecule is left as is.
+
+    Parameters
+    ----------
+    molecule: networkx.Graph
+        the complete all-atom molecule; annotated in place
+    """
+    if not any(neighbors and not molecule.nodes[node].get('chiral')
+               for node, neighbors in molecule.nodes(data='rs_isomer')):
+        return
+    try:
+        from .rdkit import annotate_stereo_labels
+    except ImportError:
+        LOGGER.warning("RDKit is not installed, so chirality given as "
+                       "'@'/'@@' cannot be converted to R/S labels; it is "
+                       "ignored when extracting fragments.")
+        return
+    annotate_stereo_labels(molecule)
+
+def _ez_signature(frag, node, mapping=None):
+    """
+    The E/Z isomer entries of `node` in the fragment graph `frag`,
+    with every atom outside `frag` replaced by None and, if given,
+    every atom inside translated by `mapping`.
+
+    Returns
+    -------
+    collections.Counter
+        of (b, c, d, label) tuples
+    """
+    signature = Counter()
+    for entry in frag.nodes[node].get('ez_isomer') or []:
+        atoms = tuple((mapping.get(n) if mapping else n) if n in frag else None
+                      for n in entry[1:4])
+        signature[atoms + (entry[4],)] += 1
+    return signature
+
+def _stereo_match(n1, n2):
+    """
+    Whether the node attribute dicts `n1` and `n2` have the same
+    stereo, as far as it can be told from a single node: the same
+    'chiral' label and the same set of cis/trans labels. Chirality
+    given only as neighbor order ('rs_isomer') cannot be compared
+    across fragments, so such nodes never match.
+    """
+    for node in (n1, n2):
+        if node.get('rs_isomer') and not node.get('chiral'):
+            return False
+    if n1.get('chiral') != n2.get('chiral'):
+        return False
+    labels1 = Counter(entry[4] for entry in n1.get('ez_isomer') or [])
+    labels2 = Counter(entry[4] for entry in n2.get('ez_isomer') or [])
+    return labels1 == labels2
+
+def _ez_consistent(target, other_frag, match):
+    """
+    Whether the isomorphism `match` (node of `target` to node of
+    `other_frag`) maps every E/Z isomer entry of `target` onto the same
+    entry of `other_frag`, i.e. pairs the same ligands across the same
+    double bonds.
+    """
+    for tnode, onode in match.items():
+        if _ez_signature(target, tnode, match) != _ez_signature(other_frag, onode):
+            return False
+    return True
 
 def _match_bonds(list1, list2):
     """
@@ -64,10 +139,12 @@ def _suffix_generator():
 def find_subgraph_isomorphism(target, other_frag):
     """
     Find subgraph isomorphisms between `target` and `other_frag`.
-    Nodes are matched on the `nhash` (neighbor-fragment hash), 'element',
-    'charge', 'rs_isomerism' and 'ez_isomerism' attributes, plus the
-    direction/order multiset of their bonding descriptors
-    (`_node_match`); edges are matched on bond order (`_edge_match`).
+    Nodes are matched on the `nhash` (neighbor-fragment hash), 'element'
+    and 'charge' attributes, their stereo ('chiral' label and cis/trans
+    labels, see `_stereo_match`), plus the direction/order multiset of
+    their bonding descriptors (`_node_match`); edges are matched on bond
+    order (`_edge_match`). Isomorphisms that pair different ligands
+    across a stereo double bond are dropped (`_ez_consistent`).
 
     Parameters
     ----------
@@ -87,9 +164,11 @@ def find_subgraph_isomorphism(target, other_frag):
         return True
 
     def _node_match(n1, n2):
-        for attr in ['nhash', 'element', 'charge', 'rs_isomerism', 'ez_isomerism']:
+        for attr in ['nhash', 'element', 'charge']:
             if n1.get(attr, None) != n2.get(attr, None):
                 return False
+        if not _stereo_match(n1, n2):
+            return False
 
 
         # these clauses only trigger when the advanced grouping
@@ -125,7 +204,8 @@ def find_subgraph_isomorphism(target, other_frag):
                                      other_frag,
                                      node_match=_node_match,
                                      edge_match=_edge_match)
-    return GM.subgraph_isomorphisms_iter()
+    return (match for match in GM.subgraph_isomorphisms_iter()
+            if _ez_consistent(target, other_frag, match))
 
 class MoleculeFragmentExtractor():
     """
@@ -481,6 +561,10 @@ class MoleculeFragmentExtractor():
         the fragments will be grouped such that a minimal amount of
         fragments is used.
 
+        Chirality given as neighbor order ('rs_isomer') is first turned
+        into 'chiral' R/S labels on `molecule` (requires RDKit), as
+        fragments can only express chirality as label.
+
         Parameters
         ----------
         molecule: networkx.Graph
@@ -493,7 +577,9 @@ class MoleculeFragmentExtractor():
             the derived meta graph and the dict mapping each
             resulting fragment name to its fragment graph
         """
-
+        # stereo labels depend on the complete molecule, so they are
+        # set before it is split; the fragments copy them
+        _annotate_stereo_labels(molecule)
         molecule = annotate_bonding_operators(molecule)
         meta_graph = make_meta_graph(molecule,
                                      unique_attr=self.unique_attr,
