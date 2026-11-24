@@ -126,6 +126,12 @@ def _bond_directions(molecule):
                                "%s=%s involves atoms in another fragment and "
                                "cannot be written.", b, c)
                 continue
+            if not all(molecule.has_edge(*bond) for bond in ((a, b), (b, c), (c, d))):
+                skipped.add(frozenset((b, c)))
+                logger.warning("The cis/trans isomerism %s refers to bonds that "
+                               "are not in the molecule and cannot be written.",
+                               (a, b, c, d, label))
+                continue
             if molecule.edges[a, b].get('order', 1) != 1 or \
                molecule.edges[c, d].get('order', 1) != 1:
                 skipped.add(frozenset((b, c)))
@@ -376,7 +382,7 @@ def _write_molecule(molecule, smiles_format=False, default_element='*',
         # without it
         clean = nx.Graph(molecule)
         for node in clean.nodes:
-            for attr in ('rs_isomer', 'ez_isomer', 'chiral'):
+            for attr in ('rs_isomer', 'ez_isomer'):
                 clean.nodes[node].pop(attr, None)
         if chiral_labels:
             unlabelled = [node for node, neighbors in molecule.nodes(data='rs_isomer')

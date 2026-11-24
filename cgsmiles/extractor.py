@@ -56,19 +56,15 @@ def _ez_signature(frag, node, mapping=None):
 def _stereo_match(n1, n2):
     """
     Whether the node attribute dicts `n1` and `n2` have the same
-    stereo, as far as it can be told from a single node: the same
-    'chiral' label and the same set of cis/trans labels. Chirality
-    given only as neighbor order ('rs_isomer') cannot be compared
-    across fragments, so such nodes never match.
+    'chiral' label. Chirality given only as neighbor order
+    ('rs_isomer') cannot be compared across fragments, so such nodes
+    never match. Cis/trans isomerism depends on the ligands and is
+    checked on the whole match by :func:`_ez_consistent`.
     """
     for node in (n1, n2):
         if node.get('rs_isomer') and not node.get('chiral'):
             return False
-    if n1.get('chiral') != n2.get('chiral'):
-        return False
-    labels1 = Counter(entry[4] for entry in n1.get('ez_isomer') or [])
-    labels2 = Counter(entry[4] for entry in n2.get('ez_isomer') or [])
-    return labels1 == labels2
+    return n1.get('chiral') == n2.get('chiral')
 
 def _ez_consistent(target, other_frag, match):
     """
@@ -140,8 +136,7 @@ def find_subgraph_isomorphism(target, other_frag):
     """
     Find subgraph isomorphisms between `target` and `other_frag`.
     Nodes are matched on the `nhash` (neighbor-fragment hash), 'element'
-    and 'charge' attributes, their stereo ('chiral' label and cis/trans
-    labels, see `_stereo_match`), plus the direction/order multiset of
+    and 'charge' attributes, their 'chiral' label (`_stereo_match`), plus the direction/order multiset of
     their bonding descriptors (`_node_match`); edges are matched on bond
     order (`_edge_match`). Isomorphisms that pair different ligands
     across a stereo double bond are dropped (`_ez_consistent`).

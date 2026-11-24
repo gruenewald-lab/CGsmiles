@@ -356,5 +356,3 @@ def test_stereo_match_neighbor_order_never_matches():
     assert not _stereo_match({'rs_isomer': (0, 1, 2, 3)}, {'rs_isomer': (0, 1, 2, 3)})
     assert _stereo_match({'rs_isomer': (0, 1, 2, 3), 'chiral': 'S'}, {'chiral': 'S'})
     assert not _stereo_match({'chiral': 'S'}, {'chiral': 'R'})
-    assert not _stereo_match({'ez_isomer': [(0, 1, 2, 3, 'cis')]},
-                             {'ez_isomer': [(5, 6, 7, 8, 'trans')]})

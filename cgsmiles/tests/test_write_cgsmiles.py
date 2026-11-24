@@ -213,6 +213,16 @@ def test_write_graph_unwritable_ez_isomer(smiles_string, caplog):
     # the result can be read back
     pysmiles.read_smiles(out)
 
+def test_write_graph_stale_ez_isomer(caplog):
+    mol = pysmiles.read_smiles("C/C=C\\CC")
+    # atoms 2 and 4 are not bonded, e.g. after editing the graph
+    mol.nodes[0]['ez_isomer'].append((0, 1, 2, 4, 'cis'))
+    out = write_graph(mol, smiles_format=True)
+    assert "not in the molecule" in caplog.text
+    # the valid entry is still written
+    n_wrong, kept = _wrong_and_kept_ez("C/C=C\\CC", out)
+    assert n_wrong == 0 and kept
+
 def _partition(smiles_string, beads):
     """
     Read `smiles_string` and assign its atoms to the fragments `beads`
