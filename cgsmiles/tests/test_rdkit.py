@@ -132,6 +132,29 @@ def test_rdkit_chiral_labels(cgsmiles_str, ref_smiles):
     for node, label in nx.get_node_attributes(mol, 'chiral').items():
         assert rdkit_mol.GetAtomWithIdx(mapping[node]).GetProp('_CIPCode') == label
 
+@pytest.mark.parametrize('cgsmiles_str, ref_smiles',(
+    # '@' in a later fragment
+    ("{[#A][#B]}.{#A=CCC[$],#B=[$]C[C@H](N)C(=O)O}", "CCCC[C@H](N)C(=O)O"),
+    ("{[#A][#B]}.{#A=CCC[$],#B=[$]C[C@@H](N)C(=O)O}", "CCCC[C@@H](N)C(=O)O"),
+    ("{[#A][#B][#C]}.{#A=CC[$],#B=[$]C[C@H](N)C[$],#C=[$]C[C@@H](O)Cl}",
+     "CCC[C@H](N)CC[C@@H](O)Cl"),
+    # '@' next to a squashed atom, in the removed and the kept fragment
+    ("{[#A][#B]}.{#A=OC[!],#B=[!]C[C@H](N)C(=O)O}", "OC[C@H](N)C(=O)O"),
+    ("{[#A][#B]}.{#A=OC[!],#B=[!]C[C@@H](N)C(=O)O}", "OC[C@@H](N)C(=O)O"),
+    ("{[#A][#B]}.{#A=N[C@H](C(=O)O)C[!],#B=[!]CO}", "N[C@H](C(=O)O)CO"),
+))
+def test_rdkit_rs_isomer_after_resolve(cgsmiles_str, ref_smiles):
+    """
+    The neighbor order of '@'/'@@' atoms refers to the resolved
+    molecule, not to the fragment.
+    """
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    for node, neighbors in mol.nodes(data='rs_isomer'):
+        if neighbors:
+            assert set(neighbors) == set(mol.neighbors(node))
+    ref = Chem.MolToSmiles(Chem.MolFromSmiles(ref_smiles))
+    assert _canonical_stereo_smiles(networkx_to_rdkit(mol)) == ref
+
 def test_rdkit_chiral_label_not_stereocenter():
     _, mol = cgsmiles.MoleculeResolver.from_string("{[#A]}.{#A=C[C;x=S](C)O}").resolve()
     with pytest.raises(ValueError):
