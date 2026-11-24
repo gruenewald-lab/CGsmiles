@@ -419,3 +419,41 @@ def embed_3d_via_rdkit(mol_graph, seed=None):
 
     return mol_graph
 
+def annotate_stereo_labels(mol_graph):
+    """
+    Set the 'chiral' (CIP R/S) attribute on all nodes that define
+    chirality as neighbor order ('rs_isomer', as set by pysmiles for
+    '@' and '@@' atoms) but have no 'chiral' label yet.
+
+    CGsmiles fragments can only express chirality as R/S label, so
+    this is needed before writing a molecule read from SMILES. The
+    label depends on all neighbors of an atom, so `mol_graph` must be
+    the complete molecule, not a fragment of it. 'rs_isomer' is kept;
+    existing 'chiral' labels are not changed.
+
+    Parameters
+    ----------
+    mol_graph: networkx.Graph
+        the complete all-atom molecule; annotated in place
+
+    Returns
+    -------
+    networkx.Graph
+        `mol_graph`
+    """
+    nodes = [node for node, neighbors in mol_graph.nodes(data='rs_isomer')
+             if neighbors and not mol_graph.nodes[node].get('chiral')]
+    if not nodes:
+        return mol_graph
+
+    rdkit_mol, node_to_idx = networkx_to_rdkit(mol_graph, return_mapping=True)
+    labels, _ = _stereo_labels(rdkit_mol)
+    for node in nodes:
+        label = labels.get(node_to_idx[node])
+        if label is None:
+            LOGGER.warning("Node %s defines chirality but is not a "
+                           "stereocenter; no label is set.", node)
+            continue
+        mol_graph.nodes[node]['chiral'] = label.upper()
+    return mol_graph
+

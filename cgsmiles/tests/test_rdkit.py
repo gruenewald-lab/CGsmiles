@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from pysmiles.testhelper import assertEqualGraphs
 from cgsmiles.rdkit import rdkit_to_networkx, networkx_to_rdkit, embed_3d_via_rdkit
-from cgsmiles.rdkit import _stereo_labels, _check_embedded_stereo
+from cgsmiles.rdkit import _stereo_labels, _check_embedded_stereo, annotate_stereo_labels
 from cgsmiles.test_utils import _keep_selected_attr
 
 @pytest.mark.parametrize('smiles_string',(
@@ -230,3 +230,41 @@ def test_embed_stereo_check():
     AllChem.EmbedMolecule(mirror, randomSeed=1)
     with pytest.raises(ValueError):
         _check_embedded_stereo(mirror, ref_atoms, ref_bonds)
+
+@pytest.mark.parametrize('smiles_string, labels',(
+    ("C[C@H](N)C(=O)O", {1: 'S'}),
+    ("C[C@@H](N)C(=O)O", {1: 'R'}),
+    # L-threonine
+    ("C[C@@H](O)[C@H](N)C(=O)O", {1: 'R', 3: 'S'}),
+    # no chirality given; stereocenters stay unlabelled
+    ("CC(N)C(=O)O", {}),
+    # chirality given on an atom that is not a stereocenter
+    ("C[C@H](C)O", {}),
+))
+def test_annotate_stereo_labels(smiles_string, labels):
+    mol = pysmiles.read_smiles(smiles_string)
+    annotate_stereo_labels(mol)
+    assert nx.get_node_attributes(mol, 'chiral') == labels
+    # the neighbor order is kept
+    assert set(nx.get_node_attributes(mol, 'rs_isomer')) == \
+           set(nx.get_node_attributes(pysmiles.read_smiles(smiles_string), 'rs_isomer'))
+
+def test_annotate_stereo_labels_resolved():
+    # explicit hydrogen atoms; '@' cannot span fragments, as pysmiles
+    # then sees only three neighbors
+    cgsmiles_str = "{[#A]}.{#A=C[C@H](N)C(=O)O}"
+    _, mol = cgsmiles.MoleculeResolver.from_string(cgsmiles_str).resolve()
+    ref = networkx_to_rdkit(mol)
+    annotate_stereo_labels(mol)
+    chiral = nx.get_node_attributes(mol, 'chiral')
+    assert list(chiral.values()) == ['S']
+    # the label describes the same molecule as the neighbor order
+    for node in chiral:
+        del mol.nodes[node]['rs_isomer']
+    assert _canonical_stereo_smiles(networkx_to_rdkit(mol)) == _canonical_stereo_smiles(ref)
+
+def test_annotate_stereo_labels_keeps_chiral():
+    mol = pysmiles.read_smiles("C[C@H](N)C(=O)O")
+    mol.nodes[1]['chiral'] = 'R'
+    annotate_stereo_labels(mol)
+    assert mol.nodes[1]['chiral'] == 'R'
