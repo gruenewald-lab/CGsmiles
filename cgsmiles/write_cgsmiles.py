@@ -1,14 +1,87 @@
 import logging
 from collections import defaultdict
 import networkx as nx
-from pysmiles.smiles_helper import format_atom
+from pysmiles.smiles_helper import has_default_h_count, AROMATIC_ATOMS
 from pysmiles.write_smiles import _get_ring_marker,_write_edge_symbol
 
 logger = logging.getLogger(__name__)
 
 order_to_symbol = {0: '.', 1: '-', 1.5: ':', 2: '=', 3: '#', 4: '$'}
 
-def format_node(molecule, current):
+def format_atom(molecule, node_key, default_element='*', annotations=['weight', 'chiral']):
+    """
+    Formats a node following SMILES conventions. Uses the attributes `element`,
+    `charge`, `hcount`, `rs_isomer`, `isotope` and `class`.
+
+    Parameters
+    ----------
+    molecule : nx.Graph
+        The molecule containing the atom.
+    node_key : hashable
+        The node key of the atom in `molecule`.
+    default_element : str
+        The element to use if the attribute is not present in the node.
+
+    Returns
+    -------
+    str
+        The atom as SMILES string.
+    """
+    attr_to_symbol = {"weight": "w", "chiral": "x"}
+    node = molecule.nodes[node_key]
+    name = node.get('element', default_element)
+    charge = node.get('charge', 0)
+    hcount = node.get('hcount', 0)
+    stereo = node.get('rs_isomer', None)
+    isotope = node.get('isotope', '')
+    class_ = node.get('class', '')
+    aromatic = node.get('aromatic', False)
+    default_h = has_default_h_count(molecule, node_key)
+
+    if stereo is not None or node.get('ez_isomer'):  # pragma: nocover
+        logger.warning("The SMILES writer does not write stereochemical information")
+
+    if aromatic and name in AROMATIC_ATOMS:
+        name = name.lower()
+
+    if (stereo is None and isotope == '' and charge == 0 and default_h and class_ == '' and
+            (name.lower() in 'b c n o p s *'.split() or name in 'F Cl Br I'.split())):
+        return name
+
+    if hcount:
+        hcountstr = 'H'
+        if hcount > 1:
+            hcountstr += str(hcount)
+    else:
+        hcountstr = ''
+
+    if charge > 0:
+        chargestr = '+'
+        if charge > 1:
+            chargestr += str(charge)
+    elif charge < 0:
+        chargestr = '-'
+        if charge < -1:
+            chargestr += str(-charge)
+    else:
+        chargestr = ''
+
+    if class_ != '':
+        class_ = ':{}'.format(class_)
+
+    fmt = '[{isotope}{name}{stereo}{hcount}{charge}{class_}'
+    annotation_values = {}
+    default_annot = {"weight": 1, "chiral": 1, "atype": "NaN"}
+    if annotations:
+        for key in annotations:
+            annotation_values[key] = node.get(key, 1)
+            if annotation_values[key] != default_annot[key]:
+                fmt += ";"+attr_to_symbol[key]+"="+"{"+key+"}"
+    fmt+="]"
+    return fmt.format(isotope=isotope, name=name, stereo='', hcount=hcountstr,
+                      charge=chargestr, class_=class_, **annotation_values)
+
+def format_node(molecule, current, annotations=[]):
     """
     Format a node from a `molecule` graph according to
     the CGsmiles syntax. The attribute fragname has to
@@ -24,7 +97,17 @@ def format_node(molecule, current):
     str
         the formatted string
     """
-    node = "[#{}]".format(molecule.nodes[current]['fragname'])
+    attr_to_symbol = {"atype": "t"}
+    annot_str = ""
+    if annotations:
+        for key in annotations:
+            if key not in molecule.nodes[current]:
+                continue
+            annotation_value = molecule.nodes[current][key]
+            annot_str += ";"+attr_to_symbol[key]+f"={annotation_value}"
+
+    node = "[#{fragname}{annotation}]".format(fragname=molecule.nodes[current]['fragname'],
+                                              annotation=annot_str)
     return node
 
 def format_bonding(bonding):
@@ -53,7 +136,7 @@ def format_bonding(bonding):
         bond_str += "["+str(bonding_descrpt[:-1])+"]"
     return bond_str
 
-def _write_molecule(molecule, smiles_format=False, default_element='*'):
+def _write_molecule(molecule, smiles_format=False, default_element='*', cg_annote=["atype"]):
     """
     Write the body of a (CG)SMILES string for a single connected
     `molecule`, without the enclosing '{' '}' that marks a complete
@@ -127,7 +210,7 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
         if smiles_format:
             smiles += format_atom(molecule, current, default_element)
         else:
-            smiles += format_node(molecule, current)
+            smiles += format_node(molecule, current, annotations=cg_annote)
 
         # we add the bonding descriptors if there are any
         if molecule.nodes[current].get('bonding', False):
@@ -150,7 +233,8 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
                     order = molecule.edges[ring_bond].get('order', 1)
                     smiles += order_to_symbol[order]
 
-                smiles += str(marker) if marker < 10 else '%{}'.format(marker)
+                #smiles += str(marker) if marker < 10 else '%{}'.format(marker)
+                smiles += '%{}'.format(marker)
 
         if current in dfs_successors:
             # Proceed to the next node in this branch
@@ -166,7 +250,7 @@ def _write_molecule(molecule, smiles_format=False, default_element='*'):
     smiles += ')' * branch_depth
     return smiles
 
-def write_graph(molecule, smiles_format=False, default_element='*'):
+def write_graph(molecule, smiles_format=False, default_element='*', cg_annote=["atype"]):
     """
     Write the body of a (CG)SMILES string describing `molecule`,
     without the enclosing '{' '}' that marks a complete CGsmiles
@@ -194,7 +278,8 @@ def write_graph(molecule, smiles_format=False, default_element='*'):
     components = sorted(nx.connected_components(molecule), key=min)
     return '.'.join(_write_molecule(molecule.subgraph(component),
                                     smiles_format=smiles_format,
-                                    default_element=default_element)
+                                    default_element=default_element,
+                                    cg_annote=cg_annote)
                     for component in components)
 
 def write_cgsmiles_graph(molecule):
@@ -238,6 +323,12 @@ def write_cgsmiles_fragments(fragment_dict, smiles_format=True):
     """
     fragment_str = ""
     for fragname, frag_graph in fragment_dict.items():
+        if not nx.is_connected(frag_graph):
+            print(f"Warning: Fragment {fragname} is not connected. Will add artifical bond.")
+            comps = nx.connected_components(frag_graph)
+            firsts = [list(comp)[0] for comp in comps]
+            new_edges = list(zip(firsts[:-1], firsts[1:]))
+            frag_graph.add_edges_from(new_edges, order=0)
         fragment_str += f"#{fragname}="
         # format graph depending on resolution
         fragment_str += write_graph(frag_graph, smiles_format=smiles_format) + ","
